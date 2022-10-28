@@ -69,3 +69,6 @@ admin = Admin(app, name='Backend', index_view=MyAdminIndexView(), template_mode=
 admin.add_view(MyModelView(models.Question, db.session))
 admin.add_view(MyModelView(models.Answer, db.session))
 admin.add_view(MyModelView(models.User, db.session))
+
+
+

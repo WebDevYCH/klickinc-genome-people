@@ -21,7 +21,7 @@ class UserRoles(db.Model):
     role_id = db.Column(db.Integer(), db.ForeignKey('roles.id', ondelete='CASCADE'))
 
 class User(UserMixin, db.Model):
-    __tablename__ = 'token'
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     password = db.Column(db.String(64), index=True, unique=True)
     used = db.Column(db.Boolean)

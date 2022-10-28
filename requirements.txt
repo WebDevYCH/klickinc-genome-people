@@ -11,6 +11,7 @@ Flask-Migrate==2.1.1
 Flask-SQLAlchemy==2.3.2
 Flask-User==1.0.1.1
 Flask-WTF==0.14.2
-pprint==0.1
-PyMySQL==0.8.0
+#pprint==0.1
+psycopg2-binary
+#PyMySQL==0.8.0
 SQLAlchemy==1.2.1
