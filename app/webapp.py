@@ -22,7 +22,7 @@ bootstrap = Bootstrap(app)
 
 # for login
 login = LoginManager(app)
-from app import models
+import models
 
 # initialize db
 db.create_all()
@@ -47,7 +47,7 @@ if not models.User.query.filter_by(password="MTS61PWD").first():
     db.session.add(admin_user)
     db.session.commit()
 
-from app import routes
+import routes
 
 # Initialize Flask-BabelEx
 babel = Babel(app)
