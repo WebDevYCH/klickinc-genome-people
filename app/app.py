@@ -9,31 +9,22 @@ from flask_admin.contrib.sqla import ModelView
 
 from model import *
 
-# Create application
-app = Flask(__name__)
+## ROUTES
 
-# Create dummy secrey key so we can use sessions
-app.config['SECRET_KEY'] = '123456790'
-app.config['FLASK_ADMIN_SWATCH'] = 'flatly'
-#app.config['FLASK_ADMIN_SWATCH'] = 'Minty'
-
-# Create in-memory database
-app.config['DATABASE_FILE'] = 'sample_db.sqlite'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + app.config['DATABASE_FILE']
-app.config['SQLALCHEMY_ECHO'] = True
-
-db = SQLAlchemy(app)
-
-# Flask views
+# GET /
 @app.route('/')
 def index():
     return '<a href="/admin/">Click me to get to Admin!</a>'
 
 
+# GET /admin/
 # Create admin with custom base template
 admin = admin.Admin(app, 'Example: Bootstrap4', template_mode='bootstrap4')
 
-# Add views
-admin.add_view(UserAdmin(User, db.session, category='Menu'))
-admin.add_view(CustomView(Page, db.session, category='Menu'))
+# Add views for CRUD
+admin.add_view(UserAdmin(Users, db.session, category='Menu'))
+admin.add_view(CustomView(Roles, db.session, category='Menu'))
+admin.add_view(CustomView(UserRoles, db.session, category='Menu'))
+admin.add_view(CustomView(SurveyQuestions, db.session, category='Menu'))
+admin.add_view(CustomView(SurveyAnswers, db.session, category='Menu'))
 
