@@ -26,23 +26,22 @@ with app.app_context():
 
 
 # Models
-#Users = Base.classes.user
-class User(db.Model):
-    __tablename__ = 'user'
-    userid = db.Column(db.Integer, primary_key=True)
-    loginname = db.Column(db.String(64), unique=True)
-    firstname = db.Column(db.String(64))
-    lastname = db.Column(db.String(64))
-    email = db.Column(db.String(64))
-    title = db.Column(db.String(64))
-    enabled = db.Column(db.Boolean)
-    supervisoruserid = db.Column(db.Integer)
-
-UserRole = Base.classes.user_roles
-Role = Base.classes.roles
-SurveyQuestion = Base.classes.survey_questions
-SurveyAnswer = Base.classes.survey_answers
-SurveyToken = Base.classes.survey_tokens
+User = Base.classes.user
+#class User(db.Model):
+#    __tablename__ = 'user'
+#    userid = db.Column(db.Integer, primary_key=True)
+#    loginname = db.Column(db.String(64), unique=True)
+#    firstname = db.Column(db.String(64))
+#    lastname = db.Column(db.String(64))
+#    email = db.Column(db.String(64))
+#    title = db.Column(db.String(64))
+#    enabled = db.Column(db.Boolean)
+#    supervisoruserid = db.Column(db.Integer)
+UserRole = Base.classes.user_role
+Role = Base.classes.role
+SurveyQuestion = Base.classes.survey_question
+SurveyAnswer = Base.classes.survey_answer
+SurveyToken = Base.classes.survey_token
 
 
 # Customized admin interface
@@ -51,7 +50,7 @@ class CustomView(ModelView):
 
 class UserAdmin(CustomView):
     column_searchable_list = ('email',)
-    column_filters = ('firstname', 'lastname', 'email')
+    column_filters = ('firstname', 'lastname', 'email', 'enabled')
     can_export = True
     export_types = ['csv', 'xlsx']
 
