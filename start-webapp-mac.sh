@@ -7,6 +7,6 @@ export FLASK_APP=app
 export FLASK_DEBUG=1
 export PYTHONPATH=.
 cd app
-flask run -p 6005 2>&1 |tee -a $logfile
+python3 -m flask run -p 6005 2>&1 |tee -a $logfile
 cd ..
 

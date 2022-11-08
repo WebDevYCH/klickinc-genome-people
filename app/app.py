@@ -4,7 +4,7 @@ import os.path as op
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-import flask_admin as admin
+import flask_admin
 from flask_admin.contrib.sqla import ModelView
 
 from sqlalchemy.ext.automap import automap_base
@@ -35,11 +35,16 @@ SurveyAnswer = Base.classes.survey_answer
 SurveyToken = Base.classes.survey_token
 
 # Customized admin interfaces
-class UserAdmin(ModelView):
+class ReadOnlyModelView(ModelView):
+    can_create = False
+    can_edit = False
+    can_delete = False 
+class UserAdmin(ReadOnlyModelView):
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
     can_export = True
     export_types = ['csv', 'xlsx']
+    can_view_details = True
 
 ## ROUTES
 
@@ -50,7 +55,7 @@ def index():
 
 # GET /admin/
 # Create admin with custom base template
-admin = admin.Admin(app, 'Example: Bootstrap4', template_mode='bootstrap4')
+admin = flask_admin.Admin(app, 'Genome People', template_mode='bootstrap4')
 # Add views for CRUD
 admin.add_view(UserAdmin(User, db.session, category='Menu'))
 admin.add_view(ModelView(Role, db.session, category='Menu'))
