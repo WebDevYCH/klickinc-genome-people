@@ -1,4 +1,6 @@
 Flask
 Flask-Admin
 Flask-SQLAlchemy
+Flask-Bootstrap
+Flask-Login
 psycopg2-binary
