@@ -3,4 +3,5 @@ Flask-Admin
 Flask-SQLAlchemy
 Flask-Bootstrap
 Flask-Login
+Flask-WTF
 psycopg2-binary

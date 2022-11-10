@@ -7,22 +7,18 @@
 
 ## Setup
 
-Create and activate a virtual environment::
+(Optional) Create and activate a virtual environment::
 
     virtualenv env
     source env/bin/activate
 
 Install requirements::
 
-    pip install -r 'examples/bootstrap4/requirements.txt'
+    pip install -r requirements.txt
+
+Copy app/config-template.py to app/config.py and add your database credentials
 
 Run the application::
 
     ./start-webapp-mac.sh
-
-The first time you run this example, a sample sqlite database gets populated automatically. To suppress this behaviour,
-comment the following lines in app.py:::
-
-    if not os.path.exists(database_path):
-        build_sample_db()
 
