@@ -34,7 +34,16 @@ db.init_app(app)
 ###################################################################
 ## MODEL
 
-Base = automap_base()
+def obj_name_survey_question_type(obj):
+    return obj.name
+
+def obj_name_survey(obj):
+    return obj.name
+
+def obj_name_survey_question(obj):
+    return '%s - %s' % (obj.survey_question_type.name, obj.survey.name)
+
+Base = automap_base(metadata=db.metadata)
 with app.app_context():
     Base.prepare(db.engine, reflect=True)
     session = Session(bind=db.engine)
@@ -49,8 +58,11 @@ class User(ModelUser):
 
 UserRole = Base.classes.user_role
 Role = Base.classes.role
+Base.classes.survey.__str__ = obj_name_survey
 Survey = Base.classes.survey
+Base.classes.survey_question_type.__str__ = obj_name_survey_question_type
 SurveyQuestionType = Base.classes.survey_question_type
+Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
 SurveyAnswer = Base.classes.survey_answer
 SurveyToken = Base.classes.survey_token
