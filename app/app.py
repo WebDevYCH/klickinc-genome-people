@@ -61,6 +61,7 @@ SurveyQuestionType = Base.classes.survey_question_type
 Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
 SurveyAnswer = Base.classes.survey_answer
+SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
 SurveyToken = Base.classes.survey_token
 
 # Customized admin interfaces
@@ -69,9 +70,14 @@ class ReadOnlyModelView(ModelView):
     can_edit = False
     can_delete = False 
     can_view_details = True
-class UserAdmin(ReadOnlyModelView):
+class UserModelView(ReadOnlyModelView):
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
+    #can_export = True
+    #export_types = ['csv', 'xlsx']
+class SurveyQuestionModelView(ReadOnlyModelView):
+    column_searchable_list = ('name','question')
+    #column_filters = ('survey_id')
     #can_export = True
     #export_types = ['csv', 'xlsx']
 
@@ -97,17 +103,17 @@ def index():
 # Create admin with custom base template
 admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4')
 # Add views for CRUD
-admin.add_view(UserAdmin(ModelUser, db.session, category='Menu'))
+admin.add_view(UserModelView(ModelUser, db.session, category='Menu'))
 admin.add_view(ModelView(Role, db.session, category='Menu'))
 admin.add_view(ModelView(UserRole, db.session, category='Menu'))
 admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Menu'))
 admin.add_view(ModelView(Survey, db.session, category='Menu'))
-admin.add_view(ModelView(SurveyQuestion, db.session, category='Menu'))
+admin.add_view(SurveyQuestionModelView(SurveyQuestion, db.session, category='Menu'))
 admin.add_view(ReadOnlyModelView(SurveyAnswer, db.session, category='Menu'))
+admin.add_view(ReadOnlyModelView(SurveyAnswerAnalysis, db.session, category='Menu'))
 
 ###################################################################
 ## SURVEY ROUTES
-
 
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
@@ -121,7 +127,7 @@ def survey():
 
     return render_template('survey.html', title='Survey', form=form, surveys=surveys, categories=categories)
 
-@app.route('/save', methods=['POST'])
+@app.route('/survey/save', methods=['POST'])
 def save():
     """Route called by Ajax method"""
     ans = SurveyAnswer(survey_id=2)
@@ -132,31 +138,30 @@ def save():
     db.session.commit()
     return jsonify({'status': 'ok'})
 
-
-######################################################################
-# Forms
-
 def getQuestions():
     '''Builds list of strs representing in DB defined questions as WTForm-elements.
     (This is some nice and hacky code generation while the program runs.)'''
-    questions = session.query(SurveyQuestion).all()
+    #qtypes = {}
+    #for qtype in session.query(SurveyQuestionType).all():
+    #    qtypes[qtype.id] = qtype.name
+
+    questions = session.query(SurveyQuestion).order_by(SurveyQuestion.name).join(SurveyQuestion.survey_question_type).all()
     qslist = []
     for i, q in enumerate(questions):
         choices = generateChoices(q)
-        if q.frontend == "StringField":
+        qtype = q.survey_question_type.wtform_field
+        # options in wtform are StringField, RadioField, SelectField, SelectMultipleField, MultiCheckboxField
+        # options in db are single_line_text, multi_line_text, dropdown, multi_select, likert
+        if qtype == "StringField":
             qslist.append(
-                f'q{(q.id):02} = {q.frontend}("{q.question}", description="{q.category}")')
-        elif q.frontend == "RadioField":
+                f'q{(q.id):02} = {qtype}("{q.question}", description="{q.category}")')
+        elif qtype == "RadioField" or qtype == "SelectField":
             qslist.append(
-                f'q{(q.id):02} = {q.frontend}("{q.question}", choices={repr(choices)}, description="{q.category}")')
-        elif q.frontend == "SelectField":
+                f'q{(q.id):02} = {qtype}("{q.question}", choices={repr(choices)}, description="{q.category}")')
+        elif qtype == "SelectMultipleField" or qtype == "MultiCheckboxField":
             qslist.append(
-                f'q{(q.id):02} = {q.frontend}("{q.question}", choices={repr(choices)}, description="{q.category}")')
-        elif q.frontend == "SelectMultipleField" or "MultiCheckboxField":
-            qslist.append(
-                f'q{(q.id):02} = {q.frontend}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.category}")')
+                f'q{(q.id):02} = {qtype}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.category}")')
     return qslist
-
 
 def generateChoices(q):
     '''Generates list of tuples from answer choices to a given question.'''
