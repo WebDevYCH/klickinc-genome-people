@@ -34,12 +34,8 @@ db.init_app(app)
 ###################################################################
 ## MODEL
 
-def obj_name_survey_question_type(obj):
+def obj_name(obj):
     return obj.name
-
-def obj_name_survey(obj):
-    return obj.name
-
 def obj_name_survey_question(obj):
     return '%s - %s' % (obj.survey_question_type.name, obj.survey.name)
 
@@ -58,9 +54,9 @@ class User(ModelUser):
 
 UserRole = Base.classes.user_role
 Role = Base.classes.role
-Base.classes.survey.__str__ = obj_name_survey
+Base.classes.survey.__str__ = obj_name
 Survey = Base.classes.survey
-Base.classes.survey_question_type.__str__ = obj_name_survey_question_type
+Base.classes.survey_question_type.__str__ = obj_name
 SurveyQuestionType = Base.classes.survey_question_type
 Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
@@ -72,12 +68,12 @@ class ReadOnlyModelView(ModelView):
     can_create = False
     can_edit = False
     can_delete = False 
+    can_view_details = True
 class UserAdmin(ReadOnlyModelView):
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
-    can_export = True
-    export_types = ['csv', 'xlsx']
-    can_view_details = True
+    #can_export = True
+    #export_types = ['csv', 'xlsx']
 
 ###################################################################
 ## AUTHENTICATION
@@ -104,10 +100,10 @@ admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4'
 admin.add_view(UserAdmin(ModelUser, db.session, category='Menu'))
 admin.add_view(ModelView(Role, db.session, category='Menu'))
 admin.add_view(ModelView(UserRole, db.session, category='Menu'))
+admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Menu'))
 admin.add_view(ModelView(Survey, db.session, category='Menu'))
-admin.add_view(ModelView(SurveyQuestionType, db.session, category='Menu'))
 admin.add_view(ModelView(SurveyQuestion, db.session, category='Menu'))
-admin.add_view(ModelView(SurveyAnswer, db.session, category='Menu'))
+admin.add_view(ReadOnlyModelView(SurveyAnswer, db.session, category='Menu'))
 
 ###################################################################
 ## SURVEY ROUTES
