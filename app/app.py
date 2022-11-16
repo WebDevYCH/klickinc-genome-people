@@ -10,11 +10,11 @@ import flask_admin
 from flask_admin.contrib.sqla import ModelView
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, widgets
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import MetaData
+from sqlalchemy import MetaData, delete, insert, update
 
 import config
 
@@ -24,8 +24,11 @@ import config
 # Create application reference
 app = config.configapp(Flask(__name__))
 Bootstrap(app)
+
+# login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
+login_manager.session_protection = 'strong'
 
 # Create db reference
 db = SQLAlchemy(app)
@@ -36,30 +39,50 @@ db.init_app(app)
 
 def obj_name(obj):
     return obj.name
+def obj_name_withid(obj):
+    return f"{obj.name} [{obj.id}]"
+def obj_name_user(obj):
+    return f"{obj.firstname} {obj.lastname}"
 def obj_name_survey_question(obj):
-    return '%s - %s' % (obj.survey_question_type.name, obj.survey.name)
+    return f"{obj.survey.name} - {obj.name}"
+def obj_name_survey_answer(obj):
+    return f"{obj.survey_question.name} - {obj.answer}"
 
 Base = automap_base(metadata=db.metadata)
 with app.app_context():
     Base.prepare(db.engine, reflect=True)
     session = Session(bind=db.engine)
 
+Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user
 class User(ModelUser):
     is_authenticated = False 
     is_active = False 
     is_anonymous = False 
-    def get_id():
+    def get_id(self):
         return userid
+    def is_active(self):
+        return self.enabled
+    def is_anonymous(self):
+        return False
 
 UserRole = Base.classes.user_role
 Role = Base.classes.role
+
 Base.classes.survey.__str__ = obj_name
 Survey = Base.classes.survey
+
+CompUser = Base.classes.comp_user
+
 Base.classes.survey_question_type.__str__ = obj_name
 SurveyQuestionType = Base.classes.survey_question_type
+
+Base.classes.survey_question_category.__str__ = obj_name
+SurveyQuestionCategory = Base.classes.survey_question_category
+
 Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
+Base.classes.survey_answer.__str__ = obj_name_survey_answer
 SurveyAnswer = Base.classes.survey_answer
 SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
 SurveyToken = Base.classes.survey_token
@@ -70,16 +93,6 @@ class ReadOnlyModelView(ModelView):
     can_edit = False
     can_delete = False 
     can_view_details = True
-class UserModelView(ReadOnlyModelView):
-    column_searchable_list = ('email','firstname','lastname')
-    column_filters = ('firstname', 'lastname', 'email', 'enabled')
-    #can_export = True
-    #export_types = ['csv', 'xlsx']
-class SurveyQuestionModelView(ReadOnlyModelView):
-    column_searchable_list = ('name','question')
-    #column_filters = ('survey_id')
-    #can_export = True
-    #export_types = ['csv', 'xlsx']
 
 ###################################################################
 ## AUTHENTICATION
@@ -98,46 +111,91 @@ def index():
     '''This is the route for the Home Page.'''
     return render_template('index.html', title='Genome People')
 
+class UserModelView(ReadOnlyModelView):
+    column_searchable_list = ('email','firstname','lastname')
+    column_filters = ('firstname', 'lastname', 'email', 'enabled')
+    #can_export = True
+    #export_types = ['csv', 'xlsx']
 
 # GET /admin/
-# Create admin with custom base template
-admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4')
+class MyAdminIndexView(flask_admin.AdminIndexView):
+    def is_accessiblexx(self):
+        return current_user.is_authenticated()
+admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView())
 # Add views for CRUD
-admin.add_view(UserModelView(ModelUser, db.session, category='Menu'))
-admin.add_view(ModelView(Role, db.session, category='Menu'))
-admin.add_view(ModelView(UserRole, db.session, category='Menu'))
-admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Menu'))
-admin.add_view(ModelView(Survey, db.session, category='Menu'))
-admin.add_view(SurveyQuestionModelView(SurveyQuestion, db.session, category='Menu'))
-admin.add_view(ReadOnlyModelView(SurveyAnswer, db.session, category='Menu'))
-admin.add_view(ReadOnlyModelView(SurveyAnswerAnalysis, db.session, category='Menu'))
+admin.add_view(UserModelView(ModelUser, db.session, category='Users/Roles'))
+admin.add_view(ModelView(Role, db.session, category='Users/Roles'))
+admin.add_view(ModelView(UserRole, db.session, category='Users/Roles'))
+
 
 ###################################################################
-## SURVEY ROUTES
+## COMP MGR
 
+class CompUserView(ModelView):
+    can_export = True
+    export_types = ['csv', 'xlsx']
+admin.add_view(CompUserView(CompUser, db.session, category='Comp Mgr'))
+
+###################################################################
+## SURVEY
+
+# admin
+admin.add_view(ModelView(Survey, db.session, category='Survey'))
+class SurveyQuestionModelView(ModelView):
+    column_searchable_list = ['name','question']
+    column_filters = ['survey','survey_question_category']
+    column_editable_list = ['name','question','survey','survey_question_category','survey_question_type']
+    can_export = True
+    export_types = ['csv', 'xlsx']
+admin.add_view(SurveyQuestionModelView(SurveyQuestion, db.session, category='Survey'))
+admin.add_view(ModelView(SurveyQuestionCategory, db.session, category='Survey'))
+admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Survey'))
+class SurveyAnswerModelView(ReadOnlyModelView):
+    column_filters = ['survey_question.survey','survey_question','user']
+    can_export = True
+    export_types = ['csv', 'xlsx']
+admin.add_view(SurveyAnswerModelView(SurveyAnswer, db.session, category='Survey'))
+class SurveyAnswerAnalysisModelView(ReadOnlyModelView):
+    column_filters = ['survey_answer.survey_question.survey','survey_answer.survey_question']
+    can_export = True
+    export_types = ['csv', 'xlsx']
+admin.add_view(SurveyAnswerAnalysisModelView(SurveyAnswerAnalysis, db.session, category='Survey'))
+
+# main frontend
 @app.route('/survey', methods=['GET', 'POST'])
 def survey():
     """Route to the survey."""
     form = SurveyForm()
 
-    query = db.session.query(SurveyQuestion.category.distinct().label("category"))
-    categories = [row.category for row in query.all()]
+    # TODO: use surveyid
+    query = db.session.query(SurveyQuestionCategory)
+    categories = [row.name for row in query.all()]
 
-    surveys = db.session.query(Survey).filter(Survey.enabled == "t").all()
+    surveys = db.session.query(Survey).filter(Survey.enabled == True).all()
 
-    return render_template('survey.html', title='Survey', form=form, surveys=surveys, categories=categories)
+    return render_template('survey/index.html', title='Survey', form=form, surveys=surveys, categories=categories)
 
+# route called by Ajax method
 @app.route('/survey/save', methods=['POST'])
-def save():
-    """Route called by Ajax method"""
-    ans = SurveyAnswer(survey_id=2)
+def survey_save():
+    # TODO: use surveyid
+    userid=3446
     for k, v in request.form.items():
         if k.startswith('q'):
-            setattr(ans, k, v)
-    db.session.add(ans)
-    db.session.commit()
+            qid = int(k[1:])
+            db.session.execute(
+                delete(SurveyAnswer).
+                where(SurveyAnswer.survey_question_id==qid, SurveyAnswer.user_id==userid)
+            )
+            db.session.commit()
+            db.session.execute(
+                insert(SurveyAnswer).
+                values(user_id=userid, survey_question_id=qid, answer=v)
+            )
+            db.session.commit()
     return jsonify({'status': 'ok'})
 
+# utility functions
 def getQuestions():
     '''Builds list of strs representing in DB defined questions as WTForm-elements.
     (This is some nice and hacky code generation while the program runs.)'''
@@ -154,22 +212,48 @@ def getQuestions():
         # options in db are single_line_text, multi_line_text, dropdown, multi_select, likert
         if qtype == "StringField":
             qslist.append(
-                f'q{(q.id):02} = {qtype}("{q.question}", description="{q.category}")')
+                f'q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
+        if qtype == "TextAreaField":
+            qslist.append(
+                f'q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
         elif qtype == "RadioField" or qtype == "SelectField":
             qslist.append(
-                f'q{(q.id):02} = {qtype}("{q.question}", choices={repr(choices)}, description="{q.category}")')
+                f'q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, description="{q.survey_question_category.name}")')
         elif qtype == "SelectMultipleField" or qtype == "MultiCheckboxField":
             qslist.append(
-                f'q{(q.id):02} = {qtype}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.category}")')
+                f'q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.survey_question_category.name}")')
     return qslist
 
 def generateChoices(q):
     '''Generates list of tuples from answer choices to a given question.'''
-    items = q.__dict__.items()
-    l = [(k, v) for k, v in items if k.startswith(
-        "ans") and v != '' and v != None]
-    l.sort()
-    return l
+    qname = q.survey_question_type.name
+    if qname == 'Likert Scale':
+        return [
+            ('1','Strongly Disagree'),
+            ('2','Disagree'),
+            ('3','Neutral'),
+            ('4','Agree'),
+            ('5','Strongly Agree')
+            ]
+    elif qname == 'Likert Scale (10 options)':
+        return [
+            ('1','Strongly Disagree'),
+            ('2','-'),
+            ('3','-'),
+            ('4','-'),
+            ('5','-'),
+            ('6','-'),
+            ('7','-'),
+            ('8','-'),
+            ('9','-'),
+            ('10','Strongly Agree')
+            ]
+    else :
+        items = q.__dict__.items()
+        l = [(k, v) for k, v in items if k.startswith(
+            "ans") and v != '' and v != None]
+        l.sort()
+        return l
 
 class SurveyForm(FlaskForm):
     """The final survey form. Generated on the fly from questions in the DB."""
@@ -178,5 +262,16 @@ class SurveyForm(FlaskForm):
     for qs in qslist:
         exec(qs)
     submit = SubmitField('Send')
+
+@app.route('/survey', methods=['GET', 'POST'])
+def score_answers():
+    answers = session.query(SurveyAnswer).join(SurveyQuestion.survey_question_type).all()
+    for i, a in enumerate(answers):
+        qtype = a.survey_question_type.wtform_field
+
+
+
+
+
 
 
