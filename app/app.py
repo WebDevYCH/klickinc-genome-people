@@ -1,6 +1,7 @@
 import datetime
 import os
 import os.path as op
+import requests
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -14,7 +15,9 @@ from wtforms import StringField, PasswordField, BooleanField, SubmitField, Selec
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update
+from sqlalchemy import MetaData, delete, insert, update, or_, and_
+
+from google.cloud import language_v1
 
 import config
 
@@ -263,15 +266,90 @@ class SurveyForm(FlaskForm):
         exec(qs)
     submit = SubmitField('Send')
 
-@app.route('/survey', methods=['GET', 'POST'])
+def retrieveEntitySentiment(line):
+    apiKey = app.config['GOOGLE_SENTIMENT_APIKEY']
+    apiEndpoint = 'https://language.googleapis.com/v1/documents:analyzeEntitySentiment?key=' + apiKey
+    nlData = {
+        'document': {
+            'language': 'en-us',
+            'type': 'PLAIN_TEXT',
+            'content': line
+        },
+        'encodingType': 'UTF8'
+    }
+    # Makes the API call.
+    response = requests.post(apiEndpoint, json=nlData)
+    return response.json()
+
+def retrieveOverallSentiment(line):
+    apiKey = app.config['GOOGLE_SENTIMENT_APIKEY']
+    apiEndpoint = 'https://language.googleapis.com/v1/documents:analyzeSentiment?key=' + apiKey
+    # Creates a JSON request, with text string, language, type and encoding
+    nlData = {
+        'document': {
+            'language': 'en-us',
+            'type': 'PLAIN_TEXT',
+            'content': line
+        },
+        'encodingType': 'UTF8'
+    }
+    # Makes the API call.
+    response = requests.post(apiEndpoint, json=nlData)
+    return response.json()
+
+def get_sentiment():
+    return ""
+
+@app.route('/survey/score')
 def score_answers():
-    answers = session.query(SurveyAnswer).join(SurveyQuestion.survey_question_type).all()
-    for i, a in enumerate(answers):
-        qtype = a.survey_question_type.wtform_field
+
+    retstring = ""
+
+    answers = session.query(SurveyAnswer).\
+        join(SurveyQuestion).\
+        join(SurveyQuestionType).\
+        all()
+    for a in answers:
+        if a.survey_question.survey_question_type.wtform_field in ('StringField','TextAreaField'):
+            db.session.execute(
+                delete(SurveyAnswerAnalysis).
+                where(SurveyAnswerAnalysis.survey_answer_id==a.id)
+            )
+            db.session.commit()
+
+            if (a.answer and a.answer != ''):
+                retstring += f"<br>text: {a.answer}<br>"
+                sentiment = retrieveOverallSentiment(a.answer)
+                retstring += f"  score={sentiment['documentSentiment']['score']} "
+                retstring += f"  magnitude={sentiment['documentSentiment']['magnitude']}<br>"
+                db.session.execute(
+                    insert(SurveyAnswerAnalysis).
+                    values(survey_answer_id=a.id, 
+                        topic='OVERALL', 
+                        topic_salience=1.0,
+                        sentiment_score=sentiment['documentSentiment']['score'],
+                        sentiment_magnitude=sentiment['documentSentiment']['magnitude'])
+                )
+                sentiment = retrieveEntitySentiment(a.answer)
+                for e in sentiment['entities']:
+                    retstring += f"entity: {e['name']} "
+                    #retstring += f"entity: {e} "
+                    retstring += f"  score={e['sentiment']['score']} "
+                    retstring += f"  magnitude={e['sentiment']['magnitude']}"
+                    retstring += "<br>\n"
+                    db.session.execute(
+                        insert(SurveyAnswerAnalysis).
+                        values(survey_answer_id=a.id, 
+                            topic=e['name'], 
+                            topic_salience=e['salience'], 
+                            sentiment_score=e['sentiment']['score'],
+                            sentiment_magnitude=e['sentiment']['magnitude'])
+                    )
 
 
 
+            db.session.commit()
 
-
+    return retstring
 
 
