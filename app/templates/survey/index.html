@@ -1,55 +1,55 @@
 {% macro render_form(form, category) %}
-{% for field in form %}
-<!-- {% if field.description == category %} -->
-{% if field.type == "CSRFTokenField" %}
-<p>
-    {{ field }}
-</p>
-{% elif field.type == "SubmitField" %}
-<p>
-    {{ field (class_="btn btn-primary")}}
-</p>
-{% elif field.type == "MultiCheckboxField" %}
-<div class="input-group">
-    <p>
-        {{ field.label }}</br>
-        {% for value, label, _ in field.iter_choices() %}
-        <label class="checkbox-inline">
-            <input type="checkbox" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
-        </label>
-        {% endfor %}
-        {% for error in field.errors %}
-        <span style="color: red;">[{{ error }}]</span>
-        {% endfor %}
-    </p>
-</div>
-{% elif field.type == "RadioField" %}
-<div class="input-group">
-    <p>
-        {{ field.label }}</br>
-        {% for value, label, _ in field.iter_choices() %}
-        <label class="radio-inline">
-            <input type="radio" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
-        </label>
-        {% endfor %}
-        {% for error in field.errors %}
-        <span style="color: red;">[{{ error }}]</span>
-        {% endfor %}
-    </p>
-</div>
-{% else %}
-<div class="input-group">
-    <p>
-        {{ field.label }}
-        {{ field (class_="form-control")}}
-        {% for error in field.errors %}
-        <span style="color: red;">[{{ error }}]</span>
-        {% endfor %}
-    </p>
-</div>
-{% endif %}
-<!-- {% endif %} -->
-{% endfor %}
+    {% for field in form %}
+    <!-- {% if field.description == category %} -->
+    {% if field.type == "CSRFTokenField" %}
+        <p>
+            {{ field }}
+        </p>
+    {% elif field.type == "SubmitField" %}
+        <p>
+            {{ field (class_="btn btn-primary")}}
+        </p>
+    {% elif field.type == "MultiCheckboxField" %}
+        <div class="input-group">
+            <p>
+                {{ field.label }}</br>
+                {% for value, label, _ in field.iter_choices() %}
+                <label class="checkbox-inline">
+                    <input type="checkbox" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
+                </label>
+                {% endfor %}
+                {% for error in field.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+        </div>
+    {% elif field.type == "RadioField" %}
+        <div class="input-group">
+            <p>
+                {{ field.label }}</br>
+                {% for value, label, _ in field.iter_choices() %}
+                <label class="radio-inline">
+                    <input type="radio" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
+                </label>
+                {% endfor %}
+                {% for error in field.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+        </div>
+    {% else %}
+        <div class="input-group">
+            <p>
+                {{ field.label }}
+                {{ field (class_="form-control")}}
+                {% for error in field.errors %}
+                <span style="color: red;">[{{ error }}]</span>
+                {% endfor %}
+            </p>
+        </div>
+    {% endif %}
+    <!-- {% endif %} -->
+    {% endfor %}
 {% endmacro %}
 
 
@@ -60,8 +60,7 @@
 
 <h1>Surveys</h1>
 <!-- Latest compiled and minified Bootstrap CSS -->
-<xxlink rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
-<form id="survey" action="" method="post">
+<form id="survey" action="/survey/save" method="post">
     {{ form.hidden_tag() }}
     <div class="container">
         <div class="panel-group" id="accordion">
@@ -71,7 +70,7 @@
                     <h4 class="panel-title">
                         <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion"
                             href="#accordion{{ loop.index }}">
-                            <h3>{{ survey.name }} ({{ survey.start_date }} - {{ survey.end_date }})</h3>
+                            <h3>{{ survey.name }}</h3>
                         </a>
                     </h4>
                 </div>
