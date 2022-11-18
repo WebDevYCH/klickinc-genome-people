@@ -12,7 +12,7 @@ from flask_admin.contrib.sqla import ModelView
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update, or_, and_
+from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
 
 from core import app, db, login_manager
 
@@ -30,19 +30,24 @@ def obj_name_survey_question(obj):
 def obj_name_survey_answer(obj):
     return f"{obj.survey_question.name} - {obj.answer}"
 
-Base = automap_base(metadata=db.metadata)
+Base = automap_base()
 with app.app_context():
-    Base.prepare(db.engine, reflect=True)
-    session = Session(bind=db.engine)
+    Base.prepare(autoload_with=db.engine, reflect=True)
+    session = Session(db.engine)
 
 Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user
 class User(ModelUser):
-    is_authenticated = False 
-    is_active = False 
+    def is_authenticated(self):
+        return self._authenticated
+    def has_roles(self, role):
+        if (self.employeetypeid==role):
+            return True
+        else:
+            return False
     is_anonymous = False 
     def get_id(self):
-        return userid
+        return self.userid
     def is_active(self):
         return self.enabled
     def is_anonymous(self):

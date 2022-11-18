@@ -4,7 +4,7 @@ import requests
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required, current_user
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
 
@@ -27,6 +27,11 @@ from model import Base, session, ReadOnlyModelView, \
 # admin
 admin.add_view(ModelView(Survey, db.session, category='Survey'))
 class SurveyQuestionModelView(ModelView):
+    def is_accessible(self):
+        if (current_user.has_roles('survey_admin')):
+            return True
+        else:
+            False
     column_searchable_list = ['name','question']
     column_filters = ['survey','survey_question_category']
     column_editable_list = ['name','question','survey','survey_question_category','survey_question_type']
@@ -36,11 +41,21 @@ admin.add_view(SurveyQuestionModelView(SurveyQuestion, db.session, category='Sur
 admin.add_view(ModelView(SurveyQuestionCategory, db.session, category='Survey'))
 admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Survey'))
 class SurveyAnswerModelView(ReadOnlyModelView):
+    def is_accessible(self):
+        if (current_user.has_roles('survey_admin')):
+            return True
+        else:
+            False
     column_filters = ['survey_question.survey','survey_question','user']
     can_export = True
     export_types = ['csv', 'xlsx']
 admin.add_view(SurveyAnswerModelView(SurveyAnswer, db.session, category='Survey'))
 class SurveyAnswerAnalysisModelView(ReadOnlyModelView):
+    def is_accessible(self):
+        if (current_user.has_roles('survey_admin')):
+            return True
+        else:
+            False
     column_filters = ['survey_answer.survey_question.survey','survey_answer.survey_question']
     can_export = True
     export_types = ['csv', 'xlsx']
@@ -48,6 +63,7 @@ admin.add_view(SurveyAnswerAnalysisModelView(SurveyAnswerAnalysis, db.session, c
 
 # main frontend
 @app.route('/survey', methods=['GET', 'POST'])
+@login_required
 def survey():
     """Route to the survey."""
     form = SurveyForm()
@@ -62,6 +78,7 @@ def survey():
 
 # route called by Ajax method
 @app.route('/survey/save', methods=['POST'])
+@login_required
 def survey_save():
     # TODO: use surveyid
     userid=3446
@@ -181,6 +198,7 @@ def retrieveOverallSentiment(line):
     return response.json()
 
 @app.route('/survey/score')
+@login_required
 def score_answers():
 
     retstring = ""

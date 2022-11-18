@@ -34,7 +34,7 @@
                     </div>
                 </form>
                 {% endif %}
-                {% if (current_user.is_authenticated and current_user.has_roles('Admin') or True) %}
+                {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                 <ul class="nav navbar-nav navbar-right">
                     <li>
                         <a href="{{ url_for('admin.index') }}">Admin Backend</a>
