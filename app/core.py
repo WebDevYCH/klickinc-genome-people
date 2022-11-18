@@ -5,18 +5,12 @@ import requests
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
+from flask_admin.contrib.sqla import ModelView
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
 import flask_admin
 import config
 
-# Configuration for Google authentication
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", None)  #set GOOGLE_CLIENT_ID=your_client_id
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", None)  #set GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_DISCOVERY_URL = (
-    "https://accounts.google.com/.well-known/openid-configuration"
-)
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 ###################################################################
 ## INITIALIZATION
 
@@ -28,7 +22,7 @@ Bootstrap(app)
 # login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
-login_manager.session_protection = 'strong'
+#login_manager.session_protection = 'strong'
 
 # Create db reference
 db = SQLAlchemy(app)
@@ -36,6 +30,21 @@ db.init_app(app)
 
 # Flask-Admin interfaces
 class MyAdminIndexView(flask_admin.AdminIndexView):
-    def is_accessiblexx(self):
-        return current_user.is_authenticated()
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('admin')
+
 admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView())
+
+# Customized admin/crud interfaces ensure there's at least basic authentication and permissions
+class AdminModelView(ModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('admin')
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login', next=request.url))
+ 
+class ReadOnlyModelView(AdminModelView):
+    can_create = False
+    can_edit = False
+    can_delete = False 
+    can_view_details = True
+

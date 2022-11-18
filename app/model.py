@@ -6,9 +6,8 @@ import requests
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
-from flask_login import LoginManager
+from flask_login import LoginManager,UserMixin
 import flask_admin
-from flask_admin.contrib.sqla import ModelView
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
@@ -37,27 +36,28 @@ with app.app_context():
 
 Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user
+UserRole = Base.classes.user_role
+Base.classes.role.__str__ = obj_name
+Role = Base.classes.role
 class User(ModelUser):
-    def is_authenticated(self):
-        return self._authenticated
-    def has_roles(self, role):
-        if (self.employeetypeid==role):
+    def has_roles(self, rolename):
+        for roles in db.session.query(Role).join(UserRole).\
+            where(UserRole.user_id==self.userid,Role.name==rolename).all():
             return True
-        else:
-            return False
-    is_anonymous = False 
-    def get_id(self):
-        return self.userid
+        return False
+    def is_authenticated(self):
+        return True
     def is_active(self):
         return self.enabled
     def is_anonymous(self):
         return False
+    def get_id(self):
+        return str(self.userid)
 
-UserRole = Base.classes.user_role
-Role = Base.classes.role
-
+# Compensation Manager
 CompUser = Base.classes.comp_user
 
+# Survey
 Base.classes.survey.__str__ = obj_name
 Survey = Base.classes.survey
 
@@ -73,11 +73,4 @@ Base.classes.survey_answer.__str__ = obj_name_survey_answer
 SurveyAnswer = Base.classes.survey_answer
 SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
 SurveyToken = Base.classes.survey_token
-
-# Customized admin interfaces
-class ReadOnlyModelView(ModelView):
-    can_create = False
-    can_edit = False
-    can_delete = False 
-    can_view_details = True
 
