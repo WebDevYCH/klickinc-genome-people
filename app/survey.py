@@ -6,7 +6,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, login_required, current_user
 import flask_admin
-from flask_admin.contrib.sqla import ModelView
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
@@ -17,45 +16,38 @@ from sqlalchemy import MetaData, delete, insert, update, or_, and_
 
 from google.cloud import language_v1
 
-from core import app, db, login_manager, admin
-from model import Base, session, ReadOnlyModelView, \
-    Survey, SurveyQuestion, SurveyAnswer, SurveyQuestionType, SurveyQuestionCategory, SurveyAnswerAnalysis
+from core import *
+from model import *
 
 ###################################################################
 ## SURVEY
 
 # admin
-admin.add_view(ModelView(Survey, db.session, category='Survey'))
-class SurveyQuestionModelView(ModelView):
+admin.add_view(AdminModelView(Survey, db.session, category='Survey'))
+
+class SurveyQuestionModelView(AdminModelView):
     def is_accessible(self):
-        if (current_user.has_roles('survey_admin')):
-            return True
-        else:
-            False
+        return current_user.is_authenticated and current_user.has_roles('survey_admin')
     column_searchable_list = ['name','question']
     column_filters = ['survey','survey_question_category']
     column_editable_list = ['name','question','survey','survey_question_category','survey_question_type']
     can_export = True
     export_types = ['csv', 'xlsx']
 admin.add_view(SurveyQuestionModelView(SurveyQuestion, db.session, category='Survey'))
-admin.add_view(ModelView(SurveyQuestionCategory, db.session, category='Survey'))
+admin.add_view(AdminModelView(SurveyQuestionCategory, db.session, category='Survey'))
 admin.add_view(ReadOnlyModelView(SurveyQuestionType, db.session, category='Survey'))
+
 class SurveyAnswerModelView(ReadOnlyModelView):
     def is_accessible(self):
-        if (current_user.has_roles('survey_admin')):
-            return True
-        else:
-            False
+        return current_user.is_authenticated and current_user.has_roles('survey_admin')
     column_filters = ['survey_question.survey','survey_question','user']
     can_export = True
     export_types = ['csv', 'xlsx']
 admin.add_view(SurveyAnswerModelView(SurveyAnswer, db.session, category='Survey'))
+
 class SurveyAnswerAnalysisModelView(ReadOnlyModelView):
     def is_accessible(self):
-        if (current_user.has_roles('survey_admin')):
-            return True
-        else:
-            False
+        return current_user.is_authenticated and current_user.has_roles('survey_admin')
     column_filters = ['survey_answer.survey_question.survey','survey_answer.survey_question']
     can_export = True
     export_types = ['csv', 'xlsx']
