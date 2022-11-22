@@ -1,0 +1,45 @@
+
+// -----------------------------------------------------------------------------
+// This file contains typography styles.
+// -----------------------------------------------------------------------------
+
+/*
+  Set up a decent box model on the root element
+*/
+
+html {
+  font-size: $rem-base;
+}
+
+/*
+  Basic typography style for copy text
+*/
+body {
+  // background: $body-bg;
+  // color: $body-color;
+  // font-family: $font-family-base;
+  // font-size: map-get($font-sizes, 'base');
+  // line-height: $line-height-base;
+  // font-weight: $font-weight-normal;
+}
+
+.genome-dashboard {
+
+	a:not(.genome-btn) {
+	  @include transition(color);
+	  color: $link-color;
+	  text-decoration: $link-decoration;
+
+	  &:hover {
+		 color: $link-hover-color;
+		 text-decoration: $link-hover-decoration;
+	  }
+	}
+
+	ul,
+	ol,
+	dl,
+	p {
+	  margin: 0;
+	}
+}

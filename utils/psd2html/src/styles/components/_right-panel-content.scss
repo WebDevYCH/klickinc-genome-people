@@ -1,0 +1,618 @@
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the right panel content.
+// -----------------------------------------------------------------------------
+
+.genome-dashboard {
+  .select-from-nav {
+    .active {
+      font-weight: bold;
+      color: red;
+    }
+  }
+
+  .tabset-navigation {
+    padding: 0.3rem 0.3rem 0;
+    margin-bottom: 1rem;
+
+    .selectr-selected {
+      border: 2px solid $blue;
+      padding: 1.1rem 4.8rem 1.1rem 1.4rem;
+
+      @include media(">=768px") {
+        padding: 1.1rem 3.5rem 1.1rem 1.4rem;
+        font-size: 1.5rem;
+      }
+
+      @include media(">=1024px") {
+        padding: 1.1rem 4.8rem 1.1rem 1.4rem;
+        font-size: 1.6rem;
+      }
+
+      &:before {
+        @include media(">=768px") {
+          right: 1rem;
+        }
+
+        @include media(">=1024px") {
+          right: 2rem;
+        }
+      }
+
+      &:after {
+        display: none;
+      }
+
+      .my-template {
+        display: flex;
+        align-items: center;
+
+        .ico-holder {
+          display: flex;
+          align-items: center;
+        }
+
+        img {
+          max-width: 1.9rem;
+          max-height: 1.4rem;
+          margin-right: 0.6rem;
+        }
+      }
+    }
+
+    .selectr-container.open .selectr-selected {
+      border-color: $blue $blue transparent $blue;
+    }
+
+    .selectr-options-container {
+      border-color: transparent $blue $blue;
+    }
+  }
+
+  .content-box {
+    background-color: $white;
+    padding: 1rem;
+    margin-bottom: 1rem;
+
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+
+      @include media(">=768px") {
+        display: block;
+      }
+
+      @include media(">=1024px") {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      h3 {
+        margin-right: 1.5rem;
+        margin-bottom: 0;
+      }
+    }
+
+    .view-more-btn {
+      font-size: 1.3rem;
+      line-height: 2.2rem;
+    }
+
+    .genom-info-btn {
+      font-size: 1.7rem;
+      color: $black !important;
+      line-height: 2.2rem;
+
+      &:hover {
+        color: $blue !important;
+      }
+    }
+
+    .links-list {
+      padding: 0;
+      margin: 0;
+      list-style: none;
+
+      li {
+        margin-bottom: 0.5rem;
+
+        &:last-of-type {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    img {
+      max-width: 100%;
+    }
+
+    h3 {
+      margin: 0 0 1rem;
+      font-size: 1.8rem;
+    }
+
+    .sub-title {
+      display: block;
+      font-size: 1.3rem;
+      color: #74757a;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      margin-bottom: 0.5rem;
+    }
+
+    .right-align {
+      text-align: right;
+    }
+
+    a:not(.genome-btn) {
+      color: $blue;
+
+      &:hover {
+        color: $black;
+      }
+    }
+
+    .link {
+      font-size: 1.5rem;
+    }
+  }
+
+  .alerts-item {
+    display: flex;
+    margin-bottom: 0.5rem;
+    align-items: flex-start;
+
+    &.error {
+      i {
+        color: #aa2327;
+      }
+    }
+
+    .icon {
+      padding-top: 0.2rem;
+      width: 2.8rem;
+      min-width: 2.8rem;
+    }
+
+    i {
+      color: #f0a13a;
+      font-size: 2rem;
+    }
+
+    .text {
+      width: calc(100% - 2.8rem);
+    }
+
+    strong {
+      display: block;
+      font-weight: normal;
+      font-size: 1.5rem;
+    }
+
+    .sub-title {
+      text-overflow: ellipsis;
+      max-width: 100%;
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      margin-bottom: 0;
+    }
+  }
+
+  .billability-row {
+    background-color: #d5d5d5;
+    height: 1.5rem;
+    width: 100%;
+    margin-bottom: 1rem;
+
+    .billability-state {
+      height: 100%;
+      background-color: #e5e5e5;
+    }
+  }
+
+  .pinned-klicksters-notification {
+    text-align: center;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+
+    i {
+      font-size: 2.2rem;
+      margin-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    strong {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: normal;
+    }
+
+    span {
+      display: block;
+      font-size: 1.4rem;
+      color: #74757a;
+    }
+  }
+
+  .link-for-tab {
+    font-weight: bold;
+  }
+
+  .key-actions-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    li {
+      margin-bottom: 0.5rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    a {
+      display: flex;
+
+      &:hover {
+        strong, span {
+          color: #599e5f;
+        }
+      }
+    }
+
+    .icon-holder {
+      width: 3.4rem;
+      min-width: 3.4rem;
+    }
+
+    .text {
+      padding: 0 0 0 0.6rem;
+      width: calc(100% - 3.4rem);
+    }
+
+    span {
+      display: block;
+      color: $blue;
+      font-size: 1.3rem;
+      text-overflow: ellipsis;
+      max-width: 100%;
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: all 0.3s;
+    }
+
+    strong {
+      display: block;
+      font-weight: normal;
+      color: $body-color;
+      font-size: 1.2rem;
+      transition: all 0.3s;
+    }
+  }
+
+  .vacations-holidays-sub-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+
+    h4 {
+      margin: 0;
+      font-size: 1.6rem;
+    }
+
+    .sub-title {
+      margin-bottom: 0;
+    }
+  }
+
+  .checkbox-holder {
+    display: flex;
+    align-items: center;
+  }
+
+  .check-radio-country {
+    display: block;
+    margin: 0 0 0 1rem;
+    cursor: pointer;
+
+    [type="checkbox"]{
+      position:fixed;
+      left:0;
+      top:0;
+      opacity:0;
+      z-index: -1;
+    }
+
+    .fake-input{
+      width: 1.8rem;
+      height: 1.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      i {
+        font-size: 1.8rem;
+        color: #666;
+
+        &.icon-canada {
+          font-size: 2.2rem;
+          margin: -2px 0 0;
+        }
+      }
+    }
+
+    [type="checkbox"]:checked + .fake-input i {
+      color: $blue;
+    }
+
+    input:disabled + .fake-input,
+    input:disabled ~ .fake-label {
+      opacity: .5;
+    }
+  }
+
+  .holidays-list {
+    padding: 0;
+    margin: 0 0 2rem;
+    list-style: none;
+
+    li {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    .icon-calendar-full {
+      font-size: 1.6rem;
+      min-width: 1.6rem;
+    }
+
+    .text {
+      padding: 0 0 0 1rem;
+      width: 100%;
+    }
+
+    .name {
+      display: flex;
+      align-items: flex-start;
+      // flex-wrap: wrap;
+      margin-bottom: 0.3rem;
+
+      strong {
+        font-weight: normal;
+        margin-right: 1.5rem;
+      }
+    }
+
+    .disabled {
+      display: none;
+    }
+
+    .disabled + i {
+      padding-left: 0;
+
+      &:after {
+        display: none;
+      }
+    }
+
+    i + i {
+      position: relative;
+      padding-left: 20px;
+
+      &:after {
+        content: '/';
+        font-size: 22px;
+        font-weight: bold;
+        position: absolute;
+        top: -1px;
+        left: 4px;
+      }
+
+      &.icon-canada {
+        &:after {
+          left: 8px;
+        }
+      }
+    }
+
+    .icon-canada {
+      font-size: 2.0rem;
+      line-height: 1.6rem;
+      margin: -1px 0 0;
+    }
+
+    .icon-usa {
+      line-height: 1.6rem;
+    }
+
+    .date {
+      display: block;
+      font-size: 1.4rem;
+      color: #74757a;
+    }
+  }
+
+  .vacation-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    li {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    .user-photo {
+      width: 3.6rem;
+      min-width: 3.6rem;
+      height: 3.6rem;
+      border-radius: 50%;
+      overflow: hidden;
+    }
+
+    .user-info {
+      width: 100%;
+      padding: 0 0 0 1rem;
+    }
+
+    a {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+      display: inline-block;
+    }
+
+    span {
+      display: block;
+      font-size: 1.4rem;
+    }
+  }
+
+  .team-changes-list {
+    padding: 0;
+    margin: 0 0 1rem;
+    list-style: none;
+
+    li {
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+  }
+
+  .user-personal-box {
+    width: 100%;
+    display: flex;
+    align-items: center;
+
+    .photo {
+      width: 3.6rem;
+      min-width: 3.6rem;
+      height: 3.6rem;
+      border-radius: 50%;
+      overflow: hidden;
+      background-image: url(../images/bg-user.png);
+      background-size: cover;
+      background-position: 50% 50%;
+    }
+
+    .inner-text {
+      width: 100%;
+      padding: 0 0 0 1rem;
+    }
+
+    a {
+      display: inline-block;
+      margin-bottom: 0.5rem;
+    }
+
+    span, strong {
+      display: block;
+      font-size: 1.2rem;
+    }
+  }
+
+  .my-team-list {
+    padding: 0 0 0 2rem;
+    margin: 0;
+    list-style: none;
+
+    li {
+      position: relative;
+      margin-bottom: 1rem;
+
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+
+    .user-personal-box {
+      .photo {
+        border: 2px solid $blue;
+      }
+
+      &.state-02 {
+        .photo {
+          border-color: #ea952b;
+        }
+      }
+    }
+
+    .active {
+      .opener {
+        &:after {
+          content: $icon-minus;
+        }
+      }
+    }
+
+    .slide {
+      padding: 0 0 0 1.5rem;
+
+      .user-personal-box {
+        margin: 1rem 0 0;
+      }
+    }
+
+    .has-open-close {
+      .opener {
+        display: block;
+      }
+    }
+
+    .opener {
+      position: absolute;
+      top: 1.2rem;
+      left: -1.9rem;
+      width: 1.4rem;
+      height: 1.4rem;
+      border: 1px solid $body-color;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: $body-color !important;
+      font-size: 1.2rem;
+      line-height: 1;
+      display: none;
+
+      &:after {
+        font-family: $icomoon-font-family;
+        content: $icon-plus;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+
+
+
+
+
+
+
+
+}

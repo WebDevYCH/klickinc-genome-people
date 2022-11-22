@@ -1,0 +1,136 @@
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the search component.
+// -----------------------------------------------------------------------------
+
+.genome-search-component {
+	position: relative;
+
+	.btn-clear {
+		display: none;
+    color: #000 !important;
+    position: absolute;
+    top: 50%;
+    right: 4.5rem;
+    transform: translate(0, -50%);
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+    margin-top: 1px;
+
+    i {
+      font-weight: bold;
+    }
+	}
+
+	.hidden-item {
+		position: absolute;
+		top: 0;
+		left: -9999px;
+		width: 100%;
+	}
+
+	.error-message {
+		display: none;
+	}
+
+	.search-drop {
+		position: absolute;
+		top: 100%;
+		left: 0;
+		width: 100%;
+		background: $body-bg;
+		padding: 10px 10px 0;
+		display: none;
+    box-shadow: 0px 4px 5px 1px rgba(0,0,0,0.5);
+    max-height: 230px;
+    overflow: auto;
+	}
+
+  .search-drop-list {
+    padding: 0;
+    margin: 0;
+    list-style: none;
+
+    li {
+      border-bottom: 1px solid $white;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+    }
+
+    a {
+      display: flex;
+      width: 100%;
+      color: $body-color;
+
+      &:hover {
+        color: $blue;
+      }
+    }
+
+    .genome-user-ava {
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+    }
+
+    .genome-user-name {
+      font-size: 1.4rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .genome-user-position {
+      font-size: 1.2rem;
+    }
+  }
+
+	.search-holder {
+	  margin-bottom: 1rem;
+	  position: relative;
+	  background-color: #f4f4f4;
+	  border-radius: 0.5rem 0.5rem 0 0;
+
+    &.no-empty {
+      .btn-clear {
+        display: block;
+      }
+    }
+
+    &.show-drop {
+      .icon-chevron-down{
+        transform: rotate(180deg) translate(0, 50%);
+        margin-top: 5px;
+      }
+
+      .search-drop {
+        display: block;
+      }
+
+      .search-input {
+        border-color: $blue;
+      }
+    }
+
+	  .search-input {
+      background-color: transparent;
+      border: 2px solid #f4f4f4;
+      border-bottom: 2px solid #bbbbbb;
+      padding: 1.3rem 6rem 1.3rem 1.5rem;
+      position: relative;
+      z-index: 2;
+      border-radius: 0.5rem 0.5rem 0 0;
+	  }
+
+	  .icon-chevron-down {
+      position: absolute;
+      top: 50%;
+      transform: translate(0, -50%);
+      right: 2rem;
+      z-index: 1;
+      transition: all 0.3s;
+      width: 16px;
+      height: 10px;
+      margin-top: -4px;
+	  }
+	}
+}

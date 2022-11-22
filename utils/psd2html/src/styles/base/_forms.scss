@@ -1,0 +1,257 @@
+// stylelint-disable selector-no-qualifying-type, selector-max-compound-selectors
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the form elements of the site
+// -----------------------------------------------------------------------------
+
+input[type='text'],
+input[type='email'],
+input[type='tel'],
+textarea {
+  @include transition(border-color);
+  border: 1px solid currentColor;
+  background-color: transparent;
+  width: 100%;
+  min-width: 0;
+  padding: 1.2rem 2.4rem;
+  border-radius: 0;
+  -webkit-appearance: none;
+
+  &:focus,
+  &:hover {
+    box-shadow: none;
+    outline: none;
+  }
+}
+
+
+.signup-form {
+
+  span {
+    display: inline-block;
+    font-size: 22px;
+    line-height: 1.4;
+    font-weight: 600;
+    margin: 0 0 16px;
+
+    @include media('>=tablet') {
+      margin: 0 0 20px;
+    }
+
+    @include media('>=desktop-xl') {
+      font-size: 24px;
+      margin: 0 0 28px;
+    }
+
+    @include media('>=1400px') {
+      font-size: 30px;
+      margin: 0 0 38px;
+    }
+  }
+
+  .input-element {
+    position: relative;
+  }
+
+  button {
+    position: absolute;
+    top: 6px;
+    bottom: 6px;
+    right: 6px;
+    background: #F7961D;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    font-size: 16px;
+    color: #281803;
+    min-width: 130px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 16px;
+    cursor: pointer;
+
+    @include media('>=tablet') {
+      min-width: 140px;
+    }
+
+    span {
+      margin: 0;
+      line-height: 1;
+      font-size: 20px;
+      display: inline-block;
+      padding-left: 16px;
+    }
+  }
+
+  input[type=email] {
+    height: 64px;
+    background: white;
+    border-radius: 80px;
+    font-size: 14px;
+    line-height: 1.375;
+    padding: 8px 150px 8px 23px;
+    letter-spacing: 0.1px;
+    text-overflow: ellipsis;
+
+    @include media('>=tablet') {
+      font-size: 16px;
+      padding: 8px 150px 8px 20px;
+    }
+
+    @include media('>=desktop') {
+      padding: 8px 150px 8px 28px;
+    }
+  }
+}
+
+.required-text {
+  display: block;
+  margin: 0 0 30px;
+  font-size: 18px;
+
+  @include media('>=tablet') {
+    margin: 0 0 48px;
+  }
+
+  @include media('>=laptop') {
+    margin: 0 0 64px;
+  }
+}
+
+.contact-form {
+  margin: 0 0 80px;
+
+  @include media('>=laptop') {
+    margin: 0 0 190px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+
+    @include media('>=tablet') {
+      margin: 0 -8px;
+    }
+
+    @include media('>=laptop') {
+      margin: 0 -12px;
+    }
+  }
+
+  .column {
+    width: 100%;
+
+    @include media('>=tablet') {
+      flex: 0 0 auto;
+      width: 50%;
+      padding: 0 8px;
+    }
+
+    @include media('>=laptop') {
+      padding: 0 12px;
+    }
+
+    &:only-child {
+
+      @include media('>=tablet') {
+        width: 100%;
+      }
+    }
+  }
+
+  .btn {
+    cursor: pointer;
+
+    @include media('>=tablet') {
+      margin: 8px 0 0;
+    }
+
+    @include media('>=laptop') {
+      margin: 32px 0 0;
+    }
+  }
+}
+
+.form-group {
+  width: 100%;
+  font-size: 16px;
+  line-height: 1;
+  margin: 0 0 15px;
+
+  @include media('>=tablet') {
+    margin: 0 0 24px;
+  }
+
+  @include media('>=laptop') {
+    margin: 0 0 32px;
+  }
+
+  label {
+    display: block;
+    margin: 0 0 16px;
+    font-weight: $font-weight-semibold;
+
+    sup {
+      font-size: 90%;
+      color: $brand-color;
+    }
+  }
+}
+
+.input-area {
+  // position: relative;
+  border: 1px solid $form-decor;
+  border-radius: 70px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+
+  .invalid-area & {
+    border-color: $form-error-color;
+
+    .icon {
+      color: $form-error-color;
+    }
+  }
+
+  input[type='text'],
+  input[type='search'],
+  input[type='tel'],
+  input[type='email'] {
+    @include placeholder {
+     color: rgba($body-color, .5);
+    }
+    color: $body-color;
+    padding: 22px 0;
+    border: none;
+  }
+
+  .icon {
+    display: block;
+    width: 40px;
+    text-align: center;
+  }
+
+  .jcf-select {
+    border: none;
+    margin: 0;
+    flex-grow: 1;
+    height: 64px;
+    border-radius: 10px;
+
+    .jcf-select-text {
+      font-size: 16px;
+      line-height: 64px;
+      margin: 0 35px 0 0;
+    }
+
+    .jcf-select-opener {
+      background: none;
+      font-size: 30px;
+    }
+  }
+}

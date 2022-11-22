@@ -1,0 +1,157 @@
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the common layout of the site
+// -----------------------------------------------------------------------------
+
+.genome-wrapper {
+	width: 100%;
+	position: relative;
+	overflow: hidden;
+	min-height: 100vh;
+	background: $body-bg;
+  font-family: $font-family-base;
+	font-size: 1.6rem;
+	line-height: 1.2;
+  box-sizing: border-box;
+
+  *, *:before, *:after {
+    box-sizing: inherit;
+  }
+}
+
+.genome-dashboard {
+  @include media(">=768px") {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+  }
+}
+
+.dashboard-container {
+  @include media(">=768px") {
+    width: 100%;
+    display: flex;
+    align-items: stretch;
+  }
+}
+
+.genome-main-content {
+  width: 100%;
+
+  .inner-content {
+    padding: 15px;
+
+    @include media(">=768px") {
+      padding: 15px 10px;
+    }
+
+    @include media(">=1024px") {
+      padding: 45px 35px 35px;
+    }
+  }
+}
+
+.genome-right-panel {
+  background-color: $body-bg;
+
+  @include media(">=768px") {
+    width: 328px;
+    min-width: 328px;
+    border-left: 2px solid #d6d7db;
+  }
+
+  @include media(">=768px") {
+    width: 250px;
+    min-width: 250px;
+  }
+
+  @include media(">=1024px") {
+    width: 328px;
+    min-width: 328px;
+  }
+}
+
+.right-panel-content {
+  padding: 0 1rem 1rem;
+}
+
+.js-tab-hidden {
+  display: block !important;
+  left: -9999px !important;
+  position: absolute !important;
+  top: -9999px !important;
+}
+
+.genome-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: $blue;
+  color: $white;
+  padding: 1rem 2rem;
+  text-decoration: none;
+  margin-bottom: 1rem;
+  border-radius: 0.3rem;
+  transition: all 0.3s;
+
+  @include media(">=768px") {
+    padding: 0.5rem 0.7rem;
+    font-size: 1.4rem;
+  }
+
+  @include media(">=1024px") {
+    padding: 1rem 2rem;
+    font-size: 1.6rem;
+  }
+
+  &:hover {
+    background-color: darken($blue, 15%);
+  }
+}
+
+.mb-0 {
+  margin-bottom: 0 !important;
+}
+
+.mb-1 {
+  margin-bottom: 1rem !important;
+}
+
+.mb-2 {
+  margin-bottom: 2rem !important;
+}
+
+.genome-accessibility{
+  position:absolute;
+  left:-10000px;
+  top:auto;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+}
+
+.genome-accessibility:focus{
+  position:static;
+  width:auto;
+  height:auto;
+}
+
+.genome-visually-hidden {
+  position: absolute;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0,0,0,0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.hover-tooltip {
+  background-color: $white;
+  border: 1px solid $blue;
+  padding: 5px;
+  border-radius: 3px;
+  font-size: 1.4rem;
+}

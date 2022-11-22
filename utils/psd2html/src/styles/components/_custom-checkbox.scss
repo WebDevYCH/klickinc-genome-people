@@ -1,0 +1,62 @@
+.custom-check-radio {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+
+  .content-box & {
+    font-size: 1.4rem;
+  }
+
+  [type="checkbox"] {
+    position:fixed;
+    left:0;
+    top:0;
+    opacity:0;
+    z-index: -1;
+  }
+
+  .fake-label {
+    line-height: 1;
+  }
+
+  .fake-input {
+    display: inline-block;
+    width:16px;
+    height:16px;
+    border: 2px solid $blue;
+    background:#f8f8f8;
+    vertical-align: middle;
+    position: relative;
+    margin-right: 8px;
+  }
+
+  [type="checkbox"] + .fake-input:before{
+    content:'';
+    width:8px;
+    height:5px;
+    position:absolute;
+    top:50%;
+    left:50%;
+    border:2px solid $blue;
+    border-width:0 0 2px 2px;
+    opacity: 0;
+    -moz-transform: rotate(-45deg);
+    -ms-transform: rotate(-45deg);
+    -webkit-transform: rotate(-45deg);
+    transform: rotate(-45deg);
+    margin:-4px 0 0 -4px;
+  }
+
+  [type="checkbox"]:checked + .fake-input:before {
+    opacity:1;
+  }
+
+  [type="checkbox"]:checked ~ .fake-label {
+    color: $blue;
+  }
+
+  input:disabled + .fake-input,
+  input:disabled ~ .fake-label {
+    opacity: .5;
+  }
+}

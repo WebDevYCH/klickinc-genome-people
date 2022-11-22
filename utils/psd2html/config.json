@@ -1,0 +1,44 @@
+{
+  "src": "src",
+  "dest": "dist",
+  "debug": false,
+  "cache_boost": false,
+  "minimize": true,
+  "linters": false,
+  "svgSprite": false,
+  "webp": false,
+  "server": {
+    "open": true,
+    "port": 8072,
+    "index": "__routes.html"
+  },
+  "styles": {
+    "bundle": "style-genome",
+    "src": "styles",
+    "dest": "css",
+    "extension": "scss"
+  },
+  "scripts": {
+    "bundle": "app",
+    "src": "js",
+    "dest": "js",
+    "extension": "js"
+  },
+  "templates": {
+    "src": "views",
+    "dest": "./",
+    "extension": "html"
+  },
+  "static": {
+    "fonts": {
+      "src": "fonts"
+    },
+    "js": {
+      "src": "js/jquery",
+      "dest": "js"
+    },
+    "images": {
+      "src": "images"
+    }
+  }
+}
