@@ -6,21 +6,11 @@
 .genome-filter-bar {
   margin-bottom: 2rem;
 
-  @include media(">=1200px") {
+  @include media-breakpoint-up(xl) {
     display: flex;
     margin-left: -0.8rem;
     margin-right: -0.8rem;
     margin-bottom: 3.5rem;
-  }
-
-  .genome-filter-group {
-    margin: 0 0 15px;
-
-    @include media(">=1200px") {
-      width: 33.333%;
-      padding: 0 0.8rem;
-      margin: 0;
-    }
   }
 
   .filter-title {
@@ -37,7 +27,7 @@
   .set-to-today {
     font-size: 1.4rem;
     font-weight: normal;
-    color: $blue;
+    color: $primary;
     cursor: pointer;
 
     &:hover {
@@ -48,11 +38,11 @@
 
 .genome-control-group {
   .content-box & {
-    @include media(">=768px") {
+    @include media-breakpoint-up(md) {
       margin-bottom: 1rem;
     }
 
-    @include media(">=1024px") {
+    @include media-breakpoint-up(lg) {
       margin-bottom: 0;
     }
   }
@@ -65,11 +55,11 @@
   justify-content: space-between;
 
   .content-box & {
-    @include media(">=768px") {
+    @include media-breakpoint-up(md) {
       display: block;
     }
 
-    @include media(">=1024px") {
+    @include media-breakpoint-up(lg) {
       display: flex;
     }
   }

@@ -2,7 +2,6 @@
 // This file contains all @font-face declarations, if any.
 // -----------------------------------------------------------------------------
 
-
 // -----------------------------------------------------------------------------
 //  @Example usage of font-family mixin;
 //
@@ -32,4 +31,3 @@
 //    @include fontface('Second Font', '${LocalFontName}-#{$suffix}Italic', $weight, italic);
 //  }
 // -----------------------------------------------------------------------------
-

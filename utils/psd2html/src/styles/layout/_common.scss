@@ -2,12 +2,64 @@
 // This file contains all styles related to the common layout of the site
 // -----------------------------------------------------------------------------
 
+body {
+  background-color: $body-bg;
+}
+
+.wrapper {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+a {
+  text-decoration: none;
+}
+
+h1, .h1 {
+  font-size: 3.0rem !important;
+}
+
+h2, .h2 {
+  font-size: 2.5rem !important;
+}
+
+h3, .h3 {
+  font-size: 1.8rem !important;
+}
+
+h4, .h4 {
+  font-size: 1.6rem !important;
+}
+
+h5, .h5 {
+  font-size: 1.5rem !important;
+}
+
+h6, .h6 {
+  font-size: 1.5rem !important;
+}
+
+// skip links
+.accessibility {
+  position: absolute;
+  left: -10000px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+
+  &:focus {
+    position: static;
+    width: auto;
+    height: auto;
+  }
+}
+
 .genome-wrapper {
-	width: 100%;
 	position: relative;
 	overflow: hidden;
 	min-height: 100vh;
-	background: $body-bg;
   font-family: $font-family-base;
 	font-size: 1.6rem;
 	line-height: 1.2;
@@ -19,7 +71,7 @@
 }
 
 .genome-dashboard {
-  @include media(">=768px") {
+  @include media-breakpoint-up(md) {
     display: flex;
     align-items: stretch;
     min-height: 100vh;
@@ -27,51 +79,28 @@
 }
 
 .dashboard-container {
-  @include media(">=768px") {
+  @include media-breakpoint-up(md) {
     width: 100%;
     display: flex;
     align-items: stretch;
   }
 }
 
-.genome-main-content {
-  width: 100%;
-
-  .inner-content {
-    padding: 15px;
-
-    @include media(">=768px") {
-      padding: 15px 10px;
-    }
-
-    @include media(">=1024px") {
-      padding: 45px 35px 35px;
-    }
-  }
-}
-
 .genome-right-panel {
-  background-color: $body-bg;
 
-  @include media(">=768px") {
+  @include media-breakpoint-up(md) {
     width: 328px;
     min-width: 328px;
     border-left: 2px solid #d6d7db;
-  }
 
-  @include media(">=768px") {
     width: 250px;
     min-width: 250px;
   }
 
-  @include media(">=1024px") {
+  @include media-breakpoint-up(lg) {
     width: 328px;
     min-width: 328px;
   }
-}
-
-.right-panel-content {
-  padding: 0 1rem 1rem;
 }
 
 .js-tab-hidden {
@@ -81,43 +110,12 @@
   top: -9999px !important;
 }
 
-.genome-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background-color: $blue;
+.btn-primary {
   color: $white;
-  padding: 1rem 2rem;
-  text-decoration: none;
-  margin-bottom: 1rem;
-  border-radius: 0.3rem;
-  transition: all 0.3s;
-
-  @include media(">=768px") {
-    padding: 0.5rem 0.7rem;
-    font-size: 1.4rem;
-  }
-
-  @include media(">=1024px") {
-    padding: 1rem 2rem;
-    font-size: 1.6rem;
-  }
 
   &:hover {
-    background-color: darken($blue, 15%);
+    color: $white;
   }
-}
-
-.mb-0 {
-  margin-bottom: 0 !important;
-}
-
-.mb-1 {
-  margin-bottom: 1rem !important;
-}
-
-.mb-2 {
-  margin-bottom: 2rem !important;
 }
 
 .genome-accessibility{
@@ -150,7 +148,7 @@
 
 .hover-tooltip {
   background-color: $white;
-  border: 1px solid $blue;
+  border: 1px solid $primary;
   padding: 5px;
   border-radius: 3px;
   font-size: 1.4rem;

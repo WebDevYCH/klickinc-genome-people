@@ -426,9 +426,9 @@ const getModules = () => {
             options: {
               postcssOptions: {
                 plugins: {
-                  cssnano: config.minimize && isProduction ? {} : false,
+                  cssnano: config.minimizeCSS && isProduction ? {} : false,
                   perfectionist:
-                    config.minimize && isProduction
+                    config.minimizeCSS && isProduction
                       ? false
                       : {
                         cascade: false,
@@ -453,7 +453,7 @@ const getModules = () => {
           {
             loader: 'file-loader',
             options: {
-              name: '[path][name].[ext]',
+              name: '[path][name].[ext][query]',
               emitFile: false,
               publicPath: function (url) {
                 const { dest } = config.styles;
@@ -527,9 +527,10 @@ const getOptimization = () => {
 
   return {
     ...settings[settingsType],
+    minimize: config.minimizeJS,
     minimizer: [
       new TerserPlugin({
-        exclude: !config.minimize ? join(config.scripts.src, config.scripts.bundle) : undefined,
+        exclude: !config.minimizeJS ? join(config.scripts.src, config.scripts.bundle) : undefined,
         extractComments: false,
         terserOptions: {
           cache: true,
@@ -636,7 +637,9 @@ const getEntries = () => {
     const entryJsFile = join(config.scripts.src, `${config.scripts.bundle}.${config.scripts.extension}`);
     const entry = iterator.concat([getAssetPath(SRC, entryJsFile)]);
 
-    entries[config.scripts.bundle] = [...entry];
+    if (!config.scripts.static) {
+      entries[config.scripts.bundle] = [...entry];
+    }
   }
 
   if (config.styles) {

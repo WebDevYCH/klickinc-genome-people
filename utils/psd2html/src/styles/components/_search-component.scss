@@ -64,7 +64,7 @@
       color: $body-color;
 
       &:hover {
-        color: $blue;
+        color: $primary;
       }
     }
 
@@ -85,7 +85,6 @@
   }
 
 	.search-holder {
-	  margin-bottom: 1rem;
 	  position: relative;
 	  background-color: #f4f4f4;
 	  border-radius: 0.5rem 0.5rem 0 0;
@@ -107,7 +106,7 @@
       }
 
       .search-input {
-        border-color: $blue;
+        border-color: $primary;
       }
     }
 

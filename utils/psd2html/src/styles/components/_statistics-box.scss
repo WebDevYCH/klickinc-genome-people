@@ -4,10 +4,8 @@
 // -----------------------------------------------------------------------------
 
 .statistics-box {
-  background-color: $blue;
   color: $white;
   margin-left: -2px;
-  padding: 1.5rem;
 
   .title-row {
     display: flex;
@@ -29,11 +27,11 @@
     justify-content: space-between;
     align-items: stretch;
 
-    @include media(">=768px") {
+    @include media-breakpoint-up(md) {
       display: block;
     }
 
-    @include media(">=1024px") {
+    @include media-breakpoint-up(lg) {
       display: flex;
     }
   }
@@ -47,12 +45,12 @@
     text-align: center;
     padding: 0.5rem 1rem;
 
-    @include media(">=768px") {
+    @include media-breakpoint-up(md) {
       width: 100%;
       margin-bottom: 1rem;
     }
 
-    @include media(">=1024px") {
+    @include media-breakpoint-up(lg) {
       width: 48%;
       margin-bottom: 0;
     }

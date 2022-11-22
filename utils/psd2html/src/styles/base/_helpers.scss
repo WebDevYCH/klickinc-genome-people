@@ -1,39 +1,38 @@
-/**
- * Hide text while making it readable for screen readers
- * 1. Needed in WebKit-based browsers because of an implementation bug;
- *    See: https://code.google.com/p/chromium/issues/detail?id=457146
+/*
+ * Hide only visually, but have it available for screen readers:
+ * https://snook.ca/archives/html_and_css/hiding-content-for-accessibility
+ *
+ * 1. For long content, line feeds are not interpreted as spaces and small width
+ *    causes content to wrap 1 word per line:
+ *    https://medium.com/@jessebeach/beware-smushed-off-screen-accessible-text-5952a4c2cbfe
  */
-.hide-text {
-  overflow: hidden;
-  padding: 0; /* 1 */
-  text-indent: 101%;
-  white-space: nowrap;
-}
 
-
-/**
- * Hide element while making it readable for screen readers
- * Shamelessly borrowed from HTML5Boilerplate:
- * https://github.com/h5bp/html5-boilerplate/blob/master/src/css/main.css#L119-L133
- */
 .visually-hidden {
-  &:not(:focus):not(:active) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    border: 0;
-    padding: 0;
-    white-space: nowrap;
-    clip-path: inset(100%);
-    clip: rect(0 0 0 0);
-    overflow: hidden;
-  }
-
-  @at-root {
-    input[type="checkbox"]#{&},
-    input[type="radio"]#{&} {
-      @extend .visually-hidden:not(:focus):not(:active);
-    }
-  }
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
+
+/*
+ * Extends the .visually-hidden class to allow the element
+ * to be focusable when navigated to via the keyboard:
+ * https://www.drupal.org/node/897638
+ */
+
+.visually-hidden.focusable:active,
+.visually-hidden.focusable:focus {
+  clip: auto;
+  height: auto;
+  margin: 0;
+  overflow: visible;
+  position: static;
+  white-space: inherit;
+  width: auto;
+}
+

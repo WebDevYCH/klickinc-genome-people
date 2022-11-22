@@ -23,7 +23,7 @@
     display: inline-block;
     width:16px;
     height:16px;
-    border: 2px solid $blue;
+    border: 2px solid $primary;
     background:#f8f8f8;
     vertical-align: middle;
     position: relative;
@@ -37,7 +37,7 @@
     position:absolute;
     top:50%;
     left:50%;
-    border:2px solid $blue;
+    border:2px solid $primary;
     border-width:0 0 2px 2px;
     opacity: 0;
     -moz-transform: rotate(-45deg);
@@ -52,7 +52,7 @@
   }
 
   [type="checkbox"]:checked ~ .fake-label {
-    color: $blue;
+    color: $primary;
   }
 
   input:disabled + .fake-input,

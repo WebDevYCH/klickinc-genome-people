@@ -1,80 +1,87 @@
 <!DOCTYPE html>
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<title>Genome</title>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- page title -->
+    <title>Genome TB</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap" rel="stylesheet">
-		<script
-		src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
-		integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
-		crossorigin="anonymous"
-		referrerpolicy="no-referrer"
-		defer></script>
-		<script>window.jQuery || document.write('<script src="js/jquery-3.6.0.min.js" defer><\/script>')</script>
-	</head>
+    <!-- include jQuery library -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+      integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+      defer></script>
+    <!-- include jQuery library local file if cdn link doesn't work -->
+    <script>window.jQuery || document.write('<script src="js/jquery-3.6.0.min.js" defer><\/script>')</script>
+  </head>
 	<body>
     <noscript><div>Javascript must be enabled for the correct page display</div></noscript>
     <a class="genome-accessibility" href="#inner-content">Skip to Content</a>
-		<div class="genome-wrapper" id="genome-wrapper">
+		<div class="genome-wrapper w-100 bg-light" id="genome-wrapper">
 			<div class="genome-dashboard">
 				<div class="dashboard-container">
-          <div class="genome-main-content">
+          <div class="genome-main-content w-100">
             <header class="genome-header" style="height: 66px; background-color: #33383d; width: 100%;">
 
             </header>
-            <div class="inner-content" id="inner-content">
+            <div class="inner-content p-15 py-md-15 px-md-10 pt-xl-45 pb-xl-35 ps-xl-35 pe-xl-35" id="inner-content">
               <div class="genome-filter">
                 <div class="genome-filter-bar">
-                  <div class="genome-filter-group">
-                    <label class="filter-title" for="klickster-select">User:</label>
-                    <select id="klickster-select" data-filter-group="genome-user-name"  name="user-name-list">
-                      <option value="Aron Goldstein">Aron Goldstein</option>
-                      <option value="Alec Melkonian">Alec Melkonian</option>
-                      <option value="Brian O'Donnell">Brian O'Donnell</option>
-                      <option value="David Bowen">David Bowen</option>
-                      <option value="Destry Sulkes">Destry Sulkes</option>
-                      <option value="Jully Kim">Jully Kim</option>
-                      <option value="Keith Liu">Keith Liu</option>
-                      <option value="Lori Grant">Lori Grant</option>
-                      <option value="Peter Cordy">Peter Cordy</option>
-                      <option value="Peter Flaschner">Peter Flaschner</option>
-                      <option value="Ryan Slipakoff">Ryan Slipakoff</option>
-                      <option value="Sheryl Steinberg">Sheryl Steinberg</option>
-                      <option value="User name">User name</option>
-                    </select>
-                  </div>
-                  <div class="genome-filter-group">
-                    <label class="filter-title" for="unit-select">CST/Business Unit:</label>
-                    <select id="unit-select" data-filter-group="genome-user-position" name="user-position-list">
-                      <option value="Chairman & CEO">Chairman & CEO</option>
-                      <option value="Chief Operating Officer">Chief Operating Officer</option>
-                      <option value="Senior Vice President">Senior Vice President</option>
-                      <option value="Sales & Client Services">Sales & Client Services</option>
-                      <option value="Partner">Partner</option>
-                      <option value="Executive Vice President">Executive Vice President</option>
-                      <option value="Managing Director">Managing Director</option>
-                      <option value="Policy & Advocacy">Policy & Advocacy</option>
-                      <option value="Growth">Growth</option>
-                      <option value="Administrative Business Partner to Leerom Segal CEO">Administrative Business Partner to Leerom Segal CEO</option>
-                      <option value="EVP">EVP</option>
-                      <option value="Corporate Strategy">Corporate Strategy</option>
-                      <option value="CEO">CEO</option>
-                      <option value="Chairman Emeritus">Chairman Emeritus</option>
-                      <option value="Chief Transformation Officer">Chief Transformation Officer</option>
-                      <option value="Communications">Communications</option>
-                      <option value="User position">User position</option>
-                    </select>
-                  </div>
-                  <div class="genome-filter-group">
-                    <div class="sub-title-row">
-                      <label class="filter-title" for="datepicker">As Of:</label>
-                      <strong class="set-to-today">set to today</strong>
-                    </div>
-                    <div class="datepicker-holder">
+                  <div class="container-fluid">
+                    <div class="row">
+                      <div class="col-12 col-xl-4 mb-15 mb-xl-0">
+                        <label class="filter-title" for="klickster-select">User:</label>
+                        <select id="klickster-select" data-filter-group="genome-user-name"  name="user-name-list">
+                          <option value="Aron Goldstein">Aron Goldstein</option>
+                          <option value="Alec Melkonian">Alec Melkonian</option>
+                          <option value="Brian O'Donnell">Brian O'Donnell</option>
+                          <option value="David Bowen">David Bowen</option>
+                          <option value="Destry Sulkes">Destry Sulkes</option>
+                          <option value="Jully Kim">Jully Kim</option>
+                          <option value="Keith Liu">Keith Liu</option>
+                          <option value="Lori Grant">Lori Grant</option>
+                          <option value="Peter Cordy">Peter Cordy</option>
+                          <option value="Peter Flaschner">Peter Flaschner</option>
+                          <option value="Ryan Slipakoff">Ryan Slipakoff</option>
+                          <option value="Sheryl Steinberg">Sheryl Steinberg</option>
+                          <option value="User name">User name</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-xl-4 mb-15 mb-xl-0">
+                        <label class="filter-title" for="unit-select">CST/Business Unit:</label>
+                        <select id="unit-select" data-filter-group="genome-user-position" name="user-position-list">
+                          <option value="Chairman & CEO">Chairman & CEO</option>
+                          <option value="Chief Operating Officer">Chief Operating Officer</option>
+                          <option value="Senior Vice President">Senior Vice President</option>
+                          <option value="Sales & Client Services">Sales & Client Services</option>
+                          <option value="Partner">Partner</option>
+                          <option value="Executive Vice President">Executive Vice President</option>
+                          <option value="Managing Director">Managing Director</option>
+                          <option value="Policy & Advocacy">Policy & Advocacy</option>
+                          <option value="Growth">Growth</option>
+                          <option value="Administrative Business Partner to Leerom Segal CEO">Administrative Business Partner to Leerom Segal CEO</option>
+                          <option value="EVP">EVP</option>
+                          <option value="Corporate Strategy">Corporate Strategy</option>
+                          <option value="CEO">CEO</option>
+                          <option value="Chairman Emeritus">Chairman Emeritus</option>
+                          <option value="Chief Transformation Officer">Chief Transformation Officer</option>
+                          <option value="Communications">Communications</option>
+                          <option value="User position">User position</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-xl-4 mb-xl-0">
+                        <div class="sub-title-row">
+                          <label class="filter-title" for="datepicker">As Of:</label>
+                          <strong class="set-to-today">set to today</strong>
+                        </div>
+                        <div class="datepicker-holder">
 
-                      <input class="datepicker" id="datepicker" type="text">
+                          <input class="datepicker" id="datepicker" type="text">
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -667,8 +674,8 @@
               </div>
             </div>
           </div>
-          <div class="genome-right-panel">
-            <div class="statistics-box">
+          <div class="genome-right-panel bg-light">
+            <div class="statistics-box p-15 bg-primary">
               <div class="title-row">
                 <strong>Genome Hub</strong>
                 <a href="#" class="close-btn"><i class="icon-close"><em class="genome-visually-hidden">Close btn</em></i></a>
@@ -694,7 +701,7 @@
                 </div>
               </div>
             </div>
-            <div class="tabset-navigation">
+            <div class="tabset-navigation mb-10 pt-5 ps-5 pe-5">
               <label class="genome-visually-hidden" for="tabset-nav-select">Sidebar navigation</label>
               <select class="tabset" id="tabset-nav-select">
                 <option selected value="tab1-0"> Dashboard </option>
@@ -704,9 +711,9 @@
                 <option value="tab5-0" data-src="./images/insights-ico.png"> Insights & Alerts </option>
               </select>
             </div>
-            <div class="right-panel-content">
+            <div class="right-panel-content ps-10 pe-10 pb-10">
               <div class="genome-search-component">
-                <div class="search-holder">
+                <div class="search-holder mb-10">
                   <div class="field-holder">
                     <label class="genome-visually-hidden" for="search-input">Search component</label>
                     <input type="text" class="search-input" id="search-input" placeholder="Search for a Klickster">
@@ -755,7 +762,7 @@
               </div>
               <div class="tab-content">
                 <div id="tab1-0">
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <div class="title-row">
                       <h3>Team Insights & Alerts</h3>
 					            <a href="tab5-0" class="view-more-btn tabset-link">View more</a>
@@ -797,16 +804,16 @@
                       </div>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Cultivate Growth</h3>
                     <div>
-                      <a href="#" class="genome-btn">Visit KlickU</a>
+                      <a href="#" class="btn btn-primary mb-10">Visit KlickU</a>
                     </div>
                     <div>
-                      <a href="#" class="genome-btn mb-0">Linked In Learning</a>
+                      <a href="#" class="btn btn-primary">Linked In Learning</a>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <div class="title-row">
                       <div>
                         <h3>Cultivate Performance</h3>
@@ -815,10 +822,10 @@
                       <a href="tab4-0" class="view-more-btn tabset-link">View more</a>
                     </div>
                     <div>
-                      <a href="#" class="genome-btn">Visit Lattice</a>
+                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
                     </div>
                     <div>
-                      <a href="#" class="genome-btn">Cultivate Performance Portal</a>
+                      <a href="#" class="btn btn-primary mb-10">Cultivate Performance Portal</a>
                     </div>
                     <ul class="key-actions-list">
                       <li>
@@ -856,13 +863,13 @@
                       </li>
                     </ul>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <div class="title-row">
                       <h3>Me & My Team</h3>
                       <a href="tab3-0" class="view-more-btn tabset-link">View team</a>
                     </div>
-                    <h4 class="mb-1">My Info</h4>
-                    <div class="mb-2">
+                    <h4 class="mb-10">My Info</h4>
+                    <div class="mb-20">
                       <div class="user-personal-box">
                         <div class="photo">
                           <img src="images/ava01.png" alt="ava-user01">
@@ -969,7 +976,7 @@
                         <span class="sub-title">In the next 90 days</span>
                       </div>
                     </div>
-                    <ul class="vacation-list mb-2">
+                    <ul class="vacation-list mb-20">
                       <li>
                         <div class="user-photo">
                           <img src="images/ava01.png" alt="ava-user01">
@@ -1020,7 +1027,7 @@
                   </div>
                 </div>
                 <div id="tab3-0">
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Team Vacations/Holidays</h3>
                     <div class="vacations-holidays-sub-title">
                       <div>
@@ -1130,7 +1137,7 @@
                       </li>
                     </ul>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Team Changes</h3>
                     <ul class="team-changes-list">
                       <li>
@@ -1162,9 +1169,9 @@
                       <a class="link" href="#">View team changes report</a>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>My Info</h3>
-                    <div class="mb-2">
+                    <div class="mb-20">
                       <div class="user-personal-box">
                         <div class="photo">
                           <img src="images/ava01.png" alt="ava-user01">
@@ -1264,19 +1271,19 @@
                   </div>
                 </div>
                 <div id="tab4-0">
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <img src="images/image-01.jpg" alt="image description">
                   </div>
                   <div class="content-box">
                     <h3>Key Links</h3>
                     <div>
-                      <a href="#" class="genome-btn">Visit Lattice</a>
+                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
                     </div>
                     <div>
-                      <a href="#" class="genome-btn mb-0">Cultivate Performance Portal</a>
+                      <a href="#" class="btn btn-primary">Cultivate Performance Portal</a>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Klickster Resources</h3>
                     <ul class="links-list">
                       <li><a href="#">About Cultivate</a></li>
@@ -1285,7 +1292,7 @@
                       <li><a href="#">Lattice University</a></li>
                     </ul>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Manager Resources</h3>
                     <ul class="links-list">
                       <li><a href="#">Cultivate Performance for Leaders</a></li>
@@ -1293,7 +1300,7 @@
                       <li><a href="#">Have an OKR Check-in Conversation</a></li>
                     </ul>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <div class="title-row">
                       <h3>Key Actions</h3>
                       <a title="Tooltip text goes here" href="#" class="genom-info-btn"><i class="icon-info"></i></a>
@@ -1336,7 +1343,7 @@
                   </div>
                 </div>
                 <div id="tab5-0">
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Time Tracking</h3>
                     <span class="sub-title">These users are overdue in their DP</span>
                     <p>No alerts</p>
@@ -1344,7 +1351,7 @@
                       <a class="link" href="#">View full org report</a>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Vacation</h3>
                     <div class="alerts-item">
                       <div class="icon">
@@ -1368,7 +1375,7 @@
                       <a class="link" href="#">View full org in vacation tool</a>
                     </div>
                   </div>
-                  <div class="content-box">
+                  <div class="content-box p-10 mb-10 bg-white">
                     <h3>Billability</h3>
                     <div class="billability-row">
                       <div class="billability-state" style="width: 75%;"></div>

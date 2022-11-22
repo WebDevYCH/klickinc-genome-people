@@ -9,8 +9,8 @@
 
 html {
   box-sizing: border-box;
+  font-size: 10px;
 }
-
 
 /**
  * Make all elements from the DOM inherit from the parent box-sizing
@@ -20,107 +20,7 @@ html {
  */
 
 *,
-*:before,
-*:after {
+*::before,
+*::after {
   box-sizing: inherit;
-}
-
-figure {
-  margin: 20px 0 80px;
-
-  @include media('>=tablet') {
-    margin: 70px 0 80px;
-  }
-
-  img {
-    width: 100%;
-    height: auto;
-    max-width: 100%;
-    margin: 0 0 8px;
-  }
-
-  figcaption {
-    display: flex;
-    font-size: 14px;
-    line-height: 1.8;
-    color: $decor-color;
-
-    @include media('>=laptop') {
-      margin: 0 30px 0 100px;
-    }
-
-    .img-title {
-      flex-shrink: 0;
-      display: block;
-      margin: 0 10px 0 0;
-      font-weight: $font-weight-normal;
-    }
-
-    p {
-      width: 100%;
-      margin: 0;
-    }
-  }
-
-  &.two-images {
-    margin: 0 0 80px;
-
-    @include media('>=tablet') {
-      display: flex;
-      justify-content: space-between;
-      margin: 0 -8px 80px;
-    }
-
-    @include media('>=laptop') {
-      margin: 0 -12px 80px;
-    }
-
-    img {
-      margin: 0 0 14px;
-
-      @include media('>=tablet') {
-        flex: 0 0 50%;
-        max-width: 50%;
-        padding: 0 8px;
-        margin: 0;
-      }
-
-      @include media('>=laptop') {
-        padding: 0 12px;
-      }
-    }
-  }
-
-  &.alignright {
-    
-    @include media('>=tablet') {
-      float: right;
-      margin: 0 0 80px 16px;
-      width: 50%;
-    }
-
-    @include media('>=laptop') {
-      margin: 0 0 80px 22px;
-      width: auto;
-    }
-
-    figcaption {
-
-      @include media('>=tablet') {
-        width: 76%;
-        margin: 0 auto;
-      }
-
-      @include media('>=laptop') {
-        width: 60%;
-      }
-    }
-  }
-}
-
-.hidden-mobile {
-
-  @include media('<tablet') {
-    display: none !important;
-  }
 }

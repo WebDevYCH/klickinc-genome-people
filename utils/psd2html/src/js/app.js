@@ -1,4 +1,5 @@
-import ready, {HTML} from './utils';
+import 'bootstrap';
+import ready, { HTML } from './utils';
 import initCustomSelect from './components/initCustomSelect';
 import {initdatepicker, currentDate} from './components/initDatepicker';
 import initTabs from './components/initTabs';

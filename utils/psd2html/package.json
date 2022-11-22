@@ -14,7 +14,9 @@
     "not dead"
   ],
   "dependencies": {
+    "@popperjs/core": "latest",
     "body-scroll-lock": "^3.1.5",
+    "bootstrap": "latest",
     "include-media": "^1.4.10",
     "mobius1-selectr": "^2.4.13",
     "normalize.css": "^8.0.1"
@@ -40,7 +42,7 @@
     "file-loader": "^6.0.0",
     "@soda/friendly-errors-webpack-plugin": "^1.7.0",
     "group-css-media-queries-loader": "^3.0.2",
-    "html-loader": "^1.1.0",
+    "html-loader": "^1.3.2",
     "html-webpack-plugin": "^4.3.0",
     "imagemin-mozjpeg": "^9.0.0",
     "imagemin-webp-webpack-plugin": "^3.3.3",

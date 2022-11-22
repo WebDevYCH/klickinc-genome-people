@@ -25,7 +25,7 @@
 
 // CONVERT TO REM
 // sass-lint:disable zero-unit
-@function convert-to-rem($value, $base-value: $rem-base) {
+@function convert-to-rem($value, $base-value: 16) {
   $value: strip-unit($value) / strip-unit($base-value) * 1rem;
   @if ($value == 0) {
     $value: 0;
@@ -56,7 +56,7 @@
 //
 //   rem-calc((16px, 32px, 48), 8px);
 
-@function rem-calc($values, $base-value: $rem-base) {
+@function rem-calc($values, $base-value: 16) {
   $max: length($values);
 
   @if $max == 1 {
@@ -70,8 +70,8 @@
   @return $rem-values;
 }
 
-@function em-calc($values, $base-value: $rem-base) {
-  $rem-values: rem-calc($values, $base-value: $rem-base);
+@function em-calc($values, $base-value: 16) {
+  $rem-values: rem-calc($values, $base-value);
 
   $max: length($rem-values);
 
@@ -98,13 +98,4 @@
 
 @function white($opacity) {
   @return rgba(white, $opacity);
-}
-
-@keyframes slideDown{
-	from {
-		opacity: 0;
-	}
-	to {
-		opacity: 1;
-	}
 }
