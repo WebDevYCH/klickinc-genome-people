@@ -32,8 +32,20 @@ def index():
         #return render_template('login.html', title='Google Login') # webpage with login button
         return redirect("/login") # redirect straight to the oath process
 
+
 ###################################################################
-## AUTHENTICATOIN / LOGIN
+## STATIC PATHS (maps /css/x.css to /static/css/x.css, for e.g.)
+
+@app.route('/css/<path:text>')
+@app.route('/fonts/<path:text>')
+@app.route('/images/<path:text>')
+@app.route('/js/<path:text>')
+def static_file(text):
+    return app.send_static_file(request.path[1:])
+
+
+###################################################################
+## AUTHENTICATION / LOGIN
 
 # GET /login
 @app.route("/login")
