@@ -38,7 +38,7 @@ def index():
 
 @app.route('/css/<path:text>')
 @app.route('/fonts/<path:text>')
-@app.route('/images/<path:text>')
+@app.route('/img/<path:text>')
 @app.route('/js/<path:text>')
 def static_file(text):
     return app.send_static_file(request.path[1:])
