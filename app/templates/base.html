@@ -1,8 +1,17 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <!-- page title -->
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Responsive Admin &amp; Dashboard Template based on Bootstrap 5">
+    <meta name="author" content="AdminKit">
+    <meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="shortcut icon" href="img/icons/icon-48x48.png" />
+
     <title>
         {% if title %}
             {{ title }}
@@ -10,826 +19,409 @@
             Genome People
         {% endif %}
     </title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
-      rel="stylesheet"
-    />
-    <!-- include jQuery library -->
-    <script
-      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
-      integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
-      crossorigin="anonymous"
-      referrerpolicy="no-referrer"
-      defer
-    ></script>
-    <!-- include jQuery library local file if cdn link doesn't work -->
-    <script>
-      window.jQuery || document.write('<script src="js/jquery-3.6.0.min.js" defer><\/script>');
-    </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
-    <link href="css/style.css" rel="stylesheet" />
-  </head>
-  <body>
-    <noscript><div>Javascript must be enabled for the correct page display</div></noscript>
-    <a class="genome-accessibility" href="#inner-content">Skip to Content</a>
-    <div class="genome-wrapper w-100 bg-light" id="genome-wrapper">
-      <div class="genome-dashboard">
-        <div class="dashboard-container">
-          <div class="genome-main-content w-100">
-            <header class="genome-header" style="height: 66px; background-color: #33383d; width: 100%">
 
-          <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-            <div class="container-fluid">
-            <a class="navbar-brand" href="{{ url_for('index') }}">Genome People</a>
-              <button
-                class="navbar-toggler"
-                type="button"
-                data-bs-toggle="collapse"
-                data-bs-target="#navbarColor02"
-                aria-controls="navbarColor02"
-                aria-expanded="false"
-                aria-label="Toggle navigation"
-              >
-                <span class="navbar-toggler-icon"></span>
-              </button>
-              <div class="collapse navbar-collapse" id="navbarColor02">
-                <ul class="navbar-nav me-auto mb-20 mb-lg-0">
-                  <li class="nav-item"><a class="navbar-brand" href="{{ url_for('index') }}">Home</a></li>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 
-                    {% if current_user.is_authenticated %}
-                    <li class="nav-item"><a class="navbar-brand" href="{{ url_for('logout') }}">Logout</a></li>
-                    {% else %}
-                    <!-- <li><a href="/login">Login</a></li> -->
-                    {% endif %}
-                  <li class="nav-item"><a class="navbar-brand" href="{{ url_for('survey') }}">Survey</a></li>
-                </ul>
-                {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
-                <ul class="nav navbar-nav navbar-right">
-                    <li><a class="navbar-brand" href="{{ url_for('admin.index') }}">Admin</a></li>
-                    <li><div style="width:30px"></div></li>
-                </ul>
+    <!-- Choose your prefered color scheme -->
+    <link href="css/light.css" rel="stylesheet">
+    <!-- <link href="css/dark.css" rel="stylesheet"> -->
+</head>
+<!--
+  HOW TO USE: 
+  data-theme: default (default), dark, light, colored
+  data-layout: fluid (default), boxed
+  data-sidebar-position: left (default), right
+  data-sidebar-layout: default (default), compact
+-->
+
+<body data-theme="colored" data-layout="fluid" data-sidebar-position="left" data-sidebar-layout="default">
+    <div class="wrapper">
+        <nav id="sidebar" class="sidebar js-sidebar">
+            <div class="sidebar-content js-simplebar">
+                <a class="sidebar-brand" href="/">
+                    <span class="sidebar-brand-text align-middle">
+                        Genome
+                        <sup><small class="badge bg-primary text-uppercase">People</small></sup>
+                    </span>
+                    <svg class="sidebar-brand-icon align-middle" width="32px" height="32px" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5"
+                        stroke-linecap="square" stroke-linejoin="miter" color="#FFFFFF" style="margin-left: -3px">
+                        <path d="M12 4L20 8.00004L12 12L4 8.00004L12 4Z"></path>
+                        <path d="M20 12L12 16L4 12"></path>
+                        <path d="M20 16L12 20L4 16"></path>
+                    </svg>
+                </a>
+
+                {% if current_user.is_authenticated %}
+                <div class="sidebar-user">
+                    <div class="d-flex justify-content-center">
+                        <div class="flex-shrink-0">
+                            <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="Charles Hall" />
+                        </div>
+                        <div class="flex-grow-1 ps-2">
+                            <a class="sidebar-user-title dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                {{ current_user.firstname}} {{ current_user.lastname }}
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-start">
+                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
+                                    Privacy</a>
+                                <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="help-circle"></i> Help Center</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="{{ url_for('logout') }}">Log out</a>
+                            </div>
+
+                            <div class="sidebar-user-subtitle">{{ current_user.title }}</div>
+                        </div>
+                    </div>
+                </div>
                 {% endif %}
-                <form class="d-flex">
-                  <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search" />
-                  <button class="btn btn-outline-light" type="submit">Search</button>
+
+
+                <ul class="sidebar-nav">
+
+                    <li class="sidebar-header">
+                        Survey
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/survey">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
+                        </a>
+                        <a class="sidebar-link" href="survey/score">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Score Sentiment</span>
+                        </a>
+                    </li>
+
+                    {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
+                    <li class="sidebar-header">
+                        Admin
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/admin">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Admin Home</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <div class="sidebar-cta">
+                    <div class="sidebar-cta-content">
+                        <strong class="d-inline-block mb-2">Weekly Sales Report</strong>
+                        <div class="mb-3 text-sm">
+                            Your weekly sales report is ready for download!
+                        </div>
+
+                        <div class="d-grid">
+                            <a href="https://adminkit.io/" class="btn btn-outline-primary" target="_blank">Download</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="main">
+            <nav class="navbar navbar-expand navbar-light navbar-bg">
+                <a class="sidebar-toggle js-sidebar-toggle">
+                    <i class="hamburger align-self-center"></i>
+                </a>
+
+                <form class="d-none d-sm-inline-block">
+                    <div class="input-group input-group-navbar">
+                        <input type="text" class="form-control" placeholder="Search…" aria-label="Search">
+                        <button class="btn" type="button">
+                            <i class="align-middle" data-feather="search"></i>
+                        </button>
+                    </div>
                 </form>
-              </div>
-            </div>
-          </nav>
 
-            </header>
-            <div class="inner-content p-15 py-md-15 px-md-10 pt-xl-45 pb-xl-35 ps-xl-35 pe-xl-35" id="inner-content">
-              <div class="genome-filter">
-                <div class="genome-filter-bar">
-                  <div class="container-fluid">
+                <ul class="navbar-nav d-none d-lg-flex">
+                    <!--
+                    <li class="nav-item px-2 dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="megaDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="false">
+                            Mega Menu
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-start dropdown-mega" aria-labelledby="megaDropdown">
+                            <div class="d-md-flex align-items-start justify-content-start">
+                                <div class="dropdown-mega-list">
+                                    <div class="dropdown-header">UI Elements</div>
+                                    <a class="dropdown-item" href="#">Alerts</a>
+                                    <a class="dropdown-item" href="#">Buttons</a>
+                                    <a class="dropdown-item" href="#">Cards</a>
+                                    <a class="dropdown-item" href="#">Carousel</a>
+                                    <a class="dropdown-item" href="#">General</a>
+                                    <a class="dropdown-item" href="#">Grid</a>
+                                    <a class="dropdown-item" href="#">Modals</a>
+                                    <a class="dropdown-item" href="#">Tabs</a>
+                                    <a class="dropdown-item" href="#">Typography</a>
+                                </div>
+                                <div class="dropdown-mega-list">
+                                    <div class="dropdown-header">Forms</div>
+                                    <a class="dropdown-item" href="#">Layouts</a>
+                                    <a class="dropdown-item" href="#">Basic Inputs</a>
+                                    <a class="dropdown-item" href="#">Input Groups</a>
+                                    <a class="dropdown-item" href="#">Advanced Inputs</a>
+                                    <a class="dropdown-item" href="#">Editors</a>
+                                    <a class="dropdown-item" href="#">Validation</a>
+                                    <a class="dropdown-item" href="#">Wizard</a>
+                                </div>
+                                <div class="dropdown-mega-list">
+                                    <div class="dropdown-header">Tables</div>
+                                    <a class="dropdown-item" href="#">Basic Tables</a>
+                                    <a class="dropdown-item" href="#">Responsive Table</a>
+                                    <a class="dropdown-item" href="#">Table with Buttons</a>
+                                    <a class="dropdown-item" href="#">Column Search</a>
+                                    <a class="dropdown-item" href="#">Muulti Selection</a>
+                                    <a class="dropdown-item" href="#">Ajax Sourced Data</a>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
 
-    <div class="container">
-        {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            {% for message in messages %}
-            <div class="alert alert-info" role="alert">{{ message }}</div>
-            {% endfor %}
-        {% endif %}
-        {% endwith %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="resourcesDropdown" role="button" data-bs-toggle="dropdown" aria-haspopup="true"
+                            aria-expanded="false">
+                            Resources
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="resourcesDropdown">
+                            <a class="dropdown-item" href="https://adminkit.io/" target="_blank"><i class="align-middle me-1" data-feather="home"></i>
+                                Homepage</a>
+                            <a class="dropdown-item" href="https://adminkit.io/docs/" target="_blank"><i class="align-middle me-1" data-feather="book-open"></i>
+                                Documentation</a>
+                            <a class="dropdown-item" href="https://adminkit.io/docs/getting-started/changelog/" target="_blank"><i class="align-middle me-1"
+                                    data-feather="edit"></i> Changelog</a>
+                        </div>
+                    </li>
+                    -->
+                </ul>
 
-        {# application content needs to be provided in the app_content block #}
-        {% block app_content %}{% endblock %}
-    </div>
+                <div class="navbar-collapse collapse">
+                    <ul class="navbar-nav navbar-align">
+                        <li class="nav-item dropdown">
+                            <a class="nav-icon dropdown-toggle" href="#" id="alertsDropdown" data-bs-toggle="dropdown">
+                                <div class="position-relative">
+                                    <i class="align-middle" data-feather="bell"></i>
+                                    <span class="indicator">4</span>
+                                </div>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end py-0" aria-labelledby="alertsDropdown">
+                                <div class="dropdown-menu-header">
+                                    4 New Notifications
+                                </div>
+                                <div class="list-group">
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <i class="text-danger" data-feather="alert-circle"></i>
+                                            </div>
+                                            <div class="col-10">
+                                                <div class="text-dark">Update completed</div>
+                                                <div class="text-muted small mt-1">Restart server 12 to complete the update.</div>
+                                                <div class="text-muted small mt-1">30m ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <i class="text-warning" data-feather="bell"></i>
+                                            </div>
+                                            <div class="col-10">
+                                                <div class="text-dark">Lorem ipsum</div>
+                                                <div class="text-muted small mt-1">Aliquam ex eros, imperdiet vulputate hendrerit et.</div>
+                                                <div class="text-muted small mt-1">2h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <i class="text-primary" data-feather="home"></i>
+                                            </div>
+                                            <div class="col-10">
+                                                <div class="text-dark">Login from 192.186.1.8</div>
+                                                <div class="text-muted small mt-1">5h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <i class="text-success" data-feather="user-plus"></i>
+                                            </div>
+                                            <div class="col-10">
+                                                <div class="text-dark">New connection</div>
+                                                <div class="text-muted small mt-1">Christina accepted your request.</div>
+                                                <div class="text-muted small mt-1">14h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="dropdown-menu-footer">
+                                    <a href="#" class="text-muted">Show all notifications</a>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-icon dropdown-toggle" href="#" id="messagesDropdown" data-bs-toggle="dropdown">
+                                <div class="position-relative">
+                                    <i class="align-middle" data-feather="message-square"></i>
+                                </div>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end py-0" aria-labelledby="messagesDropdown">
+                                <div class="dropdown-menu-header">
+                                    <div class="position-relative">
+                                        4 New Messages
+                                    </div>
+                                </div>
+                                <div class="list-group">
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <img src="img/avatars/avatar-5.jpg" class="avatar img-fluid rounded-circle" alt="Vanessa Tucker">
+                                            </div>
+                                            <div class="col-10 ps-2">
+                                                <div class="text-dark">Vanessa Tucker</div>
+                                                <div class="text-muted small mt-1">Nam pretium turpis et arcu. Duis arcu tortor.</div>
+                                                <div class="text-muted small mt-1">15m ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <img src="img/avatars/avatar-2.jpg" class="avatar img-fluid rounded-circle" alt="William Harris">
+                                            </div>
+                                            <div class="col-10 ps-2">
+                                                <div class="text-dark">William Harris</div>
+                                                <div class="text-muted small mt-1">Curabitur ligula sapien euismod vitae.</div>
+                                                <div class="text-muted small mt-1">2h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <img src="img/avatars/avatar-4.jpg" class="avatar img-fluid rounded-circle" alt="Christina Mason">
+                                            </div>
+                                            <div class="col-10 ps-2">
+                                                <div class="text-dark">Christina Mason</div>
+                                                <div class="text-muted small mt-1">Pellentesque auctor neque nec urna.</div>
+                                                <div class="text-muted small mt-1">4h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <img src="img/avatars/avatar-3.jpg" class="avatar img-fluid rounded-circle" alt="Sharon Lessman">
+                                            </div>
+                                            <div class="col-10 ps-2">
+                                                <div class="text-dark">Sharon Lessman</div>
+                                                <div class="text-muted small mt-1">Aenean tellus metus, bibendum sed, posuere ac, mattis non.</div>
+                                                <div class="text-muted small mt-1">5h ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="dropdown-menu-footer">
+                                    <a href="#" class="text-muted">Show all messages</a>
+                                </div>
+                            </div>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-icon pe-md-0 dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                                <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{current_user.firstname}} {{current_user.lastname}}" />
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
+                                    Privacy</a>
+                                <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="help-circle"></i> Help Center</a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item" href="#">Log out</a>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-          </div>
-          <div class="genome-right-panel bg-light">
-            <div class="statistics-box p-15 bg-primary">
-              <div class="title-row">
-                <strong>Genome Hub</strong>
-                <a href="#" class="close-btn"
-                  ><i class="icon-close"><em class="genome-visually-hidden">Close btn</em></i></a
-                >
-              </div>
-              <div class="sub-row">
-                <div class="sub-box">
-                  <div class="sub-column">
-                    <strong>$147.05</strong>
-                    <span>All of Klick</span>
-                  </div>
-                  <div class="sub-column">
-                    <em>EAHR</em>
-                  </div>
-                </div>
-                <div class="sub-box">
-                  <div class="sub-column">
-                    <strong>22%</strong>
-                    <span>YTD Bill%</span>
-                  </div>
-                  <div class="sub-column">
-                    <em>Billability</em>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="tabset-navigation mb-10 pt-5 ps-5 pe-5">
-              <label class="genome-visually-hidden" for="tabset-nav-select">Sidebar navigation</label>
-              <select class="tabset" id="tabset-nav-select">
-                <option selected value="tab1-0">Dashboard</option>
-                <option value="tab2-0" data-src="./images/pinned-ico.png">Pinned Klicksters</option>
-                <option value="tab3-0" data-src="./images/team-ico.png">Me & My Team</option>
-                <option value="tab4-0" data-src="./images/cultivate-ico.png">Cultivate Performance</option>
-                <option value="tab5-0" data-src="./images/insights-ico.png">Insights & Alerts</option>
-              </select>
-            </div>
-            <div class="right-panel-content ps-10 pe-10 pb-10">
-              <div class="genome-search-component">
-                <div class="search-holder mb-10">
-                  <div class="field-holder">
-                    <label class="genome-visually-hidden" for="search-input">Search component</label>
-                    <input type="text" class="search-input" id="search-input" placeholder="Search for a Klickster" />
-                    <a href="#" class="btn-clear"><i class="icon-close"></i></a>
-                    <i class="icon-chevron-down"></i>
-                  </div>
-                  <div class="search-drop">
-                    <ul class="search-drop-list">
-                      <li>
-                        <a href="#">
-                          <div class="genome-user-ava">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="genome-user-title">
-                            <strong class="genome-user-name">Steven Good</strong>
-                            <span class="genome-user-position">Group Copy Supervisor</span>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="genome-user-ava">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="genome-user-title">
-                            <strong class="genome-user-name">Steven Hand</strong>
-                            <span class="genome-user-position">Director of CRM Strategy</span>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="genome-user-ava">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="genome-user-title">
-                            <strong class="genome-user-name">Leerom Segal</strong>
-                            <span class="genome-user-position">Chairman & CEO</span>
-                          </div>
-                        </a>
-                      </li>
-                    </ul>
-                    <span class="error-message">No users found!</span>
-                  </div>
-                </div>
-              </div>
-              <div class="tab-content">
-                <div id="tab1-0">
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <div class="title-row">
-                      <h3>Team Insights & Alerts</h3>
-                      <a href="tab5-0" class="view-more-btn tabset-link">View more</a>
+            <main class="content">
+                <div class="container-fluid p-0">
+                    {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-info alert-dismissible" role="alert">
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <div class="alert-icon"><i class="far fa-fw fa-bell"></i></div>
+                        <div class="alert-message">{{ message }}</div>
                     </div>
-                    <div class="alerts-item">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>1 under-using vacation</strong>
-                        <span class="sub-title">Vlada Ross (0)</span>
-                      </div>
-                    </div>
-                    <div class="alerts-item">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>1 used more vacation than earned</strong>
-                        <span class="sub-title">Ghaith Chukfeh (-2)</span>
-                      </div>
-                    </div>
-                    <div class="alerts-item error">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>1 underbilling</strong>
-                        <span class="sub-title">KC Adviento (8%)</span>
-                      </div>
-                    </div>
-                    <div class="alerts-item">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>1 billability burning hot</strong>
-                        <span class="sub-title">Ghaith Chukfeh (137%)</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Cultivate Growth</h3>
-                    <div>
-                      <a href="#" class="btn btn-primary mb-10">Visit KlickU</a>
-                    </div>
-                    <div>
-                      <a href="#" class="btn btn-primary">Linked In Learning</a>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <div class="title-row">
-                      <div>
-                        <h3>Cultivate Performance</h3>
-                        <span class="sub-title">Powered by Lattice</span>
-                      </div>
-                      <a href="tab4-0" class="view-more-btn tabset-link">View more</a>
-                    </div>
-                    <div>
-                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
-                    </div>
-                    <div>
-                      <a href="#" class="btn btn-primary mb-10">Cultivate Performance Portal</a>
-                    </div>
-                    <ul class="key-actions-list">
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to start creating Goals</strong>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to set up updates</strong>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to share an updates</strong>
-                          </div>
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <div class="title-row">
-                      <h3>Me & My Team</h3>
-                      <a href="tab3-0" class="view-more-btn tabset-link">View team</a>
-                    </div>
-                    <h4 class="mb-10">My Info</h4>
-                    <div class="mb-20">
-                      <div class="user-personal-box">
-                        <div class="photo">
-                          <img src="images/ava01.png" alt="ava-user01" />
-                        </div>
-                        <div class="inner-text">
-                          <a href="#">Steve Wilier</a>
-                          <span>Chief Technical officer</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="vacations-holidays-sub-title">
-                      <div>
-                        <h4>Holidays</h4>
-                        <span class="sub-title">In the next 90 days</span>
-                      </div>
-                      <div class="checkbox-holder">
-                        <label for="check-canada" class="check-radio-country">
-                          <input id="check-canada" type="checkbox" checked />
-                          <span class="fake-input">
-                            <i class="icon-canada"></i>
-                          </span>
-                          <em class="genome-visually-hidden">Check canada holidays</em>
-                        </label>
-                        <label for="check-usa" class="check-radio-country">
-                          <input id="check-usa" type="checkbox" />
-                          <span class="fake-input">
-                            <i class="icon-usa"></i>
-                          </span>
-                          <em class="genome-visually-hidden">Check usa holidays</em>
-                        </label>
-                      </div>
-                    </div>
-                    <ul class="holidays-list">
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Boxing Day</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa disabled"></i>
-                          </div>
-                          <span class="date">Dec 26, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Christmas Day (observed - CAD)</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa disabled"></i>
-                          </div>
-                          <span class="date">Dec 27, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-usa"></i>
-                            <i class="icon-canada"></i>
-                          </div>
-                          <span class="date">Dec 28, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa"></i>
-                          </div>
-                          <span class="date">Dec 29, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa"></i>
-                          </div>
-                          <span class="date">Dec 30, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>New Year's Day</strong>
-                            <i class="icon-usa"></i>
-                            <i class="icon-canada"></i>
-                          </div>
-                          <span class="date">Jan 2, 2023</span>
-                        </div>
-                      </li>
-                    </ul>
-                    <div class="vacations-holidays-sub-title">
-                      <div>
-                        <h4>Team Vacation</h4>
-                        <span class="sub-title">In the next 90 days</span>
-                      </div>
-                    </div>
-                    <ul class="vacation-list mb-20">
-                      <li>
-                        <div class="user-photo">
-                          <img src="images/ava01.png" alt="ava-user01" />
-                        </div>
-                        <div class="user-info">
-                          <a href="#">Ghaith Chukfeh</a>
-                          <span>Dec 16, 2022 to Jan 13,2023</span>
-                        </div>
-                      </li>
-                    </ul>
-                    <h3>Team Changes</h3>
-                    <ul class="team-changes-list">
-                      <li>
-                        <div class="user-personal-box">
-                          <div class="photo">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="inner-text">
-                            <a href="#">Vlada Ross</a>
-                            <span>Execituve Assistant</span>
-                            <span>Leave ends: Nov 23, 2022</span>
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <div class="user-personal-box">
-                          <div class="photo"></div>
-                          <div class="inner-text">
-                            <a href="#">Nopparath (Toomie) Pathoomrath-Allen</a>
-                            <span>Execituve Assistant</span>
-                            <span>Contract ends: Dec 20,2022</span>
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
-                    <div class="right-align">
-                      <a class="link" href="#">View team changes report</a>
-                    </div>
-                  </div>
-                </div>
-                <div id="tab2-0">
-                  <div class="pinned-klicksters-notification">
-                    <i class="icon-pin"></i>
-                    <strong>Pin Some Klicksters</strong>
-                    <span>Search for a user above, and click the pin icon in the header to add them to this page</span>
-                  </div>
-                </div>
-                <div id="tab3-0">
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Team Vacations/Holidays</h3>
-                    <div class="vacations-holidays-sub-title">
-                      <div>
-                        <h4>Holidays</h4>
-                        <span class="sub-title">In the next 90 days</span>
-                      </div>
-                      <div class="checkbox-holder">
-                        <label for="check-canada-second" class="check-radio-country">
-                          <input id="check-canada-second" type="checkbox" checked />
-                          <span class="fake-input">
-                            <i class="icon-canada"></i>
-                          </span>
-                          <em class="genome-visually-hidden">Check canada holidays</em>
-                        </label>
-                        <label for="check-usa-second" class="check-radio-country">
-                          <input id="check-usa-second" type="checkbox" />
-                          <span class="fake-input">
-                            <i class="icon-usa"></i>
-                          </span>
-                          <em class="genome-visually-hidden">Check usa holidays</em>
-                        </label>
-                      </div>
-                    </div>
-                    <ul class="holidays-list">
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Boxing Day</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa disabled"></i>
-                          </div>
-                          <span class="date">Dec 26, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Christmas Day (observed - CAD)</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa disabled"></i>
-                          </div>
-                          <span class="date">Dec 27, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-usa"></i>
-                            <i class="icon-canada"></i>
-                          </div>
-                          <span class="date">Dec 28, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa"></i>
-                          </div>
-                          <span class="date">Dec 29, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>Office Closure</strong>
-                            <i class="icon-canada"></i>
-                            <i class="icon-usa"></i>
-                          </div>
-                          <span class="date">Dec 30, 2022</span>
-                        </div>
-                      </li>
-                      <li>
-                        <i class="icon-calendar-full"></i>
-                        <div class="text">
-                          <div class="name">
-                            <strong>New Year's Day</strong>
-                            <i class="icon-usa"></i>
-                            <i class="icon-canada"></i>
-                          </div>
-                          <span class="date">Jan 2, 2023</span>
-                        </div>
-                      </li>
-                    </ul>
-                    <div class="vacations-holidays-sub-title">
-                      <div>
-                        <h4>Team Vacation</h4>
-                        <span class="sub-title">In the next 90 days</span>
-                      </div>
-                    </div>
-                    <ul class="vacation-list">
-                      <li>
-                        <div class="user-photo">
-                          <img src="images/ava01.png" alt="ava-user01" />
-                        </div>
-                        <div class="user-info">
-                          <a href="#">Ghaith Chukfeh</a>
-                          <span>Dec 16, 2022 to Jan 13,2023</span>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Team Changes</h3>
-                    <ul class="team-changes-list">
-                      <li>
-                        <div class="user-personal-box">
-                          <div class="photo">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="inner-text">
-                            <a href="#">Vlada Ross</a>
-                            <span>Execituve Assistant</span>
-                            <span>Leave ends: Nov 23, 2022</span>
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <div class="user-personal-box">
-                          <div class="photo"></div>
-                          <div class="inner-text">
-                            <a href="#">Nopparath (Toomie) Pathoomrath-Allen</a>
-                            <span>Execituve Assistant</span>
-                            <span>Contract ends: Dec 20,2022</span>
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
-                    <div class="right-align">
-                      <a class="link" href="#">View team changes report</a>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>My Info</h3>
-                    <div class="mb-20">
-                      <div class="user-personal-box">
-                        <div class="photo">
-                          <img src="images/ava01.png" alt="ava-user01" />
-                        </div>
-                        <div class="inner-text">
-                          <a href="#">Steve Wilier</a>
-                          <span>Chief Technical officer</span>
-                        </div>
-                      </div>
-                    </div>
-                    <h3>My Team</h3>
-                    <div class="genome-control-panel">
-                      <div class="genome-control-group">
-                        <label for="include-freelanceers-checkbox" class="custom-check-radio">
-                          <input name="check-freelanceers" id="include-freelanceers-checkbox" type="checkbox" />
-                          <span class="fake-input"></span>
-                          <span class="fake-label">Include freelanceers</span>
-                        </label>
-                      </div>
-                      <div class="genome-control-group">
-                        <a href="#" class="btn-expand"><span>Expand</span> <em>Decrease</em> All</a>
-                      </div>
-                    </div>
-                    <ul class="my-team-list">
-                      <li>
-                        <a href="#" class="opener">&nbsp;</a>
-                        <div class="user-personal-box">
-                          <div class="photo">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="inner-text">
-                            <a href="#">Steve Wilier</a>
-                            <span>Chief Technical officer</span>
-                          </div>
-                        </div>
-                        <div class="slide">
-                          <div class="user-personal-box">
-                            <div class="photo">
-                              <img src="images/ava01.png" alt="ava-user01" />
+                    {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    {% if title %}
+                    <h1 class="h3 mb-3">{{ title }}</h1>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    {# application content needs to be provided in the app_content block #}
+                                    {% block app_content %}{% endblock %}
+                                </div>
                             </div>
-                            <div class="inner-text">
-                              <a href="#">Steve Wilier</a>
-                              <span>Chief Technical officer</span>
-                            </div>
-                          </div>
-                          <div class="user-personal-box">
-                            <div class="photo">
-                              <img src="images/ava01.png" alt="ava-user01" />
-                            </div>
-                            <div class="inner-text">
-                              <a href="#">Steve Wilier</a>
-                              <span>Chief Technical officer</span>
-                            </div>
-                          </div>
                         </div>
-                      </li>
-                      <li>
-                        <a href="#" class="opener">&nbsp;</a>
-                        <div class="user-personal-box">
-                          <div class="photo">
-                            <img src="images/ava01.png" alt="ava-user01" />
-                          </div>
-                          <div class="inner-text">
-                            <a href="#">Steve Wilier</a>
-                            <span>Chief Technical officer</span>
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <a href="#" class="opener">&nbsp;</a>
-                        <div class="user-personal-box state-02">
-                          <div class="photo"></div>
-                          <div class="inner-text">
-                            <a href="#">Steve Wilier</a>
-                            <span>Chief Technical officer</span>
-                            <strong><em>Contract ends: Dec 20, 2022</em></strong>
-                            <strong>Contractor</strong>
-                          </div>
-                        </div>
-                      </li>
-                      <li>
-                        <a href="#" class="opener">&nbsp;</a>
-                        <div class="user-personal-box state-02">
-                          <div class="photo"></div>
-                          <div class="inner-text">
-                            <a href="#">Steve Wilier</a>
-                            <span>Chief Technical officer</span>
-                            <strong><em>Leave ends: Non 23, 2022</em></strong>
-                          </div>
-                        </div>
-                      </li>
-                    </ul>
-                  </div>
+                    </div>
+
                 </div>
-                <div id="tab4-0">
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <img src="images/image-01.jpg" alt="image description" />
-                  </div>
-                  <div class="content-box">
-                    <h3>Key Links</h3>
-                    <div>
-                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
+            </main>
+
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row text-muted">
+                        <div class="col-6 text-start">
+                            <p class="mb-0">
+                                <a href="https://klick.com/" target="_blank" class="text-muted"><strong>Genome</strong></a> &copy;
+                            </p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <ul class="list-inline">
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Support</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Help Center</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Privacy</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Terms</a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                    <div>
-                      <a href="#" class="btn btn-primary">Cultivate Performance Portal</a>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Klickster Resources</h3>
-                    <ul class="links-list">
-                      <li><a href="#">About Cultivate</a></li>
-                      <li><a href="#">What is an OKR?</a></li>
-                      <li><a href="#">From "Just OK" to OKR</a></li>
-                      <li><a href="#">Lattice University</a></li>
-                    </ul>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Manager Resources</h3>
-                    <ul class="links-list">
-                      <li><a href="#">Cultivate Performance for Leaders</a></li>
-                      <li><a href="#">Create Team OKRs</a></li>
-                      <li><a href="#">Have an OKR Check-in Conversation</a></li>
-                    </ul>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <div class="title-row">
-                      <h3>Key Actions</h3>
-                      <a title="Tooltip text goes here" href="#" class="genom-info-btn"><i class="icon-info"></i></a>
-                    </div>
-                    <ul class="key-actions-list">
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to start creating Goals</strong>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to set up updates</strong>
-                          </div>
-                        </a>
-                      </li>
-                      <li>
-                        <a href="#">
-                          <div class="icon-holder">
-                            <img src="images/key-actions-ico.jpg" alt="image description" />
-                          </div>
-                          <div class="text">
-                            <span
-                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
-                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
-                            >
-                            <strong>Click here to share an updates</strong>
-                          </div>
-                        </a>
-                      </li>
-                    </ul>
-                  </div>
                 </div>
-                <div id="tab5-0">
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Time Tracking</h3>
-                    <span class="sub-title">These users are overdue in their DP</span>
-                    <p>No alerts</p>
-                    <div class="right-align">
-                      <a class="link" href="#">View full org report</a>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Vacation</h3>
-                    <div class="alerts-item">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>Ghaith Chukfeh</strong>
-                        <span class="sub-title">Used -2.5 day{s) more Chan they have Used -2.5 day{s) more Chan they have</span>
-                      </div>
-                    </div>
-                    <div class="alerts-item">
-                      <div class="icon">
-                        <i class="icon-exclamation-triangle"></i>
-                      </div>
-                      <div class="text">
-                        <strong>Ghaith Chukfeh</strong>
-                        <span class="sub-title">Used -2.5 day{s) more Chan they have Used -2.5 day{s) more Chan they have</span>
-                      </div>
-                    </div>
-                    <div class="right-align">
-                      <a class="link" href="#">View full org in vacation tool</a>
-                    </div>
-                  </div>
-                  <div class="content-box p-10 mb-10 bg-white">
-                    <h3>Billability</h3>
-                    <div class="billability-row">
-                      <div class="billability-state" style="width: 75%"></div>
-                    </div>
-                    <div class="right-align">
-                      <a class="link" href="#">View Billability dashboard</a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+            </footer>
         </div>
-        <div class="genome-side-panel" style="width: 55px; background-color: #ddd"></div>
-      </div>
     </div>
-    <a class="genome-accessibility" href="#genome-wrapper">Back to top</a>
-    <script defer src="js/app.js"></script>
-  </body>
+
+    <script src="js/app.js"></script>
+
+</body>
+
 </html>
+
+
+
+
+
+
+
+
+

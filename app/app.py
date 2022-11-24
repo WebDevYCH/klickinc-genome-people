@@ -5,6 +5,7 @@ from flask import Flask, render_template, flash, redirect, jsonify, json, url_fo
 from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
+from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 import flask_admin
 
 from sqlalchemy.orm import Session
@@ -154,6 +155,8 @@ class UserModelView(ReadOnlyModelView):
         return current_user.is_authenticated and current_user.has_roles('admin')
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
+
+admin.add_link(MenuLink(name='Logout', url='/logout'))
 
 admin.add_view(UserModelView(ModelUser, db.session, category='Users/Roles'))
 admin.add_view(AdminModelView(Role, db.session, category='Users/Roles'))

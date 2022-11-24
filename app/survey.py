@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, login_required, current_user
 import flask_admin
+from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
@@ -188,6 +189,8 @@ def retrieveOverallSentiment(line):
     # Makes the API call.
     response = requests.post(apiEndpoint, json=nlData)
     return response.json()
+
+admin.add_link(MenuLink(name='Run Scoring', url='/survey/score', category='Survey'))
 
 @app.route('/survey/score')
 @login_required
