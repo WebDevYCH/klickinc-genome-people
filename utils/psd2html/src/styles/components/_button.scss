@@ -1,0 +1,116 @@
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the button component.
+// -----------------------------------------------------------------------------
+
+
+
+.btn {
+  @include transition(background color border-color);
+  position: relative;
+  font-size: 16px;
+  font-weight: 600;
+  border: 2px solid $btn-decor;
+  background: transparent;
+  border-radius: 48px;
+  padding: 10px 29px;
+  color: $btn-color;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+
+  @include media('>=desktop') {
+    padding: 12px 30px;
+  }
+
+  @include media('>=laptop') {
+    font-size: 16px;
+  }
+
+  [class^="icon-"] {
+    display: inline-block;
+    line-height: 1;
+    padding: 2px 0px 0 16px;
+    vertical-align: top;
+    font-size: 20px;
+
+    @include media('>=tablet') {
+      padding: 0 0px 0 16px;
+    }
+
+    @include media('>=desktop') {
+      padding: 2px 0px 0 16px;
+    }
+  }
+
+  &:hover {
+    background: $btn-hover-decor;
+    border-color: $btn-hover-decor;
+    color: $white;
+  }
+
+  &.yellow {
+    background: $brand-color;
+    border-color: $brand-color;
+    color: $dark-gray;
+
+    &:hover {
+      background: transparent;
+
+      .bg-dark & {
+      	color: $brand-color;
+      }
+    }
+  }
+}
+
+.btn-back {
+  color: currentColor;
+  font-weight: $font-weight-semibold;
+
+  &:hover {
+    color: $brand-color;
+  }
+
+  i {
+    display: inline-block;
+    transform: rotate(-180deg);
+    margin-right: 6px;
+    line-height: 1.2;
+  }
+}
+
+.link-more {
+  display: inline-block;
+  vertical-align: middle;
+  padding: 0 0 6px;
+  position: relative;
+  font-weight: normal;
+  font-weight: $font-weight-semibold;
+  color: $body-color;
+
+  &:hover {
+
+    &:after {
+      width: 0;
+    }
+  }
+
+  &:after {
+    @include transition(width);
+    content: '';
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 2px;
+    background: #26464b;
+    opacity: .2;
+  }
+
+  i {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}

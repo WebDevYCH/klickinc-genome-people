@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <!-- page title -->
+    <title>Genome TB</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- include jQuery library -->
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"
+      integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+      defer
+    ></script>
+    <!-- include jQuery library local file if cdn link doesn't work -->
+    <script>
+      window.jQuery || document.write('<script src="js/jquery-3.6.0.min.js" defer><\/script>');
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link href="css/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <noscript><div>Javascript must be enabled for the correct page display</div></noscript>
+    <a class="genome-accessibility" href="#inner-content">Skip to Content</a>
+    <div class="genome-wrapper w-100 bg-light" id="genome-wrapper">
+      <div class="genome-dashboard">
+        <div class="dashboard-container">
+          <div class="genome-main-content w-100">
+            <header class="genome-header" style="height: 66px; background-color: #33383d; width: 100%"></header>
+            <div class="inner-content p-15 py-md-15 px-md-10 pt-xl-45 pb-xl-35 ps-xl-35 pe-xl-35" id="inner-content">
+              <div class="genome-filter">
+                <div class="genome-filter-bar">
+                  <div class="container-fluid">
+                    <div class="row">
+                      <div class="col-12 col-xl-4 mb-15 mb-xl-0">
+                        <label class="filter-title" for="klickster-select">User:</label>
+                        <select id="klickster-select" data-filter-group="genome-user-name" name="user-name-list">
+                          <option value="Aron Goldstein">Aron Goldstein</option>
+                          <option value="Alec Melkonian">Alec Melkonian</option>
+                          <option value="Brian O'Donnell">Brian O'Donnell</option>
+                          <option value="David Bowen">David Bowen</option>
+                          <option value="Destry Sulkes">Destry Sulkes</option>
+                          <option value="Jully Kim">Jully Kim</option>
+                          <option value="Keith Liu">Keith Liu</option>
+                          <option value="Lori Grant">Lori Grant</option>
+                          <option value="Peter Cordy">Peter Cordy</option>
+                          <option value="Peter Flaschner">Peter Flaschner</option>
+                          <option value="Ryan Slipakoff">Ryan Slipakoff</option>
+                          <option value="Sheryl Steinberg">Sheryl Steinberg</option>
+                          <option value="User name">User name</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-xl-4 mb-15 mb-xl-0">
+                        <label class="filter-title" for="unit-select">CST/Business Unit:</label>
+                        <select id="unit-select" data-filter-group="genome-user-position" name="user-position-list">
+                          <option value="Chairman & CEO">Chairman & CEO</option>
+                          <option value="Chief Operating Officer">Chief Operating Officer</option>
+                          <option value="Senior Vice President">Senior Vice President</option>
+                          <option value="Sales & Client Services">Sales & Client Services</option>
+                          <option value="Partner">Partner</option>
+                          <option value="Executive Vice President">Executive Vice President</option>
+                          <option value="Managing Director">Managing Director</option>
+                          <option value="Policy & Advocacy">Policy & Advocacy</option>
+                          <option value="Growth">Growth</option>
+                          <option value="Administrative Business Partner to Leerom Segal CEO">Administrative Business Partner to Leerom Segal CEO</option>
+                          <option value="EVP">EVP</option>
+                          <option value="Corporate Strategy">Corporate Strategy</option>
+                          <option value="CEO">CEO</option>
+                          <option value="Chairman Emeritus">Chairman Emeritus</option>
+                          <option value="Chief Transformation Officer">Chief Transformation Officer</option>
+                          <option value="Communications">Communications</option>
+                          <option value="User position">User position</option>
+                        </select>
+                      </div>
+                      <div class="col-12 col-xl-4 mb-xl-0">
+                        <div class="sub-title-row">
+                          <label class="filter-title" for="datepicker">As Of:</label>
+                          <strong class="set-to-today">set to today</strong>
+                        </div>
+                        <div class="datepicker-holder">
+                          <input class="datepicker" id="datepicker" type="text" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="genome-control-panel">
+                  <div class="genome-control-group">
+                    <label for="check-1" class="custom-check-radio">
+                      <input name="check-freelanceers" id="check-1" type="checkbox" />
+                      <span class="fake-input"></span>
+                      <span class="fake-label">Include freelanceers</span>
+                    </label>
+                  </div>
+                  <div class="genome-control-group">
+                    <a href="#" class="btn-expand"><span>Expand</span> <em>Decrease</em> All</a>
+                  </div>
+                </div>
+              </div>
+              <div class="dashboard-sidebar">
+                <ul class="users-tree-menu">
+                  <li>
+                    <input type="checkbox" checked="checked" id="user-00" />
+                    <label class="tree_label label-has-drop" for="user-00">
+                      <span class="genome-user">
+                        <span class="genome-user-ava">
+                          <img src="images/ava01.png" alt="ava-user01" />
+                        </span>
+                        <span class="genome-user-title">
+                          <strong class="genome-user-name">Leerom Segal</strong>
+                          <span class="genome-user-position">Chairman & CEO</span>
+                          <span class="as-of-date">2018/01/01</span>
+                        </span>
+                      </span>
+                    </label>
+                    <ul>
+                      <li>
+                        <input type="checkbox" id="user-1-2-1" />
+                        <label class="tree_label label-has-drop" for="user-1-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Aron Goldstein</strong>
+                              <span class="genome-user-position">Chief Operating Officer</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <input type="checkbox" id="user-1-3-1" />
+                            <label class="tree_label label-has-drop" for="user-1-3-1">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2022/01/01</span>
+                                </span>
+                              </span>
+                            </label>
+                            <ul>
+                              <li>
+                                <input type="checkbox" id="user-1-4-1" />
+                                <label class="tree_label label-has-drop" for="user-1-4-1">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </label>
+                                <ul>
+                                  <li class="freelanceer">
+                                    <span class="tree_label">
+                                      <span class="genome-user">
+                                        <span class="genome-user-ava"> </span>
+                                        <span class="genome-user-title">
+                                          <strong class="genome-user-name">User name</strong>
+                                          <span class="genome-user-position">User position</span>
+                                          <span class="as-of-date">2018/01/01</span>
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </li>
+                                  <li>
+                                    <span class="tree_label">
+                                      <span class="genome-user">
+                                        <span class="genome-user-ava"> </span>
+                                        <span class="genome-user-title">
+                                          <strong class="genome-user-name">User name</strong>
+                                          <span class="genome-user-position">User position</span>
+                                          <span class="as-of-date">2018/01/01</span>
+                                        </span>
+                                      </span>
+                                    </span>
+                                  </li>
+                                </ul>
+                              </li>
+                              <li>
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <input type="checkbox" id="user-1-3-2" />
+                            <label class="tree_label" for="user-1-3-2">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </label>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-2-2-1" />
+                        <label class="tree_label label-has-drop" for="user-2-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Alec Melkonian</strong>
+                              <span class="genome-user-position">Senior Vice President, Sales & Client Services</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <input type="checkbox" id="user-2-3-1" />
+                            <label class="tree_label label-has-drop" for="user-2-3-1">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </label>
+                            <ul>
+                              <li>
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                              <li>
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                              <li class="freelanceer">
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                              <li class="freelanceer">
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                            </ul>
+                          </li>
+                          <li>
+                            <input type="checkbox" id="user-2-3-2" />
+                            <label class="tree_label label-has-drop" for="user-2-3-2">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </label>
+                            <ul>
+                              <li>
+                                <span class="tree_label">
+                                  <span class="genome-user">
+                                    <span class="genome-user-ava"> </span>
+                                    <span class="genome-user-title">
+                                      <strong class="genome-user-name">User name</strong>
+                                      <span class="genome-user-position">User position</span>
+                                      <span class="as-of-date">2018/01/01</span>
+                                    </span>
+                                  </span>
+                                </span>
+                              </li>
+                            </ul>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-3-2-1" />
+                        <label class="tree_label label-has-drop" for="user-3-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Brian O'Donnell</strong>
+                              <span class="genome-user-position">Partner, Executive Vice President</span>
+                              <span class="as-of-date">2020/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-4-2-1" />
+                        <label class="tree_label label-has-drop" for="user-4-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Dan Drexler</strong>
+                              <span class="genome-user-position">Managing Director</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-5-2-1" />
+                        <label class="tree_label label-has-drop" for="user-5-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">David Bowen</strong>
+                              <span class="genome-user-position">Senior Vice President, Policy & Advocacy</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2021/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-6-2-1" />
+                        <label class="tree_label label-has-drop" for="user-6-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Destry Sulkes</strong>
+                              <span class="genome-user-position">Executive Vice President, Growth</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-7-2-1" />
+                        <label class="tree_label label-has-drop" for="user-7-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Jully Kim</strong>
+                              <span class="genome-user-position">Administrative Business Partner to Leerom Segal CEO</span>
+                              <span class="as-of-date">2022/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-8-2-1" />
+                        <label class="tree_label label-has-drop" for="user-8-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Keith Liu</strong>
+                              <span class="genome-user-position">EVP, Corporate Strategy</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-9-2-1" />
+                        <label class="tree_label label-has-drop" for="user-9-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Lori Grant</strong>
+                              <span class="genome-user-position">CEO</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-10-2-1" />
+                        <label class="tree_label label-has-drop" for="user-10-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Peter Cordy</strong>
+                              <span class="genome-user-position">Chairman Emeritus</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2022/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-11-2-1" />
+                        <label class="tree_label label-has-drop" for="user-11-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Peter Flaschner</strong>
+                              <span class="genome-user-position">Managing Director</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <span class="tree_label">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Ryan Slipakoff</strong>
+                              <span class="genome-user-position">Chief Transformation Officer</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </span>
+                      </li>
+                      <li>
+                        <input type="checkbox" id="user-13-2-1" />
+                        <label class="tree_label label-has-drop" for="user-13-2-1">
+                          <span class="genome-user">
+                            <span class="genome-user-ava"> </span>
+                            <span class="genome-user-title">
+                              <strong class="genome-user-name">Sheryl Steinberg</strong>
+                              <span class="genome-user-position">Senior Vice President, Communications</span>
+                              <span class="as-of-date">2018/01/01</span>
+                            </span>
+                          </span>
+                        </label>
+                        <ul>
+                          <li>
+                            <span class="tree_label">
+                              <span class="genome-user">
+                                <span class="genome-user-ava"> </span>
+                                <span class="genome-user-title">
+                                  <strong class="genome-user-name">User name</strong>
+                                  <span class="genome-user-position">User position</span>
+                                  <span class="as-of-date">2018/01/01</span>
+                                </span>
+                              </span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="genome-right-panel bg-light">
+            <div class="statistics-box p-15 bg-primary">
+              <div class="title-row">
+                <strong>Genome Hub</strong>
+                <a href="#" class="close-btn"
+                  ><i class="icon-close"><em class="genome-visually-hidden">Close btn</em></i></a
+                >
+              </div>
+              <div class="sub-row">
+                <div class="sub-box">
+                  <div class="sub-column">
+                    <strong>$147.05</strong>
+                    <span>All of Klick</span>
+                  </div>
+                  <div class="sub-column">
+                    <em>EAHR</em>
+                  </div>
+                </div>
+                <div class="sub-box">
+                  <div class="sub-column">
+                    <strong>22%</strong>
+                    <span>YTD Bill%</span>
+                  </div>
+                  <div class="sub-column">
+                    <em>Billability</em>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="tabset-navigation mb-10 pt-5 ps-5 pe-5">
+              <label class="genome-visually-hidden" for="tabset-nav-select">Sidebar navigation</label>
+              <select class="tabset" id="tabset-nav-select">
+                <option selected value="tab1-0">Dashboard</option>
+                <option value="tab2-0" data-src="./images/pinned-ico.png">Pinned Klicksters</option>
+                <option value="tab3-0" data-src="./images/team-ico.png">Me & My Team</option>
+                <option value="tab4-0" data-src="./images/cultivate-ico.png">Cultivate Performance</option>
+                <option value="tab5-0" data-src="./images/insights-ico.png">Insights & Alerts</option>
+              </select>
+            </div>
+            <div class="right-panel-content ps-10 pe-10 pb-10">
+              <div class="genome-search-component">
+                <div class="search-holder mb-10">
+                  <div class="field-holder">
+                    <label class="genome-visually-hidden" for="search-input">Search component</label>
+                    <input type="text" class="search-input" id="search-input" placeholder="Search for a Klickster" />
+                    <a href="#" class="btn-clear"><i class="icon-close"></i></a>
+                    <i class="icon-chevron-down"></i>
+                  </div>
+                  <div class="search-drop">
+                    <ul class="search-drop-list">
+                      <li>
+                        <a href="#">
+                          <div class="genome-user-ava">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="genome-user-title">
+                            <strong class="genome-user-name">Steven Good</strong>
+                            <span class="genome-user-position">Group Copy Supervisor</span>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="genome-user-ava">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="genome-user-title">
+                            <strong class="genome-user-name">Steven Hand</strong>
+                            <span class="genome-user-position">Director of CRM Strategy</span>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="genome-user-ava">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="genome-user-title">
+                            <strong class="genome-user-name">Leerom Segal</strong>
+                            <span class="genome-user-position">Chairman & CEO</span>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                    <span class="error-message">No users found!</span>
+                  </div>
+                </div>
+              </div>
+              <div class="tab-content">
+                <div id="tab1-0">
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <div class="title-row">
+                      <h3>Team Insights & Alerts</h3>
+                      <a href="tab5-0" class="view-more-btn tabset-link">View more</a>
+                    </div>
+                    <div class="alerts-item">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>1 under-using vacation</strong>
+                        <span class="sub-title">Vlada Ross (0)</span>
+                      </div>
+                    </div>
+                    <div class="alerts-item">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>1 used more vacation than earned</strong>
+                        <span class="sub-title">Ghaith Chukfeh (-2)</span>
+                      </div>
+                    </div>
+                    <div class="alerts-item error">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>1 underbilling</strong>
+                        <span class="sub-title">KC Adviento (8%)</span>
+                      </div>
+                    </div>
+                    <div class="alerts-item">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>1 billability burning hot</strong>
+                        <span class="sub-title">Ghaith Chukfeh (137%)</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Cultivate Growth</h3>
+                    <div>
+                      <a href="#" class="btn btn-primary mb-10">Visit KlickU</a>
+                    </div>
+                    <div>
+                      <a href="#" class="btn btn-primary">Linked In Learning</a>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <div class="title-row">
+                      <div>
+                        <h3>Cultivate Performance</h3>
+                        <span class="sub-title">Powered by Lattice</span>
+                      </div>
+                      <a href="tab4-0" class="view-more-btn tabset-link">View more</a>
+                    </div>
+                    <div>
+                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
+                    </div>
+                    <div>
+                      <a href="#" class="btn btn-primary mb-10">Cultivate Performance Portal</a>
+                    </div>
+                    <ul class="key-actions-list">
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to start creating Goals</strong>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to set up updates</strong>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to share an updates</strong>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <div class="title-row">
+                      <h3>Me & My Team</h3>
+                      <a href="tab3-0" class="view-more-btn tabset-link">View team</a>
+                    </div>
+                    <h4 class="mb-10">My Info</h4>
+                    <div class="mb-20">
+                      <div class="user-personal-box">
+                        <div class="photo">
+                          <img src="images/ava01.png" alt="ava-user01" />
+                        </div>
+                        <div class="inner-text">
+                          <a href="#">Steve Wilier</a>
+                          <span>Chief Technical officer</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="vacations-holidays-sub-title">
+                      <div>
+                        <h4>Holidays</h4>
+                        <span class="sub-title">In the next 90 days</span>
+                      </div>
+                      <div class="checkbox-holder">
+                        <label for="check-canada" class="check-radio-country">
+                          <input id="check-canada" type="checkbox" checked />
+                          <span class="fake-input">
+                            <i class="icon-canada"></i>
+                          </span>
+                          <em class="genome-visually-hidden">Check canada holidays</em>
+                        </label>
+                        <label for="check-usa" class="check-radio-country">
+                          <input id="check-usa" type="checkbox" />
+                          <span class="fake-input">
+                            <i class="icon-usa"></i>
+                          </span>
+                          <em class="genome-visually-hidden">Check usa holidays</em>
+                        </label>
+                      </div>
+                    </div>
+                    <ul class="holidays-list">
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Boxing Day</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa disabled"></i>
+                          </div>
+                          <span class="date">Dec 26, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Christmas Day (observed - CAD)</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa disabled"></i>
+                          </div>
+                          <span class="date">Dec 27, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-usa"></i>
+                            <i class="icon-canada"></i>
+                          </div>
+                          <span class="date">Dec 28, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa"></i>
+                          </div>
+                          <span class="date">Dec 29, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa"></i>
+                          </div>
+                          <span class="date">Dec 30, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>New Year's Day</strong>
+                            <i class="icon-usa"></i>
+                            <i class="icon-canada"></i>
+                          </div>
+                          <span class="date">Jan 2, 2023</span>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="vacations-holidays-sub-title">
+                      <div>
+                        <h4>Team Vacation</h4>
+                        <span class="sub-title">In the next 90 days</span>
+                      </div>
+                    </div>
+                    <ul class="vacation-list mb-20">
+                      <li>
+                        <div class="user-photo">
+                          <img src="images/ava01.png" alt="ava-user01" />
+                        </div>
+                        <div class="user-info">
+                          <a href="#">Ghaith Chukfeh</a>
+                          <span>Dec 16, 2022 to Jan 13,2023</span>
+                        </div>
+                      </li>
+                    </ul>
+                    <h3>Team Changes</h3>
+                    <ul class="team-changes-list">
+                      <li>
+                        <div class="user-personal-box">
+                          <div class="photo">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="inner-text">
+                            <a href="#">Vlada Ross</a>
+                            <span>Execituve Assistant</span>
+                            <span>Leave ends: Nov 23, 2022</span>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="user-personal-box">
+                          <div class="photo"></div>
+                          <div class="inner-text">
+                            <a href="#">Nopparath (Toomie) Pathoomrath-Allen</a>
+                            <span>Execituve Assistant</span>
+                            <span>Contract ends: Dec 20,2022</span>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="right-align">
+                      <a class="link" href="#">View team changes report</a>
+                    </div>
+                  </div>
+                </div>
+                <div id="tab2-0">
+                  <div class="pinned-klicksters-notification">
+                    <i class="icon-pin"></i>
+                    <strong>Pin Some Klicksters</strong>
+                    <span>Search for a user above, and click the pin icon in the header to add them to this page</span>
+                  </div>
+                </div>
+                <div id="tab3-0">
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Team Vacations/Holidays</h3>
+                    <div class="vacations-holidays-sub-title">
+                      <div>
+                        <h4>Holidays</h4>
+                        <span class="sub-title">In the next 90 days</span>
+                      </div>
+                      <div class="checkbox-holder">
+                        <label for="check-canada-second" class="check-radio-country">
+                          <input id="check-canada-second" type="checkbox" checked />
+                          <span class="fake-input">
+                            <i class="icon-canada"></i>
+                          </span>
+                          <em class="genome-visually-hidden">Check canada holidays</em>
+                        </label>
+                        <label for="check-usa-second" class="check-radio-country">
+                          <input id="check-usa-second" type="checkbox" />
+                          <span class="fake-input">
+                            <i class="icon-usa"></i>
+                          </span>
+                          <em class="genome-visually-hidden">Check usa holidays</em>
+                        </label>
+                      </div>
+                    </div>
+                    <ul class="holidays-list">
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Boxing Day</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa disabled"></i>
+                          </div>
+                          <span class="date">Dec 26, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Christmas Day (observed - CAD)</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa disabled"></i>
+                          </div>
+                          <span class="date">Dec 27, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-usa"></i>
+                            <i class="icon-canada"></i>
+                          </div>
+                          <span class="date">Dec 28, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa"></i>
+                          </div>
+                          <span class="date">Dec 29, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>Office Closure</strong>
+                            <i class="icon-canada"></i>
+                            <i class="icon-usa"></i>
+                          </div>
+                          <span class="date">Dec 30, 2022</span>
+                        </div>
+                      </li>
+                      <li>
+                        <i class="icon-calendar-full"></i>
+                        <div class="text">
+                          <div class="name">
+                            <strong>New Year's Day</strong>
+                            <i class="icon-usa"></i>
+                            <i class="icon-canada"></i>
+                          </div>
+                          <span class="date">Jan 2, 2023</span>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="vacations-holidays-sub-title">
+                      <div>
+                        <h4>Team Vacation</h4>
+                        <span class="sub-title">In the next 90 days</span>
+                      </div>
+                    </div>
+                    <ul class="vacation-list">
+                      <li>
+                        <div class="user-photo">
+                          <img src="images/ava01.png" alt="ava-user01" />
+                        </div>
+                        <div class="user-info">
+                          <a href="#">Ghaith Chukfeh</a>
+                          <span>Dec 16, 2022 to Jan 13,2023</span>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Team Changes</h3>
+                    <ul class="team-changes-list">
+                      <li>
+                        <div class="user-personal-box">
+                          <div class="photo">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="inner-text">
+                            <a href="#">Vlada Ross</a>
+                            <span>Execituve Assistant</span>
+                            <span>Leave ends: Nov 23, 2022</span>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="user-personal-box">
+                          <div class="photo"></div>
+                          <div class="inner-text">
+                            <a href="#">Nopparath (Toomie) Pathoomrath-Allen</a>
+                            <span>Execituve Assistant</span>
+                            <span>Contract ends: Dec 20,2022</span>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                    <div class="right-align">
+                      <a class="link" href="#">View team changes report</a>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>My Info</h3>
+                    <div class="mb-20">
+                      <div class="user-personal-box">
+                        <div class="photo">
+                          <img src="images/ava01.png" alt="ava-user01" />
+                        </div>
+                        <div class="inner-text">
+                          <a href="#">Steve Wilier</a>
+                          <span>Chief Technical officer</span>
+                        </div>
+                      </div>
+                    </div>
+                    <h3>My Team</h3>
+                    <div class="genome-control-panel">
+                      <div class="genome-control-group">
+                        <label for="include-freelanceers-checkbox" class="custom-check-radio">
+                          <input name="check-freelanceers" id="include-freelanceers-checkbox" type="checkbox" />
+                          <span class="fake-input"></span>
+                          <span class="fake-label">Include freelanceers</span>
+                        </label>
+                      </div>
+                      <div class="genome-control-group">
+                        <a href="#" class="btn-expand"><span>Expand</span> <em>Decrease</em> All</a>
+                      </div>
+                    </div>
+                    <ul class="my-team-list">
+                      <li>
+                        <a href="#" class="opener">&nbsp;</a>
+                        <div class="user-personal-box">
+                          <div class="photo">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="inner-text">
+                            <a href="#">Steve Wilier</a>
+                            <span>Chief Technical officer</span>
+                          </div>
+                        </div>
+                        <div class="slide">
+                          <div class="user-personal-box">
+                            <div class="photo">
+                              <img src="images/ava01.png" alt="ava-user01" />
+                            </div>
+                            <div class="inner-text">
+                              <a href="#">Steve Wilier</a>
+                              <span>Chief Technical officer</span>
+                            </div>
+                          </div>
+                          <div class="user-personal-box">
+                            <div class="photo">
+                              <img src="images/ava01.png" alt="ava-user01" />
+                            </div>
+                            <div class="inner-text">
+                              <a href="#">Steve Wilier</a>
+                              <span>Chief Technical officer</span>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <a href="#" class="opener">&nbsp;</a>
+                        <div class="user-personal-box">
+                          <div class="photo">
+                            <img src="images/ava01.png" alt="ava-user01" />
+                          </div>
+                          <div class="inner-text">
+                            <a href="#">Steve Wilier</a>
+                            <span>Chief Technical officer</span>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <a href="#" class="opener">&nbsp;</a>
+                        <div class="user-personal-box state-02">
+                          <div class="photo"></div>
+                          <div class="inner-text">
+                            <a href="#">Steve Wilier</a>
+                            <span>Chief Technical officer</span>
+                            <strong><em>Contract ends: Dec 20, 2022</em></strong>
+                            <strong>Contractor</strong>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <a href="#" class="opener">&nbsp;</a>
+                        <div class="user-personal-box state-02">
+                          <div class="photo"></div>
+                          <div class="inner-text">
+                            <a href="#">Steve Wilier</a>
+                            <span>Chief Technical officer</span>
+                            <strong><em>Leave ends: Non 23, 2022</em></strong>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div id="tab4-0">
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <img src="images/image-01.jpg" alt="image description" />
+                  </div>
+                  <div class="content-box">
+                    <h3>Key Links</h3>
+                    <div>
+                      <a href="#" class="btn btn-primary mb-10">Visit Lattice</a>
+                    </div>
+                    <div>
+                      <a href="#" class="btn btn-primary">Cultivate Performance Portal</a>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Klickster Resources</h3>
+                    <ul class="links-list">
+                      <li><a href="#">About Cultivate</a></li>
+                      <li><a href="#">What is an OKR?</a></li>
+                      <li><a href="#">From "Just OK" to OKR</a></li>
+                      <li><a href="#">Lattice University</a></li>
+                    </ul>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Manager Resources</h3>
+                    <ul class="links-list">
+                      <li><a href="#">Cultivate Performance for Leaders</a></li>
+                      <li><a href="#">Create Team OKRs</a></li>
+                      <li><a href="#">Have an OKR Check-in Conversation</a></li>
+                    </ul>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <div class="title-row">
+                      <h3>Key Actions</h3>
+                      <a title="Tooltip text goes here" href="#" class="genom-info-btn"><i class="icon-info"></i></a>
+                    </div>
+                    <ul class="key-actions-list">
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to start creating Goals</strong>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to set up updates</strong>
+                          </div>
+                        </a>
+                      </li>
+                      <li>
+                        <a href="#">
+                          <div class="icon-holder">
+                            <img src="images/key-actions-ico.jpg" alt="image description" />
+                          </div>
+                          <div class="text">
+                            <span
+                              >Lorem ipsum dolor sit amet consectetur, adipisicing elit. Harum deserunt, a maiores soluta eos veniam ipsum, placeat nisi, facilis maxime temporibus
+                              dolores amet numquam fuga ullam ea cupiditate eum. Eius!</span
+                            >
+                            <strong>Click here to share an updates</strong>
+                          </div>
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                <div id="tab5-0">
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Time Tracking</h3>
+                    <span class="sub-title">These users are overdue in their DP</span>
+                    <p>No alerts</p>
+                    <div class="right-align">
+                      <a class="link" href="#">View full org report</a>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Vacation</h3>
+                    <div class="alerts-item">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>Ghaith Chukfeh</strong>
+                        <span class="sub-title">Used -2.5 day{s) more Chan they have Used -2.5 day{s) more Chan they have</span>
+                      </div>
+                    </div>
+                    <div class="alerts-item">
+                      <div class="icon">
+                        <i class="icon-exclamation-triangle"></i>
+                      </div>
+                      <div class="text">
+                        <strong>Ghaith Chukfeh</strong>
+                        <span class="sub-title">Used -2.5 day{s) more Chan they have Used -2.5 day{s) more Chan they have</span>
+                      </div>
+                    </div>
+                    <div class="right-align">
+                      <a class="link" href="#">View full org in vacation tool</a>
+                    </div>
+                  </div>
+                  <div class="content-box p-10 mb-10 bg-white">
+                    <h3>Billability</h3>
+                    <div class="billability-row">
+                      <div class="billability-state" style="width: 75%"></div>
+                    </div>
+                    <div class="right-align">
+                      <a class="link" href="#">View Billability dashboard</a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="genome-side-panel" style="width: 55px; background-color: #ddd"></div>
+      </div>
+    </div>
+    <a class="genome-accessibility" href="#genome-wrapper">Back to top</a>
+    <script defer src="js/app.js"></script>
+  </body>
+</html>

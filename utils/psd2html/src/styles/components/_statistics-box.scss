@@ -1,0 +1,102 @@
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the statistics box  component.
+// -----------------------------------------------------------------------------
+
+.statistics-box {
+  color: $white;
+  margin-left: -2px;
+
+  .title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  .close-btn {
+    color: $white !important;
+
+    &:hover {
+      color: $black !important;
+    }
+  }
+
+  .sub-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+
+    @include media-breakpoint-up(md) {
+      display: block;
+    }
+
+    @include media-breakpoint-up(lg) {
+      display: flex;
+    }
+  }
+
+  .sub-box {
+    background-color: #6facc9;
+    width: 48%;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    text-align: center;
+    padding: 0.5rem 1rem;
+
+    @include media-breakpoint-up(md) {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    @include media-breakpoint-up(lg) {
+      width: 48%;
+      margin-bottom: 0;
+    }
+  }
+
+  .sub-column {
+    padding: 0 0.8rem 0 0;
+    position: relative;
+    // width: 100%;
+    flex: 1;
+
+    &:last-of-type {
+      padding: 0 0 0 0.8rem;
+      width: auto;
+
+      &:after {
+        display: none;
+      }
+    }
+
+    &:after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 2px;
+      background-color: #b7d8e9;
+    }
+
+    strong {
+      display: block;
+      font-size: 1.7rem;
+    }
+
+    span {
+      display: block;
+      color: #bad5f0;
+      font-size: 1.1rem;
+    }
+
+    em {
+      display: block;
+      font-style: normal;
+      font-size: 1.3rem;
+      padding: 0.3rem 0;
+    }
+  }
+}

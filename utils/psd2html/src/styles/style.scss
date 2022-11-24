@@ -1,0 +1,39 @@
+// 1. Configuration and helpers
+@import 'abstracts/variables';
+@import 'abstracts/functions';
+
+// 2. Vendors
+@import 'vendors/bootstrap-utilities';
+@import 'abstracts/rebuilded-mixins';
+@import 'vendors/bootstrap';
+@import 'vendors/icomoon/styles';
+@import 'vendors/datepicker-ui-min';
+@import 'abstracts/mixins';
+
+// 3. Base styles and elements
+@import 'base/base';
+@import 'base/helpers';
+@import 'base/fonts';
+@import 'base/typography';
+@import 'base/forms';
+
+// 4. Layout-related sections
+@import 'layout/header';
+@import 'layout/common';
+@import 'layout/footer';
+
+// 5. Components
+@import 'components/tree-menu';
+@import 'components/filter';
+@import 'components/custom-select';
+@import 'components/datepicker';
+@import 'components/custom-checkbox';
+@import 'components/statistics-box';
+@import 'components/search-component';
+@import 'components/right-panel-content';
+
+// 6. Page-specific styles
+// @import 'pages/home';
+
+// 7. Themes
+// @import 'themes/themes';

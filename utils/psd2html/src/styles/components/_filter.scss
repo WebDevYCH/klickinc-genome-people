@@ -1,0 +1,87 @@
+
+// -----------------------------------------------------------------------------
+// This file contains all styles related to the filter component.
+// -----------------------------------------------------------------------------
+
+.genome-filter-bar {
+  margin-bottom: 2rem;
+
+  @include media-breakpoint-up(xl) {
+    display: flex;
+    margin-left: -0.8rem;
+    margin-right: -0.8rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .filter-title {
+    display: block;
+    margin-bottom: 0.6rem;
+  }
+
+  .sub-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .set-to-today {
+    font-size: 1.4rem;
+    font-weight: normal;
+    color: $primary;
+    cursor: pointer;
+
+    &:hover {
+      color: $black;
+    }
+  }
+}
+
+.genome-control-group {
+  .content-box & {
+    @include media-breakpoint-up(md) {
+      margin-bottom: 1rem;
+    }
+
+    @include media-breakpoint-up(lg) {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.genome-control-panel {
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .content-box & {
+    @include media-breakpoint-up(md) {
+      display: block;
+    }
+
+    @include media-breakpoint-up(lg) {
+      display: flex;
+    }
+  }
+
+  .btn-expand {
+    em {
+      display: none;
+      font-style: normal;
+    }
+
+    &.active {
+      span {
+        display: none;
+      }
+
+      em {
+        display: inline;
+      }
+    }
+
+    .content-box & {
+      font-size: 1.4rem;
+    }
+  }
+}

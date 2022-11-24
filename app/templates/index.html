@@ -2,13 +2,13 @@
 
 {% block app_content %}
     {% if current_user.is_authenticated %}
-        <h1>
-            You are logged in as 
-            {{ current_user.firstname }} {{current_user.lastname}} 
-            ({{ current_user.email }})
-            {{ current_user.userid }}
-        </h1>
+        You are logged in as 
+        {{ current_user.firstname }} {{current_user.lastname}} 
+        ({{ current_user.email }})
     {% else %}
-        <h1>You are not logged in.</h1>
+        You are not logged in.
     {% endif %}
 {% endblock %}
+
+
+
