@@ -156,6 +156,7 @@ class UserModelView(ReadOnlyModelView):
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
 
+admin.add_link(MenuLink(name='Frontend', url='/'))
 admin.add_link(MenuLink(name='Logout', url='/logout'))
 
 admin.add_view(UserModelView(ModelUser, db.session, category='Users/Roles'))

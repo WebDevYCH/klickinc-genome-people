@@ -5,11 +5,10 @@ import requests
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
+import flask_admin
 from flask_admin.contrib.sqla import ModelView
-from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
-import flask_admin
 import config
 
 ###################################################################
@@ -51,3 +50,8 @@ class ReadOnlyModelView(AdminModelView):
     can_delete = False 
     can_view_details = True
 
+class AdminBaseView(flask_admin.BaseView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('admin')
+    def inaccessible_callback(self, name, **kwargs):
+        return redirect(url_for('login', next=request.url))

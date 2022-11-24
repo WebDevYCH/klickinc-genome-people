@@ -5,7 +5,7 @@ from flask import Flask, render_template, flash, redirect, jsonify, json, url_fo
 from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, login_required, current_user
-import flask_admin
+from flask_admin import expose
 from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 
 from flask_wtf import FlaskForm
@@ -190,59 +190,51 @@ def retrieveOverallSentiment(line):
     response = requests.post(apiEndpoint, json=nlData)
     return response.json()
 
-admin.add_link(MenuLink(name='Run Scoring', url='/survey/score', category='Survey'))
 
-@app.route('/survey/score')
-@login_required
-def score_answers():
+class SurveyScoreView(AdminBaseView):
+    @expose('/')
+    def index(self):
 
-    retstring = ""
+        loglines = []
 
-    answers = session.query(SurveyAnswer).\
-        join(SurveyQuestion).\
-        join(SurveyQuestionType).\
-        all()
-    for a in answers:
-        if a.survey_question.survey_question_type.wtform_field in ('StringField','TextAreaField'):
-            db.session.execute(
-                delete(SurveyAnswerAnalysis).
-                where(SurveyAnswerAnalysis.survey_answer_id==a.id)
-            )
-            db.session.commit()
-
-            if (a.answer and a.answer != ''):
-                retstring += f"<br>text: {a.answer}<br>"
-                sentiment = retrieveOverallSentiment(a.answer)
-                retstring += f"  score={sentiment['documentSentiment']['score']} "
-                retstring += f"  magnitude={sentiment['documentSentiment']['magnitude']}<br>"
+        answers = session.query(SurveyAnswer).\
+            join(SurveyQuestion).\
+            join(SurveyQuestionType).\
+            all()
+        for a in answers:
+            if a.survey_question.survey_question_type.wtform_field in ('StringField','TextAreaField'):
                 db.session.execute(
-                    insert(SurveyAnswerAnalysis).
-                    values(survey_answer_id=a.id, 
-                        topic='OVERALL', 
-                        topic_salience=1.0,
-                        sentiment_score=sentiment['documentSentiment']['score'],
-                        sentiment_magnitude=sentiment['documentSentiment']['magnitude'])
+                    delete(SurveyAnswerAnalysis).
+                    where(SurveyAnswerAnalysis.survey_answer_id==a.id)
                 )
-                sentiment = retrieveEntitySentiment(a.answer)
-                for e in sentiment['entities']:
-                    retstring += f"entity: {e['name']} "
-                    #retstring += f"entity: {e} "
-                    retstring += f"  score={e['sentiment']['score']} "
-                    retstring += f"  magnitude={e['sentiment']['magnitude']}"
-                    retstring += "<br>\n"
+                db.session.commit()
+
+                if (a.answer and a.answer != ''):
+                    loglines.append(f"text: {a.answer}")
+                    sentiment = retrieveOverallSentiment(a.answer)
+                    loglines.append(f"  score={sentiment['documentSentiment']['score']} magnitude={sentiment['documentSentiment']['magnitude']}")
                     db.session.execute(
                         insert(SurveyAnswerAnalysis).
                         values(survey_answer_id=a.id, 
-                            topic=e['name'], 
-                            topic_salience=e['salience'], 
-                            sentiment_score=e['sentiment']['score'],
-                            sentiment_magnitude=e['sentiment']['magnitude'])
+                            topic='OVERALL', 
+                            topic_salience=1.0,
+                            sentiment_score=sentiment['documentSentiment']['score'],
+                            sentiment_magnitude=sentiment['documentSentiment']['magnitude'])
                     )
+                    sentiment = retrieveEntitySentiment(a.answer)
+                    for e in sentiment['entities']:
+                        loglines.append(f"entity: {e['name']} score={e['sentiment']['score']} magnitude={e['sentiment']['magnitude']}")
+                        db.session.execute(
+                            insert(SurveyAnswerAnalysis).
+                            values(survey_answer_id=a.id, 
+                                topic=e['name'], 
+                                topic_salience=e['salience'], 
+                                sentiment_score=e['sentiment']['score'],
+                                sentiment_magnitude=e['sentiment']['magnitude'])
+                        )
+                    loglines.append("")
+                    db.session.commit()
+        return self.render('admin/survey_score.html', loglines=loglines)
 
-
-
-            db.session.commit()
-
-    return retstring
-
+admin.add_view(SurveyScoreView(name='Run Scoring', category='Survey'))
 
