@@ -234,7 +234,7 @@ class SurveyScoreView(AdminBaseView):
                         )
                     loglines.append("")
                     db.session.commit()
-        return self.render('admin/survey_score.html', loglines=loglines)
+        return self.render('admin/job_log.html', loglines=loglines)
 
 admin.add_view(SurveyScoreView(name='Run Scoring', category='Survey'))
 

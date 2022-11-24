@@ -8,6 +8,9 @@ export FLASK_DEBUG=1
 export PYTHONPATH=.
 cd app
 
-python3 -m flask run -p 6005 2>&1 |tee -a $logfile
+while /usr/bin/true; do
+    python3 -m flask run -p 6005 2>&1 |tee -a $logfile
+    sleep 15
+done
 cd ..
 
