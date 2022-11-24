@@ -22,11 +22,11 @@ from model import *
 ###################################################################
 ## COMP MGR
 
-class CompUserView(AdminModelView):
+class CompMgrView(AdminModelView):
     def is_accessible(self):
         return current_user.is_authenticated and current_user.has_roles('compmgr_admin')
     can_export = True
     export_types = ['csv', 'xlsx']
-admin.add_view(CompUserView(CompUser, db.session, category='Comp Mgr'))
+admin.add_view(CompMgrView(CompMgr, db.session, category='Comp Mgr'))
 
 

@@ -17,6 +17,22 @@ from model import *
 ###################################################################
 ## DATABASE REPLICATION
 
+def retrieveGenomeReport(queryid):
+    apikey = app.config['GENOME_API_TOKEN']
+    apiendpoint = app.config['GENOME_API_ROOT']+'/QueryTemplate/Report?_='+apikey
+    # Creates a JSON request, with text string, language, type and encoding
+    reqjson = {
+        'document': {
+            'language': 'en-us',
+            'type': 'PLAIN_TEXT',
+            'content': line
+        },
+        'encodingType': 'UTF8'
+    }
+    # Makes the API call.
+    response = requests.post(apiendpoint, json=reqjson)
+    return response.json()
+
 
 class DbReplicationView(AdminBaseView):
     @expose('/')
@@ -26,6 +42,8 @@ class DbReplicationView(AdminBaseView):
 
         loglines.append("Starting Genome DB Replication via Report Queries")
         loglines.append("")
+
+
 
         return self.render('admin/job_log.html', loglines=loglines)
 

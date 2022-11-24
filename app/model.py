@@ -55,7 +55,7 @@ class User(ModelUser):
         return str(self.userid)
 
 # Compensation Manager
-CompUser = Base.classes.comp_user
+CompMgr = Base.classes.comp_mgr
 
 # Survey
 Base.classes.survey.__str__ = obj_name
