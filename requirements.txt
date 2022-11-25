@@ -4,6 +4,7 @@ Flask-SQLAlchemy
 Flask-Bootstrap
 Flask-Login
 Flask-WTF
+Flask-Session
 psycopg2-binary
 google-cloud
 requests
