@@ -12,7 +12,6 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
 
 from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
 from sqlalchemy import MetaData, delete, insert, update, or_, and_
 
 from google.cloud import language_v1
@@ -98,7 +97,7 @@ def getQuestions():
     #for qtype in session.query(SurveyQuestionType).all():
     #    qtypes[qtype.id] = qtype.name
 
-    questions = session.query(SurveyQuestion).order_by(SurveyQuestion.name).join(SurveyQuestion.survey_question_type).all()
+    questions = db.session.query(SurveyQuestion).order_by(SurveyQuestion.name).join(SurveyQuestion.survey_question_type).all()
     qslist = []
     for i, q in enumerate(questions):
         choices = generateChoices(q)
@@ -152,11 +151,11 @@ def generateChoices(q):
 
 class SurveyForm(FlaskForm):
     """The final survey form. Generated on the fly from questions in the DB."""
-    qslist = getQuestions()
-    
-    for qs in qslist:
-        exec(qs)
-    submit = SubmitField('Send')
+    def __init__(self):
+        qslist = getQuestions()
+        for qs in qslist:
+            exec(qs)
+        submit = SubmitField('Send')
 
 # sentiment scoring
 def retrieveEntitySentiment(line):
@@ -197,7 +196,7 @@ class SurveyScoreView(AdminBaseView):
 
         loglines = []
 
-        answers = session.query(SurveyAnswer).\
+        answers = db.session.query(SurveyAnswer).\
             join(SurveyQuestion).\
             join(SurveyQuestionType).\
             all()

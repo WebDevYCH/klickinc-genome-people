@@ -37,13 +37,10 @@ def retrieveGenomeReport(queryid):
 class DbReplicationView(AdminBaseView):
     @expose('/')
     def gqueries(self):
-
         loglines = []
 
         loglines.append("Starting Genome DB Replication via Report Queries")
         loglines.append("")
-
-
 
         return self.render('admin/job_log.html', loglines=loglines)
 

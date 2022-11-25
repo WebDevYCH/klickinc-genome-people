@@ -2,14 +2,13 @@ import datetime
 import os
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_sqlalchemy import SQLAlchemy
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user, login_required, login_user, logout_user
 from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 import flask_admin
 
-from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update, or_, and_
+import sqlalchemy
+from sqlalchemy import delete, insert, update, or_, and_
 
 from core import *
 from model import *
@@ -56,6 +55,10 @@ def login():
     google_provider_cfg = get_google_provider_cfg()
     authorization_endpoint = google_provider_cfg["authorization_endpoint"]
 
+    login_next = request.args.get('next')
+    if login_next:
+        session['login_next'] = login_next
+
     # Use library to construct the request for Google login and provide
     # scopes that let you retrieve user's profile from Google
     request_uri = oathclient.prepare_request_uri(
@@ -68,9 +71,6 @@ def login():
 # GET /login/callback
 @app.route("/login/callback")
 def callback():
-    with app.app_context():
-        Base.prepare(autoload_with=db.engine, reflect=True)
-
     # Get authorization code Google sent back to you
     code = request.args.get("code")
 
@@ -78,7 +78,6 @@ def callback():
     # things on behalf of a user
     google_provider_cfg = get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
-
     
     # Prepare and send request to get tokens! Yay tokens!
     token_url, headers, body = oathclient.prepare_token_request(
@@ -119,7 +118,10 @@ def callback():
 
     if user:
         login_user(user)
-        return redirect(url_for("index"))
+        if 'login_next' in session:
+            return redirect(session.pop('login_next'))
+        else:
+            return redirect(url_for("index"))
     else:
         return "You are not in the user list and are not authorized to use this application.", 400
 
@@ -137,13 +139,17 @@ if __name__ == "__main__":
     app.run(ssl_context="adhoc")
 
 ## AUTHENTICATION
-#@login_manager.unauthorized_handler
-#def unauthorized():
-#    return "You must be logged in to access this content.", 403
 login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.query(User).get(user_id)
+    try:
+        return db.session.query(User).get(user_id)
+    except sqlalchemy.orm.exc.UnmappedClassError:
+        # if the autoloaded model isn't initialized yet, then initialize
+        with app.app_context():
+            Base.prepare(autoload_with=db.engine, reflect=True)
+        # ...and then retry the query
+        return db.session.query(User).get(user_id)
 
 def get_google_provider_cfg():
     return requests.get(app.config['GOOGLE_DISCOVERY_URL']).json()
@@ -153,7 +159,7 @@ def get_google_provider_cfg():
 
 class UserModelView(ReadOnlyModelView):
     def is_accessible(self):
-        return current_user.is_authenticated and current_user.has_roles('admin')
+        return current_user.is_authenticated and current_user.has_roles('user_admin')
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
 

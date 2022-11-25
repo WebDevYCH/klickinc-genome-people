@@ -3,7 +3,7 @@ import os
 import os.path as op
 import requests
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
+from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request, session
 from flask_sqlalchemy import SQLAlchemy
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
@@ -16,7 +16,7 @@ import config
 
 # Create application reference
 app = config.configapp(Flask(__name__))
-app.secret_key = os.environ.get("SECRET_KEY") or os.urandom(24)
+app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
 Bootstrap(app)
 
 # login manager
