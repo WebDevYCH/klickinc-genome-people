@@ -11,7 +11,11 @@ import flask_admin
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
+from sqlalchemy import delete, insert, update, or_, and_, select
+
+from sqlalchemy import MetaData, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.automap import automap_base
 
 from core import app, db, login_manager
 
@@ -20,6 +24,8 @@ from core import app, db, login_manager
 
 def obj_name(obj):
     return obj.name
+def obj_title(obj):
+    return obj.title
 def obj_name_withid(obj):
     return f"{obj.name} [{obj.id}]"
 def obj_name_user(obj):
@@ -29,10 +35,16 @@ def obj_name_survey_question(obj):
 def obj_name_survey_answer(obj):
     return f"{obj.survey_question.name} - {obj.answer}"
 
-Base = automap_base()
-with app.app_context():
-    Base.prepare(autoload_with=db.engine, reflect=True)
-    session = Session(db.engine)
+# Connect directly to database to make the schema, outside of the Flask context so we can
+# initialize before the first web request
+dbengine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
+Session = sessionmaker(bind=dbengine)
+dbsession = Session()
+
+dbmetadata = MetaData()
+dbmetadata.reflect(dbengine)
+Base = automap_base(metadata=dbmetadata)
+Base.prepare()
 
 Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user
@@ -55,7 +67,7 @@ class User(ModelUser):
         return str(self.userid)
 
 # Compensation Manager
-CompUser = Base.classes.comp_mgr
+CompMgr = Base.classes.comp_mgr
 
 # Survey
 Base.classes.survey.__str__ = obj_name
@@ -69,8 +81,46 @@ SurveyQuestionCategory = Base.classes.survey_question_category
 
 Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
+
 Base.classes.survey_answer.__str__ = obj_name_survey_answer
 SurveyAnswer = Base.classes.survey_answer
+
 SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
+
 SurveyToken = Base.classes.survey_token
+
+# Job Ads
+Base.classes.job_posting.__str__ = obj_name
+JobPosting = Base.classes.job_posting
+
+Base.classes.job_posting_category.__str__ = obj_name
+JobPostingCategory = Base.classes.job_posting_category
+
+JobPostingSkill = Base.classes.job_posting_skill
+
+# Skills
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
+
+Base.classes.user_skill_source.__str__ = obj_name
+UserSkillSource = Base.classes.user_skill_source
+
+UserSkill = Base.classes.user_skill
+
+Base.classes.title.__str__ = obj_name
+Title = Base.classes.title
+
+TitleSkill = Base.classes.title_skill
+
+Base.classes.labor_category.__str__ = obj_name
+LaborCategory = Base.classes.labor_category
+
+Base.classes.labor_role.__str__ = obj_name
+LaborRole = Base.classes.labor_role
+
+LaborRoleSkill = Base.classes.labor_role_skill
+
+
+
+
 

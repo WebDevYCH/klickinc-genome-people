@@ -19,6 +19,19 @@ def configapp(app):
 	# Sentiment
 	app.config['GOOGLE_SENTIMENT_APIKEY'] = "YOURKEY"
 
+	# Sentiment
+	app.config['GOOGLE_SENTIMENT_APIKEY'] = "AIzaSyCTsxuEXm8wBxI75xZdAuUfadeaHT6FpM8"
+
+	# Genome API
+	app.config['GENOME_API_ROOT'] = "https://genome.klick.com/api"
+	app.config['GENOME_API_TOKEN'] = "YOURKEY"
+
+	# Emsi/Lightcast API
+	app.config['LIGHTCAST_API_CLIENTID'] = "YOURKEY"
+	app.config['LIGHTCAST_API_SECRET'] = "YOURKEY"
+	app.config['LIGHTCAST_API_SCOPE'] = "msi_open"
+
+
 
 	return app
 
