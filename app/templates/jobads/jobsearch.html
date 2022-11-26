@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block style %}
+<style>
+    .job-details {
+        height: 300px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
+{% block app_content %}
+{% for job in jobs %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">{{ job.title }}</h5>
+    </div>
+    <div class="card-body">
+        <div class="job-details">
+            {{ job.description }}
+        </div>
+        <a href="#" class="btn btn-primary pull-right">Apply</a>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
