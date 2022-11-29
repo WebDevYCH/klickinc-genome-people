@@ -9,6 +9,7 @@ psycopg2-binary
 google-cloud
 requests
 google
+google-cloud-bigquery
 oauthlib
 pyOpenSSL
 
