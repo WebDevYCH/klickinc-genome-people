@@ -33,26 +33,47 @@ def retrieveGenomeReport(queryid):
 
 class DbReplicationView(AdminBaseView):
     @expose('/')
-    def gqueries(self):
+    def index(self):
+        return self.render('admin/dbrepl.html')
+
+    @expose('/userphotos')
+    def userphotos(self):
         loglines = []
 
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via Report Queries")
         loglines.append("")
 
-        #json = retrieveGenomeReport(2122)
+        # users (just for photos)
+        loglines.append("EMPLOYEE LIST (for photos)")
+        json = retrieveGenomeReport(1873)
+        for uin in json['Entries']:
+            #loglines.append(uin)
+            #return self.render('admin/job_log.html', loglines=loglines)
+            uout = User()
+            users = db.session.query(User).where(
+                User.email == uin['Email'],
+                or_(User.photourl != uin['PhotoURL'], User.photourl == None)).all()
+            if len(users) > 0:
+                uout = users[0]
+                uout.photourl = uin['PhotoURL']
+                loglines.append(f"UPDATE user {uin['Email']} {uin['Name']}")
+                db.session.commit()
 
-        # labor roles
-        # portfolios
-        # portfolio forecasts
+        loglines.append("")
 
         return self.render('admin/job_log.html', loglines=loglines)
 
+        # portfolio forecasts
+
 class BQReplicationView(AdminBaseView):
     @expose('/')
-    def gqueries(self):
-        loglines = []
+    def index(self):
+        return self.render('admin/bqrepl.html')
 
+    @expose('/users')
+    def users(self):
+        loglines = []
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via BigQuery")
         loglines.append("")
@@ -104,6 +125,7 @@ class BQReplicationView(AdminBaseView):
     Department
     from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
         """
+        row = 0
         for uin in bqclient.query(sql).result():
             # upsert emulation
             uout = User()
@@ -154,14 +176,28 @@ class BQReplicationView(AdminBaseView):
 
             if len(users) == 0:
                 db.session.add(uout)
-            db.session.commit()
+                loglines.append(f"NEW user {uin.Email} {uin.FirstName} {uin.LastName}")
+            else:
+                loglines.append(f"UPDATE user {uin.Email} {uin.FirstName} {uin.LastName}")
+            if ++row > 25:
+                db.session.commit()
+                row = 0
+        db.session.commit()
 
-            loglines.append(f"user {uin.FirstName} {uin.LastName}")
+        return self.render('admin/job_log.html', loglines=loglines)
 
+    @expose('/portfolios')
+    def portfolios(self):
+        loglines = []
         loglines.append("")
+        loglines.append("portfolios page")
 
         return self.render('admin/job_log.html', loglines=loglines)
 
 admin.add_view(DbReplicationView(name='Genome DB', category='DB Replication'))
 admin.add_view(BQReplicationView(name='Genome BQ', category='DB Replication'))
+
+
+
+
 
