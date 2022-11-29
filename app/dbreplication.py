@@ -7,7 +7,7 @@ from flask_admin import expose
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update, or_, and_
+from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
 
 from google.cloud import language_v1
 from google.cloud import bigquery
@@ -45,26 +45,44 @@ class DbReplicationView(AdminBaseView):
         loglines.append("")
 
         # users (just for photos)
+        # preload all users, and then for each user in the json, search through the db list
+        # and if the photo is different or not set yet, then set it
         loglines.append("EMPLOYEE LIST (for photos)")
         json = retrieveGenomeReport(1873)
+        usersdb = db.session.query(User).all()
+        usersout = []
         for uin in json['Entries']:
-            #loglines.append(uin)
-            #return self.render('admin/job_log.html', loglines=loglines)
-            uout = User()
-            users = db.session.query(User).where(
-                User.email == uin['Email'],
-                or_(User.photourl != uin['PhotoURL'], User.photourl == None)).all()
-            if len(users) > 0:
-                uout = users[0]
-                uout.photourl = uin['PhotoURL']
-                loglines.append(f"UPDATE user {uin['Email']} {uin['Name']}")
-                db.session.commit()
+            if uin['PhotoURL'] != None:
+                uout = User()
+                for u in usersdb:
+                    if u.userid == uin['Employee'] and (u.photourl == None or u.photourl != uin['PhotoURL']):
+                        u.photourl = uin['PhotoURL']
+                        loglines.append(f"UPDATE user {uin['Email']} {uin['Name']} to {u.photourl}")
 
         loglines.append("")
+        db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
 
-        # portfolio forecasts
+    @expose('/portfolioforecasts')
+    def portfolioforecasts(self):
+        loglines = []
+
+        bqclient = bigquery.Client()
+        loglines.append("Starting Genome DB Replication via Report Queries")
+        loglines.append("")
+
+    # portfolio forecasts
+        loglines.append("EMPLOYEE LIST (for photos)")
+        json = retrieveGenomeReport(1873)
+        pfsout = []
+        for pfin in json['Entries']:
+            loglines.append(pfin)
+
+        db.session.bulk_save_objects(pfsout)
+        loglines.append("")
+
+        return self.render('admin/job_log.html', loglines=loglines)
 
 class BQReplicationView(AdminBaseView):
     @expose('/')
@@ -125,7 +143,6 @@ class BQReplicationView(AdminBaseView):
     Department
     from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
         """
-        row = 0
         for uin in bqclient.query(sql).result():
             # upsert emulation
             uout = User()
@@ -179,9 +196,6 @@ class BQReplicationView(AdminBaseView):
                 loglines.append(f"NEW user {uin.Email} {uin.FirstName} {uin.LastName}")
             else:
                 loglines.append(f"UPDATE user {uin.Email} {uin.FirstName} {uin.LastName}")
-            if ++row > 25:
-                db.session.commit()
-                row = 0
         db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
