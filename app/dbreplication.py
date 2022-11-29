@@ -9,6 +9,8 @@ from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
 
+from sqlalchemy.ext.serializer import loads, dumps
+
 from google.cloud import language_v1
 from google.cloud import bigquery
 
@@ -149,7 +151,8 @@ class BQReplicationView(AdminBaseView):
             users = db.session.query(User).where(User.userid==uin.UserID).all()
             if len(users) > 0:
                 uout = users[0]
-            uout.userid = uin.UserID
+            uout_serialized = dumps(uout)
+            #uout.userid = uin.UserID
             uout.adpemployeeid = uin.ADPEmployeeID
             uout.loginname = uin.LoginName
             uout.firstname = uin.FirstName
@@ -195,7 +198,11 @@ class BQReplicationView(AdminBaseView):
                 db.session.add(uout)
                 loglines.append(f"NEW user {uin.Email} {uin.FirstName} {uin.LastName}")
             else:
-                loglines.append(f"UPDATE user {uin.Email} {uin.FirstName} {uin.LastName}")
+                if dumps(uout) != uout_serialized:
+                    loglines.append(f"UPDATE user {uin.Email} {uin.FirstName} {uin.LastName}")
+                else:
+                    loglines.append(f"SKIP user {uin.Email} {uin.FirstName} {uin.LastName}")
+
         db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
@@ -204,7 +211,7 @@ class BQReplicationView(AdminBaseView):
     def portfolios(self):
         loglines = []
         loglines.append("")
-        loglines.append("portfolios page")
+        loglines.append("portfolios")
 
         return self.render('admin/job_log.html', loglines=loglines)
 
