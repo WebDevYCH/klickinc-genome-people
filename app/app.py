@@ -114,7 +114,14 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
 
-    user = db.session.query(User).filter(User.email==users_email).first()
+    try:
+        user = db.session.query(User).filter(User.email==users_email).first()
+    except sqlalchemy.orm.exc.UnmappedClassError:
+        # if the autoloaded model isn't initialized yet, then initialize
+        with app.app_context():
+            Base.prepare(autoload_with=db.engine, reflect=True)
+        # ...and then retry the query
+        user = db.session.query(User).filter(User.email==users_email).first()
 
     if user:
         login_user(user)

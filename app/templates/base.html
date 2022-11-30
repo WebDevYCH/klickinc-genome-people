@@ -55,7 +55,11 @@
                 <div class="sidebar-user">
                     <div class="d-flex justify-content-center">
                         <div class="flex-shrink-0">
-                            <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="Charles Hall" />
+                            {% if current_user.photourl %}
+                            <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            {% else %}
+                            <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-2">
                             <a class="sidebar-user-title dropdown-toggle" href="#" data-bs-toggle="dropdown">
@@ -329,7 +333,11 @@
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-icon pe-md-0 dropdown-toggle" href="#" data-bs-toggle="dropdown">
-                                <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{current_user.firstname}} {{current_user.lastname}}" />
+                                {% if current_user.photourl %}
+                                <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                                {% else %}
+                                <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                                {% endif %}
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
                                 <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
