@@ -152,7 +152,7 @@ class BQReplicationView(AdminBaseView):
             if len(users) > 0:
                 uout = users[0]
             uout_serialized = dumps(uout)
-            #uout.userid = uin.UserID
+            uout.userid = uin.UserID
             uout.adpemployeeid = uin.ADPEmployeeID
             uout.loginname = uin.LoginName
             uout.firstname = uin.FirstName
@@ -210,8 +210,44 @@ class BQReplicationView(AdminBaseView):
     @expose('/portfolios')
     def portfolios(self):
         loglines = []
+        bqclient = bigquery.Client()
+        loglines.append("Starting Genome DB Replication via BigQuery")
         loglines.append("")
-        loglines.append("portfolios")
+
+        # users
+        loglines.append("PORTFOLIO TABLE")
+        sql = f"""
+SELECT distinct accountportfolioid,
+name, clientname, currcst, currbusinessunit, currcostcenter, 
+currgadname, currpdname, currstratname, currcdname, currtdname, currofficename
+from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
+        """
+        for pfin in bqclient.query(sql).result():
+            # upsert emulation
+            pfout = Portfolio()
+            portfolios = db.session.query(Portfolio).where(Portfolio.id==pfin.accountportfolioid).all()
+            if len(portfolios) > 0:
+                pfout = portfolios[0]
+            pfout.id = pfin.accountportfolioid
+            pfout.name = pfin.name
+            pfout.clientname = pfin.clientname
+            pfout.currcst = pfin.currcst
+            pfout.currbusinessunit = pfin.currbusinessunit
+            pfout.currcostcenter = pfin.currcostcenter
+            pfout.currgadname = pfin.currgadname
+            pfout.currpdname = pfin.currpdname
+            pfout.currstratname = pfin.currstratname
+            pfout.currcdname = pfin.currcdname
+            pfout.currtdname = pfin.currtdname
+            pfout.currofficename = pfin.currofficename
+
+            if len(portfolios) == 0:
+                db.session.add(pfout)
+                loglines.append(f"NEW portfolio {pfout.name}")
+            else:
+                loglines.append(f"UPDATE portfolio {pfout.name}")
+
+        db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
 

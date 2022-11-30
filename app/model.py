@@ -121,6 +121,10 @@ LaborRole = Base.classes.labor_role
 LaborRoleSkill = Base.classes.labor_role_skill
 
 
+# Portfolios etc.
+
+Base.classes.portfolio.__str__ = obj_name
+Portfolio = Base.classes.portfolio
 
 
 
