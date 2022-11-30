@@ -52,7 +52,6 @@ class DbReplicationView(AdminBaseView):
         loglines.append("EMPLOYEE LIST (for photos)")
         json = retrieveGenomeReport(1873)
         usersdb = db.session.query(User).all()
-        usersout = []
         for uin in json['Entries']:
             if uin['PhotoURL'] != None:
                 uout = User()
@@ -74,15 +73,52 @@ class DbReplicationView(AdminBaseView):
         loglines.append("Starting Genome DB Replication via Report Queries")
         loglines.append("")
 
-    # portfolio forecasts
-        loglines.append("EMPLOYEE LIST (for photos)")
-        json = retrieveGenomeReport(1873)
-        pfsout = []
+        loglines.append("PORTFOLIO FORECAST LIST")
+        json = retrieveGenomeReport(1705)
         for pfin in json['Entries']:
-            loglines.append(pfin)
+            # date comes back in the format '/Date(1262322000000-0500)/', ie milliseconds since 1970-01-01
+            pfin['YearMonth'] = datetime.datetime.fromtimestamp(int(pfin['YearMonth'][6:16]))
 
-        db.session.bulk_save_objects(pfsout)
+            newupdateskip = 'u'
+            pfout = db.session.query(PortfolioForecast).where(
+                PortfolioForecast.portfolioid == pfin['AccountPortfolioID'],
+                PortfolioForecast.yearmonth == pfin['YearMonth']
+                ).first()
+            if pfout == None:
+                pfout = PortfolioForecast()
+                newupdateskip = 'n'
+
+            # do we even know this portfolio? (skip if not)
+            if db.session.query(Portfolio).where(Portfolio.id == pfin['AccountPortfolioID']).first() == None:
+                newupdateskip = 's'
+            # skip if they're the same
+            pfinsig = f"{pfin['TEARevenue']} {pfin['FEARevenue']} {pfin['AEARevenue']} {pfin['LEARevenue']}"
+            pfoutsig = f"{pfout.portfolioid} {pfout.yearmonth} {pfout.target} {pfout.forecast} {pfout.actuals} {pfout.lbeforecast}"
+            if pfinsig == pfoutsig:
+                newupdateskip = 's'
+            # skip if forecast is older than 2020
+            if pfin['YearMonth'] < datetime.datetime(2020,1,1):
+                newupdateskip = 's'
+
+            if newupdateskip == 'u' or newupdateskip == 'n':
+                pfout.portfolioid = pfin['AccountPortfolioID']
+                pfout.yearmonth = pfin['YearMonth']
+                pfout.target = pfin['TEARevenue']
+                pfout.forecast = pfin['FEARevenue']
+                pfout.actuals = pfin['AEARevenue']
+                pfout.lbeforecast = pfin['LEARevenue']
+
+            if newupdateskip == 'n':
+                db.session.add(pfout)
+                loglines.append(f"NEW portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
+            elif newupdateskip == 's':
+                loglines.append(f"SKIP portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
+            else:
+                loglines.append(f"UPDATE portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
+            db.session.commit()
+
         loglines.append("")
+        db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
 
@@ -225,27 +261,41 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
         for pfin in bqclient.query(sql).result():
             # upsert emulation
             pfout = Portfolio()
+            newupdateskip = 'n'
             portfolios = db.session.query(Portfolio).where(Portfolio.id==pfin.accountportfolioid).all()
             if len(portfolios) > 0:
                 pfout = portfolios[0]
-            pfout.id = pfin.accountportfolioid
-            pfout.name = pfin.name
-            pfout.clientname = pfin.clientname
-            pfout.currcst = pfin.currcst
-            pfout.currbusinessunit = pfin.currbusinessunit
-            pfout.currcostcenter = pfin.currcostcenter
-            pfout.currgadname = pfin.currgadname
-            pfout.currpdname = pfin.currpdname
-            pfout.currstratname = pfin.currstratname
-            pfout.currcdname = pfin.currcdname
-            pfout.currtdname = pfin.currtdname
-            pfout.currofficename = pfin.currofficename
+                newupdateskip = 's'
 
-            if len(portfolios) == 0:
+            pfinsig = f"{pfin.name} {pfin.clientname} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
+            pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
+
+            if pfinsig != pfoutsig:
+                if newupdateskip == 's':
+                    newupdateskip = 'u'
+                pfout.id = pfin.accountportfolioid
+                pfout.name = pfin.name
+                pfout.clientname = pfin.clientname
+                if pfin.currcst != None:
+                    pfout.currcst = pfin.currcst
+                pfout.currbusinessunit = pfin.currbusinessunit
+                pfout.currcostcenter = pfin.currcostcenter
+                pfout.currgadname = pfin.currgadname
+                pfout.currpdname = pfin.currpdname
+                pfout.currstratname = pfin.currstratname
+                pfout.currcdname = pfin.currcdname
+                pfout.currtdname = pfin.currtdname
+                pfout.currofficename = pfin.currofficename
+
+            if newupdateskip == 'n':
                 db.session.add(pfout)
                 loglines.append(f"NEW portfolio {pfout.name}")
+            elif newupdateskip == 's':
+                loglines.append(f"SKIP portfolio {pfout.name}")
             else:
                 loglines.append(f"UPDATE portfolio {pfout.name}")
+                loglines.append(f"  [INBOUND : {pfinsig}]")
+                loglines.append(f"  [EXISTING: {pfoutsig}]")
 
         db.session.commit()
 
