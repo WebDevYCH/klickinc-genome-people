@@ -301,6 +301,55 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
 
         return self.render('admin/job_log.html', loglines=loglines)
 
+    @expose('/laborroles')
+    def laborroles(self):
+        loglines = []
+        bqclient = bigquery.Client()
+        loglines.append("Starting Genome DB Replication via BigQuery")
+        loglines.append("")
+
+        # users
+        loglines.append("LABORROLE TABLE")
+        sql = f"""
+SELECT 
+distinct laborroleid, defaultname as name, jobfunction, joblevel, categoryname 
+from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
+        """
+        for lrin in bqclient.query(sql).result():
+            # upsert emulation
+            lrout = LaborRole()
+            newupdateskip = 'n'
+            laborroles = db.session.query(LaborRole).where(LaborRole.id==lrin.laborroleid).all()
+            if len(laborroles) > 0:
+                lrout = laborroles[0]
+                newupdateskip = 's'
+
+            lrinsig = f"{lrin.name} {lrin.jobfunction} {lrin.joblevel} {lrin.categoryname}"
+            lroutsig = f"{lrout.name} {lrout.jobfunction} {lrout.joblevel} {lrout.categoryname}"
+
+            if lrinsig != lroutsig:
+                if newupdateskip == 's':
+                    newupdateskip = 'u'
+                lrout.id = lrin.laborroleid
+                lrout.name = lrin.name
+                lrout.jobfunction = lrin.jobfunction
+                lrout.joblevel = lrin.joblevel
+                lrout.categoryname = lrin.categoryname
+
+            if newupdateskip == 'n':
+                db.session.add(lrout)
+                loglines.append(f"NEW labor role {lrout.name}")
+            elif newupdateskip == 's':
+                loglines.append(f"SKIP labor role {lrout.name}")
+            else:
+                loglines.append(f"UPDATE labor role {lrout.name}")
+                loglines.append(f"  [INBOUND : {lrinsig}]")
+                loglines.append(f"  [EXISTING: {lroutsig}]")
+
+        db.session.commit()
+
+        return self.render('admin/job_log.html', loglines=loglines)
+
 admin.add_view(DbReplicationView(name='Genome DB', category='DB Replication'))
 admin.add_view(BQReplicationView(name='Genome BQ', category='DB Replication'))
 
