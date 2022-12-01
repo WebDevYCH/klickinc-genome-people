@@ -16,7 +16,10 @@ Install requirements::
 
     pip install -r requirements.txt
 
-Copy app/config-template.py to app/config.py and add your database credentials
+Copy app/config-template.py to app/config.py and add your database credentials::
+
+    cp app/config-template.py app/config.py
+    [edit app/config.py]
 
 Run the application::
 

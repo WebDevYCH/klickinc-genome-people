@@ -6,6 +6,7 @@ logfile=$0.log
 export FLASK_APP=app
 export FLASK_DEBUG=1
 export PYTHONPATH=.
+export GOOGLE_APPLICATION_CREDENTIALS="../keys/google-key.json"
 cd app
 
 while /usr/bin/true; do

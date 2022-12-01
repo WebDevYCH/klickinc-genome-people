@@ -126,7 +126,6 @@ def callback():
         # ...and then retry the query
         user = db.session.query(User).filter(User.email==users_email).first()
 
-
     if user:
         login_user(user)
         if 'login_next' in session:

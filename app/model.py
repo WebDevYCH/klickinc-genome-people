@@ -120,5 +120,12 @@ LaborRoleSkill = Base.classes.labor_role_skill
 # profile
 UserProfile = Base.classes.user_profile
 
+# Portfolios etc.
+Base.classes.portfolio.__str__ = obj_name
+Portfolio = Base.classes.portfolio
+
+Base.classes.portfolio_forecast.__str__ = obj_name
+PortfolioForecast = Base.classes.portfolio_forecast
+
 
 
