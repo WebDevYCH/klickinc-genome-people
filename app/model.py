@@ -112,9 +112,6 @@ Title = Base.classes.title
 
 TitleSkill = Base.classes.title_skill
 
-Base.classes.labor_category.__str__ = obj_name
-LaborCategory = Base.classes.labor_category
-
 Base.classes.labor_role.__str__ = obj_name
 LaborRole = Base.classes.labor_role
 
