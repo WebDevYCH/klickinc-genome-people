@@ -62,7 +62,7 @@
                                 {{ current_user.firstname}} {{ current_user.lastname }}
                             </a>
                             <div class="dropdown-menu dropdown-menu-start">
-                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
@@ -90,6 +90,13 @@
                         </a>
                     </li>
 
+                    <li class="sidebar-header">Jobs</li>
+                    <li class="sidebar-item">
+                      <a class="sidebar-link" href="/jobs">
+                        <i class="align-middle" data-feather="list"></i>
+                        <span class="align-middle">Jobs view</span>
+                      </a>
+                    </li>
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
                         Admin
@@ -332,7 +339,7 @@
                                 <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{current_user.firstname}} {{current_user.lastname}}" />
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
-                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &

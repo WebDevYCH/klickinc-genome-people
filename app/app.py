@@ -15,7 +15,10 @@ from model import *
 
 from oauthlib.oauth2 import WebApplicationClient
 import survey
+import job
+import profile
 import compmgr
+import labor
 import requests
 import dbreplication
 
@@ -78,7 +81,7 @@ def callback():
     # things on behalf of a user
     google_provider_cfg = get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
-    
+
     # Prepare and send request to get tokens! Yay tokens!
     token_url, headers, body = oathclient.prepare_token_request(
         token_endpoint,
@@ -114,7 +117,15 @@ def callback():
     else:
         return "User email not available or not verified by Google.", 400
 
-    user = db.session.query(User).filter(User.email==users_email).first()
+    try:
+        user = db.session.query(User).filter(User.email==users_email).first()
+    except sqlalchemy.orm.exc.UnmappedClassError:
+        # if the autoloaded model isn't initialized yet, then initialize
+        with app.app_context():
+            Base.prepare(autoload_with=db.engine, reflect=True)
+        # ...and then retry the query
+        user = db.session.query(User).filter(User.email==users_email).first()
+
 
     if user:
         login_user(user)
