@@ -18,6 +18,7 @@ import survey
 import compmgr
 import requests
 import dbreplication
+import forecasts
 
 ###################################################################
 ## HOME PAGE
