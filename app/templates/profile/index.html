@@ -5,8 +5,11 @@
 
 <!-- Latest compiled and minified Bootstrap CSS -->
 
-<h1 class="h3 mb-3">Profile</h1>
-<div class="row">
+<div class="d-flex justify-content-between">
+    <h1 class="h3 mb-3">Profile</h1>
+    <a class="text-dark float-end" href="/skill-edit"><i class="fa fa-arrow-left"></i> Edit Skills Page</a>
+</div>
+<div class="profile-page row">
     <div class="col-md-4 col-xl-3 col-3">
         <div class="card mb-3">
             <div class="card-header">
@@ -17,48 +20,23 @@
                 <h5 class="card-title mb-0">{{ user }}</h5>
                 <div class="text-muted mb-2">Developer</div>
 
-                <div>
+                <!-- <div>
                     <a class="btn btn-primary btn-sm" href="#">Follow</a>
                     <a class="btn btn-primary btn-sm" href="#"><span data-feather="message-square"></span> Message</a>
-                </div>
+                </div> -->
             </div>
             <hr class="my-0" />
             <div class="card-body">
-                <h5 class="h6 card-title">Skills</h5>
-                <a href="#" class="badge bg-primary me-1 my-1">HTML</a>
-                <a href="#" class="badge bg-primary me-1 my-1">JavaScript</a>
-                <a href="#" class="badge bg-primary me-1 my-1">Sass</a>
-                <a href="#" class="badge bg-primary me-1 my-1">Angular</a>
-                <a href="#" class="badge bg-primary me-1 my-1">Vue</a>
-                <a href="#" class="badge bg-primary me-1 my-1">React</a>
-                <a href="#" class="badge bg-primary me-1 my-1">Redux</a>
-                <a href="#" class="badge bg-primary me-1 my-1">UI</a>
-                <a href="#" class="badge bg-primary me-1 my-1">UX</a>
-                <form action="/profile" method="post">
-                    {{ skillform.csrf_token }}
-                    <div class="container">
-                        <div class="panel-group" id="accordion">
-                            <p>
-                                {{ skillform.skillid() }}
-                            </p>
-
-                            {% if skillform.skillid.errors %}
-                                <ul class="errors">
-                                    {% for error in skillform.skillid.errors %}
-                                        <li>{{ error }}</li>
-                                    {% endfor %}
-                                </ul>
-                            {% endif %}
-                            <p>
-                                <input type="submit" value="Add">
-                            </p>
-                        </div>
-                    </div>
-                </form>
+                <div class="row">
+                    <h5 class="h6 card-title">Skills</h5>
+                   
+                </div>
+                {% for skill in skills %}
+                <a href="#" class="badge bg-primary me-1 my-1">{{ skill.name }}</a>
+                {% endfor %}
             </div>
         </div>
     </div>
-
     <div class="col-md-8 col-xl-9 col-9">
         <div class="card">
             <div class="card-header">
@@ -68,29 +46,29 @@
             <div class="card-body h-100">
                 {{ profile.resume }}
             </div>
-        </div>
-        <form action="/profile" method="post">
-            {{ form.csrf_token }}
-            <div class="container">
-                <div class="panel-group" id="accordion">
-                    <p>
-                        {{ form.resume() }}
-                    </p>
+            <form action="/profile" method="post">
+                {{ form.csrf_token }}
+                <div class="container">
+                    <div class="panel-group" id="accordion">
+                        <div class="resume">
+                            {{ form.resume() }}
+                        </div>
 
-                    {% if form.resume.errors %}
-                        <ul class="errors">
-                            {% for error in form.resume.errors %}
-                                <li>{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
+                        {% if form.resume.errors %}
+                            <ul class="errors">
+                                {% for error in form.resume.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
 
-                    <p>
-                        <input type="submit" value="Add">
-                    </p>
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-primary text-white" type="submit"><i class="fa fa-plus"></i> Add</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
 
