@@ -12,16 +12,21 @@
     .other-info {
         font-size: x-small;
     }
+    #people-list {
+        height: 450px;
+        overflow: auto;
+    }
 </style>
 {% endblock %}
 {% block app_content %}
 <p class="clearfix">
     <a href="#" class="float-end text-decoration-underline ms-3">Personal Settings</a>
     <a href="#" class="float-end text-decoration-underline ms-3" id="create-job-btn" data-bs-toggle="modal" data-bs-target="#create_job_modal">Create a Job</a>
-    <a href="#" class="float-end text-decoration-underline ms-3">View Available People</a>
+    <a href="#" class="float-end text-decoration-underline ms-3" id="available-people-btn" data-bs-toggle="modal" data-bs-target="#available_people_modal">View Available People</a>
 </p>
 <p id="job-num">There are {{ jobs|length }} job postings that meet the search criteria</p>
 <div class="row">
+    <!-- /////////////////////////// Search Criteria ///////////////////// -->
     <div class="col-12 col-xl-3">
         <form id="delta_box" class="mb-3">
             <label class="col-form-label text-sm-end pt-sm-0">Date Posted</label>
@@ -61,33 +66,34 @@
             </select>
         </div>
     </div>
+    <!-- //////////////////// Job Lists ////////////////////// -->
     <div id="job-list" class="col-12 col-xl-9">
         {% for job in jobs %}
         <div class="row job-card">
             <div class="col-md-9">
                 <div>
                     <span class="card-title mb-0 text-primary fs-3" job-posting-id="{{ job.id }}">{{ job.title }}</span>
-                    <span class="fs-6">({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category.name }}</span>)</span>
+                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category.name }}</span>)</i></span>
                 </div>
                 <div class="job-details">
                     Description: <span class="card-description">{{ job.description | safe }}</span>
                 </div>
                 <div class="other-info">
-                    Skills: React.js, Node.js
+                    Skills: React.js, Node.js (To be fixed soon...)
                 </div>
             </div>
             <div class="col-md-3">
-                <div>
+                <div class="clearfix">
                     <span class="float-end ms-5 text-muted">Today</span>
                     <span class="text-success float-end">Applied</span>
                 </div>
                 <div class="clearfix">
                     <label class="float-end text-danger">Expires in 3 days</label>
                 </div>
+                {% if current_user.userid == job.poster_user_id %}
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline">View applicants</a>
                 </div>
-                {% if current_user.userid == job.poster_user_id %}
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
                 </div>
@@ -106,6 +112,8 @@
         {% endfor %}
     </div>
 </div>
+
+<!-- ///////////////////////// Create, Edit Job Modal ///////////////////////////////////////////////// -->
 <div class="modal fade" id="create_job_modal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
         <div class="modal-content">
@@ -114,6 +122,10 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body m-3">
+                <div class="d-flex align-items-center modal-spinner d-none">
+                    <strong>Loading...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
                 <form>
                     <label for="">Title</label>
                     <span class="text-danger">*</span>
@@ -193,12 +205,57 @@
         </div>
     </div>
 </div>
+
+<!-- ////////////////// Available People Modal //////////////////////// -->
+<div class="modal fade" id="available_people_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Available People</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div class="d-flex align-items-center modal-spinner d-none">
+                    <strong>Loading...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
+                <p id="people-num"></p>
+                <div class="row">
+                    <div class="col-12 col-xl-4">
+                        <div class="mb-3">
+                            <label class="form-label">CST</label>
+                            <select id="people-cst" class="form-control mb-3">
+                                <option selected>Select CST</option>
+                                {% for cst in csts %}
+                                <option>{{ cst }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Job Function</label>
+                            <select id="people-job-function" class="form-control mb-3">
+                                <option selected>Select job function</option>
+                                {% for jobfunction in jobfunctions %}
+                                <option>{{ jobfunction }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div id="people-list" class="col-12 col-xl-8">
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block script %}
 <script>
     var editor;
     var category_id = 0;
     var flag = "create";
+    //////////// Search Job Functions ////////////////
     $("#delta_box").change(function() {
         loading();
         let data = {
@@ -233,10 +290,9 @@
             method: "POST",
             data: data,
             success: function(res) {
-                unloading();
                 var jobs = JSON.parse(res);
                 var data = "";
-                jobs.forEach(job => {console.log(job);
+                jobs.forEach(job => {
                     var current_user_id = "{{ current_user.userid }}";
                     data += `<div class="row job-card">
                                 <div class="col-md-9">
@@ -280,9 +336,11 @@
                 });
                 $("#job-list").html(data);
                 $("#job-num").html("There are "+jobs.length+" job postings that meet the search criteria");
+                unloading();
             }
         });
     }
+    ////////////// Widgets Ready ///////////////////////////
     document.addEventListener("DOMContentLoaded", function() {
 		flatpickr(".flatpickr-minimum", {
             minDate: "today"
@@ -295,6 +353,7 @@
             theme: "snow"
         });
     });
+    //////////// Job Post, Edit Functions /////////////
     $('#job-post-btn').on('click', function() {
         var description = editor.root.innerHTML;
         var title = $('#modal-job-title').val();
@@ -305,14 +364,13 @@
         if(title == "Select job title" || category == "Select job posting category" || description == "<p><br></p>" || expiry_date == "") {
             alert("You must fill required fields!");
         } else {
+            $("#create_job_modal").modal('hide');
             if (flag == "create") {
                 var url = '{{ url_for("postjob") }}';
             }
             else {
                 var url = '{{ url_for("editjob") }}';
             }
-            $("#create_job_modal").modal('toggle');
-            loading();
             $.ajax({
                 type: 'POST',
                 url: url,
@@ -325,10 +383,11 @@
                     job_posting_id: job_posting_id
                 },
                 success: function() {
-                    window.location.href = '/jobsearch'
-                    unloading();
+                    loading();
+                    window.location.href = '/jobsearch';
                 }
             });
+            unloading();
         }
     });
     $("#modal-job-category").change(function() {
@@ -359,5 +418,62 @@
         $("#job_posting_id").val("");
         $(".modal-title").html("Create a Job");
     });
+    //////////////////// Available People Functions ///////////
+    $("#available-people-btn").click(function() {
+        showModalLoading();
+        let data = {
+            cst: $("#people-cst").val(),
+            jobfunction: $("#people-job-function").val()
+        }
+        searchpeople(data);
+    });
+    $("#people-cst").change(function() {
+        showModalLoading();
+        let data = {
+            cst: $(this).val(),
+            jobfunction: $("#people-job-function").val()
+        }
+        searchpeople(data);
+    });
+    
+    $("#people-job-function").change(function() {
+        showModalLoading();
+        let data = {
+            cst: $("#people-cst").val(),
+            jobfunction: $(this).val()
+        }
+        searchpeople(data);
+    });
+    function searchpeople(data) {
+        $.ajax({
+            url: "{{ url_for('searchpeople') }}",
+            method: "POST",
+            data: data,
+            success: function(response) {
+                var html_str = "";
+                var people = JSON.parse(response);
+                people.forEach(p => {
+                    html_str += `
+                        <div class="row people-card">
+                            <div class="col-12">
+                                <div>
+                                    <span class="card-title mb-0 text-primary fs-4">`+p.firstname+` `+p.lastname+`</span>
+                                </div>
+                                <div class="other-info">
+                                    `+p.cst+` `+p.jobfunction+`
+                                </div>
+                                <div class="clearfix">
+                                    <a href="#" class="float-end text-decoration-underline">View profile</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
+                    $("#people-list").html(html_str);
+                    hideModalLoading();
+                });
+            }
+        });
+    }
 </script>
 {% endblock %}

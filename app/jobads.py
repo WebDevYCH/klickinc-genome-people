@@ -50,6 +50,10 @@ def editjob():
 def jobsearch():
     categories = db.session.query(JobPostingCategory).all()
     titles = db.session.query(Title).all()
+    csts = db.session.query(User.cst).distinct().all()
+    csts = [row.cst for row in csts]
+    jobfunctions = db.session.query(User.jobfunction).distinct().all()
+    jobfunctions = [row.jobfunction for row in jobfunctions]
     today = date.today()
     if request.method == 'POST':
         delta = int(request.form['delta'])
@@ -57,22 +61,31 @@ def jobsearch():
         title = request.form['title']
         if(category_id == 0 and title != 'Select job title'):
             jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.title==title).all()
-            data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-            return data  
         elif(category_id != 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all()
-            data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-            return data       
+            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all() 
         elif(category_id == 0 and title == 'Select job title'):
             jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
-            data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-            return data
         else:
             jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-            data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-            return data
+        data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
+        return data
     else:
         delta = 7
         jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
+    return render_template('jobads/jobsearch.html', jobs=jobs, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
-    return render_template('jobads/jobsearch.html', jobs=jobs, categories=categories, titles=titles)
+@app.route('/searchpeople', methods=['GET', 'POST'])
+@login_required
+def searchpeople():
+    cst =  request.form['cst']
+    jobfunction =  request.form['jobfunction']
+    if(cst != 'Select CST' and jobfunction == 'Select job function'):
+        data = db.session.query(User).filter(User.cst == cst).all()
+    elif(cst == 'Select CST' and jobfunction != 'Select job function'):
+        data = db.session.query(User).filter(User.jobfunction == jobfunction).all()
+    elif(cst != 'Select CST' and jobfunction != 'Select job function'):
+        data = db.session.query(User).filter(User.jobfunction == jobfunction, User.cst == cst).all()
+    else:
+        data = db.session.query(User).limit(100).all()
+    people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
+    return people
