@@ -34,6 +34,8 @@ def obj_name_survey_question(obj):
     return f"{obj.survey.name} - {obj.name}"
 def obj_name_survey_answer(obj):
     return f"{obj.survey_question.name} - {obj.answer}"
+def obj_name_joined(obj):
+    return ['id', 'job_or_availadble', 'job_posting_category_id', 'poster_user_id', 'posted_date', 'expiry_date', 'removed_date', 'title', 'description', 'contact_user_id', 'name']
 
 # Connect directly to database to make the schema, outside of the Flask context so we can
 # initialize before the first web request
@@ -91,6 +93,7 @@ SurveyToken = Base.classes.survey_token
 
 # Job Ads
 Base.classes.job_posting.__str__ = obj_name
+Base.classes.job_posting.__json__ = obj_name_joined
 JobPosting = Base.classes.job_posting
 
 Base.classes.job_posting_category.__str__ = obj_name

@@ -27,6 +27,22 @@
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
     {% block app_head %}{% endblock %}
+    <style>
+        div.loading {
+            width: 135px;
+            height: 135px;
+            display: none;
+            background: url("img/spinning.gif") no-repeat;
+            cursor: wait;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%); /* IE 9 */
+            -webkit-transform: translate(-50%, -50%); /* Chrome, Safari, Opera */
+            z-index: 9999999999;
+        }
+    </style>
 </head>
 <!--
   HOW TO USE: 
@@ -102,6 +118,15 @@
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="/forecasts/portfolio-forecasts">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Portfolio Forecasts</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-header">
+                        Job Board
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/jobads/jobsearch">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
 
@@ -428,7 +453,24 @@
     </div>
 
     <script src="/static/js/app.js"></script>
+    <script src="/static/js/jquery-3.6.1.min.js"></script>
 
+    <div class="loading"></div>
+    <script type="text/javascript">// <![CDATA[
+        function loading(){
+            $(".loading").show();      
+        }
+        function unloading(){
+            $(".loading").hide();
+        }
+        function showModalLoading() {
+            $(".modal-spinner").removeClass('d-none');
+        }
+        function hideModalLoading() {
+            $(".modal-spinner").addClass('d-none');
+        }
+// ]]></script>
+    {% block script %}{% endblock %}
 </body>
 
 </html>
