@@ -15,12 +15,12 @@ from model import *
 
 from oauthlib.oauth2 import WebApplicationClient
 import survey
-import job
 import profile
 import compmgr
 import labor
 import requests
 import dbreplication
+import forecasts
 import jobads
 
 ###################################################################
@@ -75,8 +75,6 @@ def login():
 # GET /login/callback
 @app.route("/login/callback")
 def callback():
-    with app.app_context():
-        Base.prepare(autoload_with=db.engine, reflect=True)
     # Get authorization code Google sent back to you
     code = request.args.get("code")
 

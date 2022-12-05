@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block style %}
+{% block app_head %}
 <link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
 <style>
     .job-details {
@@ -18,6 +18,7 @@
     }
 </style>
 {% endblock %}
+
 {% block app_content %}
 <p class="clearfix">
     <a href="#" class="float-end text-decoration-underline ms-3">Personal Settings</a>
@@ -468,10 +469,13 @@
                             </div>
                         </div>
                     `;
-                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
-                    $("#people-list").html(html_str);
-                    hideModalLoading();
                 });
+                if (people.length > 500)
+                    $("#people-num").html("There are at least 500 people that meet the criteria");
+                else
+                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
+                $("#people-list").html(html_str);
+                hideModalLoading();
             }
         });
     }

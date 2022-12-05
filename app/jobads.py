@@ -1,10 +1,8 @@
 from sqlite3 import Row
 from flask_login import login_required
 from datetime import date
-import simplejson
 import json
 import pandas as pd
-from bson import json_util
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
@@ -12,7 +10,7 @@ from model import *
 
 admin.add_view(AdminModelView(JobPosting, db.session, category='Job Ads'))
 
-@app.route('/postjob', methods=['GET', 'POST'])
+@app.route('/jobads/postjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
     title = request.form['title']
@@ -28,7 +26,7 @@ def postjob():
     db.session.commit()
     return redirect(url_for('jobsearch'))
 
-@app.route('/editjob', methods=['GET', 'POST'])
+@app.route('/jobads/editjob', methods=['GET', 'POST'])
 @login_required
 def editjob():
     title = request.form['title']
@@ -45,14 +43,14 @@ def editjob():
     db.session.commit()
     return redirect(url_for('jobsearch'))
 
-@app.route('/jobsearch', methods=['GET', 'POST'])
+@app.route('/jobads/jobsearch', methods=['GET', 'POST'])
 @login_required
 def jobsearch():
-    categories = db.session.query(JobPostingCategory).all()
-    titles = db.session.query(Title).all()
-    csts = db.session.query(User.cst).distinct().all()
+    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+    titles = db.session.query(Title).order_by(Title.name).all()
+    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
     csts = [row.cst for row in csts]
-    jobfunctions = db.session.query(User.jobfunction).distinct().all()
+    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
     jobfunctions = [row.jobfunction for row in jobfunctions]
     today = date.today()
     if request.method == 'POST':
@@ -74,18 +72,21 @@ def jobsearch():
         jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
     return render_template('jobads/jobsearch.html', jobs=jobs, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
-@app.route('/searchpeople', methods=['GET', 'POST'])
+@app.route('/jobads/searchpeople', methods=['GET', 'POST'])
 @login_required
 def searchpeople():
     cst =  request.form['cst']
     jobfunction =  request.form['jobfunction']
     if(cst != 'Select CST' and jobfunction == 'Select job function'):
-        data = db.session.query(User).filter(User.cst == cst).all()
+        data = db.session.query(User).filter(User.enabled == True, User.cst == cst).order_by(User.firstname).all()
     elif(cst == 'Select CST' and jobfunction != 'Select job function'):
-        data = db.session.query(User).filter(User.jobfunction == jobfunction).all()
+        data = db.session.query(User).filter(User.enabled == True, User.jobfunction == jobfunction).order_by(User.firstname).all()
     elif(cst != 'Select CST' and jobfunction != 'Select job function'):
-        data = db.session.query(User).filter(User.jobfunction == jobfunction, User.cst == cst).all()
+        data = db.session.query(User).filter(User.enabled == True, User.jobfunction == jobfunction, User.cst == cst).order_by(User.firstname).all()
     else:
-        data = db.session.query(User).limit(100).all()
+        data = db.session.query(User).filter(User.enabled == True).order_by(User.firstname).limit(501).all()
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
+
+
+

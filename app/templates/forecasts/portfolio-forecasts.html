@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block app_head %}
+<script src="/static/js/dhtmlxsuite.js"></script>
+<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
+{% endblock %}
+
+
+{% block app_content %}
+
+<div style="max-width: 600px; width: 100%;" id="pcombo"></div>
+<div style="max-width: 150px" id="yearcombo"></div>
+
+<div style="width: 100%; min-height: 500px; height: 100%; border:1px;" id="grid"></div>
+
+<script>
+    comboonchange = function(id) {
+        var year = yearcombo.getValue();
+        var portfolios = pcombo.getValue();
+        if (portfolios != "")
+            treegrid.data.load('portfolio-forecasts-data?year='+year+'&portfolios='+portfolios);
+    }
+
+    const pcombo = new dhx.Combobox("pcombo", {
+        multiselection: true,
+        label: "Portfolio",
+    });
+    pcombo.events.on("change", comboonchange);
+    pcombo.data.load('/forecasts/portfolio-data');
+
+    const years = [
+        {% for y in range(startyear,endyear+1)  %}
+        { "id" : {{y}}, "value" : "{{y}}" },
+        {% endfor %}
+    ]
+    const yearcombo = new dhx.Combobox("yearcombo", {
+        multiselection: false,
+        data: years,
+        label: "Year",
+        value: {{thisyear}},
+        readOnly: true,
+    });
+    yearcombo.events.on("change", comboonchange);
+
+    const treegrid = new dhx.Grid("grid", {
+        columns: [
+            { id: "client", gravity: 1.5, header: [{ text: "Client" }] },
+            { id: "portfolio", gravity: 1.5, header: [{ text: "Portfolio" }] },
+            { id: "m1", type: "number", header: [{ text: "Jan" }] },
+            { id: "m2", type: "number", header: [{ text: "Feb" }] }, 
+            { id: "m3", type: "number", header: [{ text: "Mar" }] },
+            { id: "m4", type: "number", header: [{ text: "Apr" }] },
+            { id: "m5", type: "number", header: [{ text: "May" }] },
+            { id: "m6", type: "number", header: [{ text: "Jun" }] },
+            { id: "m7", type: "number", header: [{ text: "Jul" }] },
+            { id: "m8", type: "number", header: [{ text: "Aug" }] },
+            { id: "m9", type: "number", header: [{ text: "Sep" }] },
+            { id: "m10", type: "number", header: [{ text: "Oct" }] },
+            { id: "m11", type: "number", header: [{ text: "Nov" }] },
+            { id: "m12", type: "number", header: [{ text: "Dec" }] },
+        ],
+        autoWidth: true,
+        resizable: true,
+        label: "Forecasts and Targets",
+    });
+</script>
+
+{% endblock %}
+
