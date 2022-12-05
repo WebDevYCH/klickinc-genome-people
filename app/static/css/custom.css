@@ -15,3 +15,18 @@
 .profile-page .panel-group .resume {
     word-break: break-all;
 }
+
+div.loading {
+    width: 135px;
+    height: 135px;
+    display: none;
+    background: url("img/spinning.gif") no-repeat;
+    cursor: wait;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    -ms-transform: translate(-50%, -50%); /* IE 9 */
+    -webkit-transform: translate(-50%, -50%); /* Chrome, Safari, Opera */
+    z-index: 9999999999;
+}
