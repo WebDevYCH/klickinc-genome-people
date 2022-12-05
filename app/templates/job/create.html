@@ -56,7 +56,7 @@
 
 <h1 class="text-center">Job create</h1>
 <!-- Latest compiled and minified Bootstrap CSS -->
-<form id="job" action="/jobs-create" method="post">
+<form id="job" action="/job/jobs-create" method="post">
   {{form.hidden_tag()}}
   <div class="container">
     <div class="col-12 col-xl-6">
@@ -73,7 +73,9 @@
   </div>
 </form>
 <!-- end container -->
-{% endblock %} {% block scripts %}
+{% endblock %} 
+
+{% block scripts %}
 <!-- Latest compiled and minified JavaScript -->
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>

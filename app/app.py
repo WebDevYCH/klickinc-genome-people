@@ -15,7 +15,6 @@ from model import *
 
 from oauthlib.oauth2 import WebApplicationClient
 import survey
-import job
 import profile
 import compmgr
 import labor
@@ -23,6 +22,7 @@ import requests
 import dbreplication
 import forecasts
 import jobads
+import job
 
 ###################################################################
 ## HOME PAGE

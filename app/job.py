@@ -19,12 +19,12 @@ from google.cloud import language_v1
 from core import *
 from model import *
 
-admin.add_view(AdminModelView(JobPosting, db.session, category='Jobs/Postings'))
-admin.add_view(AdminModelView(JobPostingCategory, db.session, category='Jobs/Postings'))
-admin.add_view(AdminModelView(JobPostingSkill, db.session, category='Jobs/Postings'))
+#admin.add_view(AdminModelView(JobPosting, db.session, category='Jobs/Postings'))
+#admin.add_view(AdminModelView(JobPostingCategory, db.session, category='Jobs/Postings'))
+#admin.add_view(AdminModelView(JobPostingSkill, db.session, category='Jobs/Postings'))
 
 
-@app.route('/jobs', methods=['GET', 'POST'])
+@app.route('/job/jobs', methods=['GET', 'POST'])
 @login_required
 def job():
     """Route to the job."""
@@ -34,7 +34,7 @@ def job():
 
     return render_template('job/index.html', title='Jobs', jobs=jobs)
 
-@app.route('/jobs-create', methods=['GET', 'POST'])
+@app.route('/job/jobs-create', methods=['GET', 'POST'])
 @login_required
 def create():
 
