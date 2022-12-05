@@ -46,11 +46,11 @@ def editjob():
 @app.route('/jobads/jobsearch', methods=['GET', 'POST'])
 @login_required
 def jobsearch():
-    categories = db.session.query(JobPostingCategory).all()
-    titles = db.session.query(Title).all()
-    csts = db.session.query(User.cst).distinct().all()
+    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+    titles = db.session.query(Title).order_by(Title.name).all()
+    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
     csts = [row.cst for row in csts]
-    jobfunctions = db.session.query(User.jobfunction).distinct().all()
+    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
     jobfunctions = [row.jobfunction for row in jobfunctions]
     today = date.today()
     if request.method == 'POST':
@@ -78,13 +78,13 @@ def searchpeople():
     cst =  request.form['cst']
     jobfunction =  request.form['jobfunction']
     if(cst != 'Select CST' and jobfunction == 'Select job function'):
-        data = db.session.query(User).filter(User.enabled == true, User.cst == cst).all()
+        data = db.session.query(User).filter(User.enabled == True, User.cst == cst).order_by(User.firstname).all()
     elif(cst == 'Select CST' and jobfunction != 'Select job function'):
-        data = db.session.query(User).filter(User.enabled == true, User.jobfunction == jobfunction).all()
+        data = db.session.query(User).filter(User.enabled == True, User.jobfunction == jobfunction).order_by(User.firstname).all()
     elif(cst != 'Select CST' and jobfunction != 'Select job function'):
-        data = db.session.query(User).filter(User.enabled == true, User.jobfunction == jobfunction, User.cst == cst).all()
+        data = db.session.query(User).filter(User.enabled == True, User.jobfunction == jobfunction, User.cst == cst).order_by(User.firstname).all()
     else:
-        data = db.session.query(User).limit(100).all()
+        data = db.session.query(User).filter(User.enabled == True).order_by(User.firstname).limit(501).all()
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 

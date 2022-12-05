@@ -469,10 +469,13 @@
                             </div>
                         </div>
                     `;
-                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
-                    $("#people-list").html(html_str);
-                    hideModalLoading();
                 });
+                if (people.length > 500)
+                    $("#people-num").html("There are at least 500 people that meet the criteria");
+                else
+                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
+                $("#people-list").html(html_str);
+                hideModalLoading();
             }
         });
     }
