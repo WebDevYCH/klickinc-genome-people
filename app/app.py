@@ -15,7 +15,10 @@ from model import *
 
 from oauthlib.oauth2 import WebApplicationClient
 import survey
+import job
+import profile
 import compmgr
+import labor
 import requests
 import dbreplication
 import jobads
@@ -81,7 +84,7 @@ def callback():
     # things on behalf of a user
     google_provider_cfg = get_google_provider_cfg()
     token_endpoint = google_provider_cfg["token_endpoint"]
-    
+
     # Prepare and send request to get tokens! Yay tokens!
     token_url, headers, body = oathclient.prepare_token_request(
         token_endpoint,

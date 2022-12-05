@@ -1,0 +1,17 @@
+.skill-edit-page select {
+    width: 100% !important;
+    height: 500px !important;
+}
+
+.skill-edit-page .pure-table {
+    width: 100% !important;
+}
+
+.profile-page .panel-group textarea{
+    width: 100%;
+    height: 300px;
+}
+
+.profile-page .panel-group .resume {
+    word-break: break-all;
+}
