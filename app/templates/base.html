@@ -25,6 +25,23 @@
     <!-- Choose your prefered color scheme -->
     <link href="css/light.css" rel="stylesheet">
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
+    <style>
+        div.loading {
+            width: 135px;
+            height: 135px;
+            display: none;
+            background: url("img/spinning.gif") no-repeat;
+            cursor: wait;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%); /* IE 9 */
+            -webkit-transform: translate(-50%, -50%); /* Chrome, Safari, Opera */
+            z-index: 9999999999;
+        }
+    </style>
+    {% block style %}{% endblock %}
 </head>
 <!--
   HOW TO USE: 
@@ -91,6 +108,15 @@
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="/survey">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-header">
+                        Job Board
+                    </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/jobsearch">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
 
@@ -415,9 +441,24 @@
             </footer>
         </div>
     </div>
-
+    <div class="loading"></div>
+    <script src="js/jquery-3.6.1.min.js"></script>
     <script src="js/app.js"></script>
-
+    <script type="text/javascript">// <![CDATA[
+        function loading(){
+            $(".loading").show();      
+        }
+        function unloading(){
+            $(".loading").hide();
+        }
+        function showModalLoading() {
+            $(".modal-spinner").removeClass('d-none');
+        }
+        function hideModalLoading() {
+            $(".modal-spinner").addClass('d-none');
+        }
+// ]]></script>
+    {% block script %}{% endblock %}
 </body>
 
 </html>
