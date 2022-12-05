@@ -3,30 +3,35 @@
 {% block app_head %}
 <script src="/static/js/dhtmlxsuite.js"></script>
 <link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
+
+<style>
+    .dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell, .dhx_tree-cell {font-size: 12px;}
+    { padding: 0 4px; }
+</style>
 {% endblock %}
 
 
 {% block app_content %}
 
-<div style="max-width: 600px; width: 100%;" id="pcombo"></div>
 <div style="max-width: 150px" id="yearcombo"></div>
+<div style="max-width: 600px; width: 100%;" id="ccombo"></div>
 
 <div style="width: 100%; min-height: 500px; height: 100%; border:1px;" id="grid"></div>
 
 <script>
-    comboonchange = function(id) {
-        var year = yearcombo.getValue();
-        var portfolios = pcombo.getValue();
-        if (portfolios != "")
-            treegrid.data.load('portfolio-forecasts-data?year='+year+'&portfolios='+portfolios);
-    }
 
-    const pcombo = new dhx.Combobox("pcombo", {
+    const ccombo = new dhx.Combobox("ccombo", {
         multiselection: true,
-        label: "Portfolio",
+        label: "Client",
     });
-    pcombo.events.on("change", comboonchange);
-    pcombo.data.load('/forecasts/portfolio-data');
+    ccomboonchange = function(id) {
+        var year = yearcombo.getValue();
+        var clients = ccombo.getValue();
+        if (clients != "")
+            treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
+    }
+    ccombo.events.on("change", ccomboonchange);
+
 
     const years = [
         {% for y in range(startyear,endyear+1)  %}
@@ -40,12 +45,16 @@
         value: {{thisyear}},
         readOnly: true,
     });
-    yearcombo.events.on("change", comboonchange);
+    yearcomboonchange = function(id) {
+        var year = yearcombo.getValue();
+        ccombo.data.load('/forecasts/client-list?year='+year);
+    }
+    yearcombo.events.on("change", yearcomboonchange);
+    yearcomboonchange(null);
 
-    const treegrid = new dhx.Grid("grid", {
+    const treegrid = new dhx.TreeGrid("grid", {
         columns: [
-            { id: "client", gravity: 1.5, header: [{ text: "Client" }] },
-            { id: "portfolio", gravity: 1.5, header: [{ text: "Portfolio" }] },
+            { id: "name", gravity: 4, header: [{ text: "Name" }] },
             { id: "m1", type: "number", header: [{ text: "Jan" }] },
             { id: "m2", type: "number", header: [{ text: "Feb" }] }, 
             { id: "m3", type: "number", header: [{ text: "Mar" }] },

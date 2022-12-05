@@ -36,36 +36,45 @@ def portfolio_forecasts():
 @login_required
 def portfolio_forecasts_data():
     year = int(request.args.get('year'))
-    portfolios = request.args.get('portfolios')
+    clients = request.args.get('clients')
     pfs = db.session.query(PortfolioForecast).\
         join(Portfolio).\
         filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1),\
             PortfolioForecast.yearmonth < datetime.date(year+1,1,1),\
-            PortfolioForecast.portfolioid.in_(list(map(int, portfolios.split(','))))\
+            Portfolio.clientid.in_(clients.split(','))\
         ).\
         all()
 
     bypfid= {}
     for pf in pfs:
+        # portfolios with forecasts
         pfout = bypfid.get(pf.portfolioid) or {}
-        pfout['client'] = pf.portfolio.clientname
-        pfout['portfolio'] = pf.portfolio.name
+        pfout['id'] = pf.portfolioid
+        pfout['parent'] = pf.portfolio.clientname
+        pfout['name'] = pf.portfolio.name
         pfout[f"m{pf.yearmonth.month}"] = pf.forecast
         bypfid[pf.portfolio.id] = pfout
+        # clients (as parent nodes)
+        pfout = bypfid.get(pf.portfolio.clientname) or {}
+        pfout['id'] = pf.portfolio.clientname
+        pfout['name'] = pf.portfolio.clientname
+        bypfid[pf.portfolio.clientname] = pfout
 
     return list(bypfid.values())
 
-@app.route('/forecasts/portfolio-data')
+
+@app.route('/forecasts/client-list')
 @login_required
-def portfolio_data():
-    thisyear = datetime.date.today().year
-    startyear = thisyear-2
-    endyear = thisyear+1
-    portfolios = db.session.query(Portfolio).\
+def pf_client_list():
+    year = int(request.args.get('year'))
+    clients = db.session.query(Portfolio).\
+        distinct(Portfolio.clientid,Portfolio.clientname).\
         join(PortfolioForecast).\
-        filter(PortfolioForecast.yearmonth >= datetime.date(startyear,1,1)).\
-        order_by(Portfolio.clientname,Portfolio.name).\
+        filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1)).\
+        filter(PortfolioForecast.yearmonth < datetime.date(year+1,1,1)).\
+        order_by(Portfolio.clientname).\
         all()
-    return [{"id" : p.id, "value" : f"{p.clientname} - {p.name}"} for p in portfolios]
+
+    return [{"id":c.clientid, "value":c.clientname } for c in clients]
 
 

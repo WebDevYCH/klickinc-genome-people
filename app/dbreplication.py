@@ -1,5 +1,7 @@
 import datetime
 import requests
+import re
+import hashlib
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_login import LoginManager, login_required, current_user
@@ -193,6 +195,9 @@ class BQReplicationView(AdminBaseView):
             uout.loginname = uin.LoginName
             uout.firstname = uin.FirstName
             uout.lastname = uin.LastName
+            if app.config['APP_ENV'] != 'live':
+                uout.firstname = re.sub('^(.).*','\\1',uout.firstname)
+                uout.lastname = re.sub('^(.).*','\\1',uout.lastname)
             uout.email = uin.Email
             uout.title = uin.Title
             uout.started = uin.Started
@@ -267,8 +272,8 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
                 pfout = portfolios[0]
                 newupdateskip = 's'
 
-            pfinsig = f"{pfin.name} {pfin.clientname} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
-            pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
+            pfinsig = f"{pfin.name} {pfin.clientname} {pfin.cliientid} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
+            pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.clientid} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
 
             if pfinsig != pfoutsig:
                 if newupdateskip == 's':
@@ -276,6 +281,11 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
                 pfout.id = pfin.accountportfolioid
                 pfout.name = pfin.name
                 pfout.clientname = pfin.clientname
+
+                sha1 = hashlib.sha1()
+                sha1.update(pfin.clientname.encode('utf-8'))
+                pfout.clientid = sha1.hexdigest()
+
                 if pfin.currcst != None:
                     pfout.currcst = pfin.currcst
                 pfout.currbusinessunit = pfin.currbusinessunit
