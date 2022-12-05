@@ -22,7 +22,6 @@ import requests
 import dbreplication
 import forecasts
 import jobads
-import job
 
 ###################################################################
 ## HOME PAGE
