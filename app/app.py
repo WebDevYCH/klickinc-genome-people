@@ -21,6 +21,7 @@ import compmgr
 import labor
 import requests
 import dbreplication
+import jobads
 
 ###################################################################
 ## HOME PAGE
@@ -74,6 +75,8 @@ def login():
 # GET /login/callback
 @app.route("/login/callback")
 def callback():
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
     # Get authorization code Google sent back to you
     code = request.args.get("code")
 
