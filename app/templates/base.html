@@ -26,23 +26,9 @@
     <link href="/static/css/light.css" rel="stylesheet">
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
+    <link href="/static/css/custom.css" rel="stylesheet">
+
     {% block app_head %}{% endblock %}
-    <style>
-        div.loading {
-            width: 135px;
-            height: 135px;
-            display: none;
-            background: url("img/spinning.gif") no-repeat;
-            cursor: wait;
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            -ms-transform: translate(-50%, -50%); /* IE 9 */
-            -webkit-transform: translate(-50%, -50%); /* Chrome, Safari, Opera */
-            z-index: 9999999999;
-        }
-    </style>
 </head>
 <!--
   HOW TO USE: 
@@ -84,7 +70,7 @@
                                 {{ current_user.firstname}} {{ current_user.lastname }}
                             </a>
                             <div class="dropdown-menu dropdown-menu-start">
-                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
@@ -110,6 +96,14 @@
                         <a class="sidebar-link" href="/survey">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
                         </a>
+                    </li>
+
+                    <li class="sidebar-header">Jobs (Elijah)</li>
+                    <li class="sidebar-item">
+                      <a class="sidebar-link" href="/jobs">
+                        <i class="align-middle" data-feather="list"></i>
+                        <span class="align-middle">Jobs view</span>
+                      </a>
                     </li>
 
                     <li class="sidebar-header">
@@ -376,7 +370,7 @@
                                 {% endif %}
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
-                                <a class="dropdown-item" href="pages-profile.html"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
