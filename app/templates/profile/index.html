@@ -1,13 +1,16 @@
 
 {% extends "base.html" %}
-
+{% block app_head %}
+<link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
+<style>
+</style>
+{% endblock %}
 {% block app_content %}
 
 <!-- Latest compiled and minified Bootstrap CSS -->
 
 <div class="d-flex justify-content-between">
     <h1 class="h3 mb-3">Profile</h1>
-    <a class="text-dark float-end" href="/skill-edit"><i class="fa fa-arrow-left"></i> Edit Skills Page</a>
 </div>
 <div class="profile-page row">
     <div class="col-md-4 col-xl-3 col-3">
@@ -28,7 +31,12 @@
             <hr class="my-0" />
             <div class="card-body">
                 <div class="row">
-                    <h5 class="h6 card-title">Skills</h5>
+                    <div class="d-flex justify-content-between">
+                        <h5 class="h6 card-title">Skills</h5>
+                        <a href="/profile/edit-skills" class="btn btn-sm btn-secondary">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                    </div>
                 </div>
                 {% for skill in skills %}
                 <a href="#" class="badge bg-primary me-1 my-1">{{ skill.name }}</a>
@@ -40,37 +48,129 @@
         <div class="card">
             <div class="card-header">
 
-                <h5 class="card-title mb-0">Resume</h5>
-            </div>
-            <div class="card-body h-100">
-                {{ profile.resume }}
-            </div>
-            <form action="/profile" method="post">
-                {{ form.csrf_token }}
-                <div class="container">
-                    <div class="panel-group" id="accordion">
-                        <div class="resume">
-                            {{ form.resume() }}
-                        </div>
-
-                        {% if form.resume.errors %}
-                            <ul class="errors">
-                                {% for error in form.resume.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-
-                        <div class="d-flex justify-content-end">
-                            <button class="btn btn-primary text-white" type="submit"><i class="fa fa-plus"></i> Add</button>
-                        </div>
-                    </div>
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title mb-0">Resume</h5>
+                    <a href="#" class="btn btn-sm btn-secondary" id="upload-resume-btn" data-bs-toggle="modal" data-bs-target="#edit_resume_modal">
+                        <i class="fas fa-edit"></i>
+                    </a>
                 </div>
-            </form>
+            </div>
+            <div class="card-body h-100" id="resume-panel">
+                {{ profile.resume | safe }}
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="edit_resume_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit resume</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div class="d-flex align-items-center modal-spinner d-none">
+                    <strong>Loading...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
+                <form>
+                    <div class="clearfix mb-3">
+                        <div id="quill-toolbar">
+                            <span class="ql-formats">
+                                <select class="ql-font"></select>
+                                <select class="ql-size"></select>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-bold"></button>
+                                <button class="ql-italic"></button>
+                                <button class="ql-underline"></button>
+                                <button class="ql-strike"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <select class="ql-color"></select>
+                                <select class="ql-background"></select>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-script" value="sub"></button>
+                                <button class="ql-script" value="super"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-header" value="1"></button>
+                                <button class="ql-header" value="2"></button>
+                                <button class="ql-blockquote"></button>
+                                <button class="ql-code-block"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-list" value="ordered"></button>
+                                <button class="ql-list" value="bullet"></button>
+                                <button class="ql-indent" value="-1"></button>
+                                <button class="ql-indent" value="+1"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-direction" value="rtl"></button>
+                                <select class="ql-align"></select>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-link"></button>
+                                <button class="ql-image"></button>
+                                <button class="ql-video"></button>
+                            </span>
+                            <span class="ql-formats">
+                                <button class="ql-clean"></button>
+                            </span>
+                        </div>
+                        <div id="quill-editor"></div>
+                    </div>
+                    <span id="resume-edit-btn" class="btn btn-primary float-end ms-3">Upload</span>
+                    <button type="button" class="btn btn-secondary float-end" data-bs-dismiss="modal">Cancel</button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
 
-  <!-- end container -->
-{% endblock %} 
 
+  <!-- end container -->
+{% endblock %}
+{% block script %}
+<script>
+    let flag = "Create"
+    const resume = $("#resume-panel").html()
+    if (resume) flag = "Edit"
+    $("#upload-resume-btn").on('click', function() {
+        if (flag === "Create") {
+            editor.root.innerHTML = "<p><br><p>"
+            $(".modal-title").html("Create your resume");
+        } else {
+            editor.root.innerHTML = resume
+        }
+    })
+    $('#resume-edit-btn').on('click', function() {
+        var resume = editor.root.innerHTML
+        $("#edit_resume_modal").modal('hide')
+        $.ajax({
+            type: "POST",
+            url: '/profile',
+            data: {
+                resume: resume
+            },
+            success: function() {
+                loading();
+                location.reload(true);
+            }
+        })
+        unloading()
+    })
+    document.addEventListener("DOMContentLoaded", function() {
+        flatpickr(".flatpickr-minimum", {
+            minDate: "today"
+        });
+        editor = new Quill("#quill-editor", {
+            modules: {
+                toolbar: "#quill-toolbar"
+            },
+            placeholder: "Write resume description here...",
+            theme: "snow"
+        });
+    });
+</script>
+{% endblock %}
