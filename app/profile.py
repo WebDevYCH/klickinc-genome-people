@@ -1,8 +1,8 @@
-from flask import render_template, flash, redirect, url_for
+from flask import render_template, flash, request
 from flask_login import login_required, current_user
 
 from flask_wtf import FlaskForm
-from wtforms import SelectField, TextAreaField, SelectMultipleField
+from wtforms import SelectField, TextAreaField
 from wtforms.validators import InputRequired
 
 from core import *
@@ -13,44 +13,48 @@ from helpers import *
 @login_required
 def profile():
     """Route to the job."""
-    form = ProfileForm()
-    profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).first()
+    profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
     my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).all()
-    skillform = SkillForm()
-    # fill_skills_by_lightcast_api()
-    if form.validate_on_submit():
+
+    if request.method == "POST":
         if profile:
-            relevant_skills = extract_skills_from_text(form.resume.data)
+            relevant_skills = extract_skills_from_text(request.form["resume"])
             auto_fill_user_skill_from_resume(relevant_skills)
-            profile.resume = form.resume.data
+            profile.resume = request.form["resume"]
             db.session.commit()
-            flash("Successfully updated!")
+            flash("Successfully updated your resume")
         else:
-            user_profile = UserProfile(resume=form.resume.data, user_id=int(current_user.userid))
+            user_profile = UserProfile(resume=request.form["resume"], user_id=int(current_user.userid))
             db.session.add(user_profile)
             db.session.commit()
             flash("Successfully added your resume")
-    return render_template('profile/index.html', form=form, skillform=skillform, profile=profile, user=current_user, skills=my_skills)
+    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills)
 
-@app.route('/skill-edit', methods=['GET', 'POST'])
+@app.route('/profile/edit-skills')
 @login_required
-def skill_edit():
-    skillform = SkillForm()
-    my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).all()
-    return render_template('profile/skill_edit.html', skillform=skillform, skills=my_skills)
+def resume_skills():
+    skills = db.session.query(Skill).join(UserSkill).filter(UserSkill.user_id==current_user.userid).all()
+    return render_template('profile/skill_edit.html', title="Personal Skills", skills=skills)
 
-@app.route('/skill-add', methods=['POST'])
+@app.route('/profile/total-skills-data')
+@login_required
+def total_skills_data():
+    skills = db.session.query(Skill).all()
+    return [{"id": skill.id, "value": skill.name} for skill in skills]
+
+@app.route('/profile/skill-add', methods=['POST'])
 @login_required
 def skill_add():
-    skillform = SkillForm()
-    if skillform.validate_on_submit():
-        for id in skillform.skillid.data:
-            if not db.session.query(UserSkill).filter(UserSkill.user_id==current_user.userid, UserSkill.skill_id==id).first():
-                new_skill = UserSkill(skill_id=id, user_id=int(current_user.userid), user_skill_source_id=1)
+    if request.method == "POST":
+        newSkills = request.form["newSkills"].split(",")
+        print(newSkills)
+        for id in newSkills:
+            if not db.session.query(UserSkill).filter(UserSkill.user_id==current_user.userid, UserSkill.skill_id==int(id)).first():
+                new_skill = UserSkill(skill_id=int(id), user_id=int(current_user.userid), user_skill_source_id=1)
                 db.session.add(new_skill)
         db.session.commit()
         flash("Successfully added your skills!") 
-    return redirect(url_for('skill_edit'))
+    return redirect(url_for('resume_skills'))
 
 @app.route('/profile/skill-edit/delete/<id>')
 @login_required
@@ -58,18 +62,4 @@ def skill_remove(id):
     db.session.query(UserSkill).filter(UserSkill.user_id==current_user.userid, UserSkill.skill_id==id).delete(synchronize_session="fetch")
     db.session.commit()
     flash("Successfully removed")
-    return redirect(url_for('skill_edit'))
-
-class ProfileForm(FlaskForm):
-    resume = TextAreaField('description', validators=[InputRequired()])
-
-class SkillForm(FlaskForm):
-    skillid = SelectMultipleField('skillid', choices=[], coerce=int)
-
-    def __init__(self, validate_choice=True, *args, **kwargs):
-        super(SkillForm, self).__init__(validate_choice=validate_choice, *args, **kwargs)
-        SKILL_CHOICES = []
-        skills = db.session.query(Skill).all()
-        for x in skills:
-            SKILL_CHOICES.append((x.id, x.name))
-        self.skillid.choices = SKILL_CHOICES
+    return redirect(url_for('resume_skills'))
