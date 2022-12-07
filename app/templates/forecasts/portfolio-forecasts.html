@@ -5,8 +5,9 @@
 <link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
 
 <style>
-    .dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell, .dhx_tree-cell {font-size: 12px;}
-    { padding: 0 4px; }
+    .dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell, .dhx_tree-cell {
+        font-size: 12px;
+    }
 </style>
 {% endblock %}
 
@@ -69,8 +70,13 @@
             { id: "m12", type: "number", header: [{ text: "Dec" }] },
         ],
         autoWidth: true,
+        autoHeight: true,
         resizable: true,
+        selection: true,
         label: "Forecasts and Targets",
+    });
+    treegrid.data.events.on("load", function() {
+        treegrid.collapseAll();
     });
 </script>
 

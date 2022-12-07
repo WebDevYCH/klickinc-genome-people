@@ -48,17 +48,31 @@ def portfolio_forecasts_data():
     bypfid= {}
     for pf in pfs:
         # portfolios with forecasts
-        pfout = bypfid.get(pf.portfolioid) or {}
-        pfout['id'] = pf.portfolioid
-        pfout['parent'] = pf.portfolio.clientname
+        pfout = bypfid.get(f"{pf.portfolioid}") or {}
+        pfout['id'] = f"{pf.portfolioid}"
+        pfout['parent'] = pf.portfolio.clientid
         pfout['name'] = pf.portfolio.name
         pfout[f"m{pf.yearmonth.month}"] = pf.forecast
-        bypfid[pf.portfolio.id] = pfout
+        bypfid[f"{pf.portfolio.id}"] = pfout
         # clients (as parent nodes)
         pfout = bypfid.get(pf.portfolio.clientname) or {}
-        pfout['id'] = pf.portfolio.clientname
+        pfout['id'] = pf.portfolio.clientid
         pfout['name'] = pf.portfolio.clientname
         bypfid[pf.portfolio.clientname] = pfout
+        # targets (as child nodes)
+        pfout = bypfid.get(f"t{pf.portfolioid}") or {}
+        pfout['id'] = f"t{pf.portfolioid}"
+        pfout['parent'] = f"{pf.portfolioid}"
+        pfout['name'] = "Targets"
+        pfout[f"m{pf.yearmonth.month}"] = pf.target
+        bypfid[f"t{pf.portfolio.id}"] = pfout
+        # targets (as child nodes)
+        pfout = bypfid.get(f"a{pf.portfolioid}") or {}
+        pfout['id'] = f"a{pf.portfolioid}"
+        pfout['parent'] = f"{pf.portfolioid}"
+        pfout['name'] = "Actuals"
+        pfout[f"m{pf.yearmonth.month}"] = pf.actuals
+        bypfid[f"a{pf.portfolio.id}"] = pfout
 
     return list(bypfid.values())
 
