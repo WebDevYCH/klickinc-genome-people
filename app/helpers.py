@@ -29,8 +29,10 @@ def get_allskills_from_lightcast():
 def fill_skills_by_lightcast_api():
     skills = get_allskills_from_lightcast()
     for skill in skills['data']:
-        new_skill = Skill(name=skill['name'], is_klick=False)
-        db.session.add(new_skill)
+        current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
+        if not current_skill:
+            new_skill = Skill(name=skill['name'], is_klick=False)
+            db.session.add(new_skill)
     db.session.commit()
     return True
 
