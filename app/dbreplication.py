@@ -16,6 +16,7 @@ from google.cloud import bigquery
 
 from core import *
 from model import *
+from helpers import *
 
 ###################################################################
 ## DATABASE REPLICATION
@@ -137,7 +138,7 @@ class BQReplicationView(AdminBaseView):
         # users
         loglines.append("USER TABLE")
         sql = f"""
-    select  
+    select
     UserID,
     ADPEmployeeID,
     LoginName,
@@ -254,7 +255,7 @@ class BQReplicationView(AdminBaseView):
         loglines.append("PORTFOLIO TABLE")
         sql = f"""
 SELECT distinct accountportfolioid,
-name, clientname, currcst, currbusinessunit, currcostcenter, 
+name, clientname, currcst, currbusinessunit, currcostcenter,
 currgadname, currpdname, currstratname, currcdname, currtdname, currofficename
 from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
         """
@@ -311,8 +312,8 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
         # users
         loglines.append("LABORROLE TABLE")
         sql = f"""
-SELECT 
-distinct laborroleid, defaultname as name, jobfunction, joblevel, categoryname 
+SELECT
+distinct laborroleid, defaultname as name, jobfunction, joblevel, categoryname
 from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
         """
         for lrin in bqclient.query(sql).result():
@@ -350,10 +351,29 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
 
         return self.render('admin/job_log.html', loglines=loglines)
 
+class SkillReplicationView(AdminBaseView):
+    @expose('/')
+    def index(self):
+        return self.render('admin/skillrepl.html')
+
+    @expose('/newskills')
+    def newskills(self):
+        loglines = []
+        loglines.append("Starting autofill New Skills Replication via LightCast API")
+        skills = get_allskills_from_lightcast()
+        loglines.append("Comparing with current skills table")
+        for skill in skills['data']:
+            current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
+            if not current_skill:
+                new_skill = Skill(name=skill['name'], is_klick=False)
+                db.session.add(new_skill)
+                loglines.append(f"Creating new skill {skill['name']}")
+            else:
+                loglines.append(f"Skipping existing skill {skill['name']}")
+        db.session.commit()
+        loglines.append("Finished autofilling new skills repliaction via LightCast API")
+        return self.render('admin/job_log.html', loglines=loglines)
+
 admin.add_view(DbReplicationView(name='Genome DB', category='DB Replication'))
 admin.add_view(BQReplicationView(name='Genome BQ', category='DB Replication'))
-
-
-
-
-
+admin.add_view(SkillReplicationView(name='Autofill skills', category='DB Replication'))
