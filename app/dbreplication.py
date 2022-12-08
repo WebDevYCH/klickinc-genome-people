@@ -273,8 +273,8 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
                 pfout = portfolios[0]
                 newupdateskip = 's'
 
-            pfinsig = f"{pfin.name} {pfin.clientname} {pfin.cliientid} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
-            pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.clientid} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
+            pfinsig = f"{pfin.name} {pfin.clientname} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
+            pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
 
             if pfinsig != pfoutsig:
                 if newupdateskip == 's':
@@ -283,12 +283,13 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
                 pfout.name = pfin.name
                 pfout.clientname = pfin.clientname
 
-                sha1 = hashlib.sha1()
-                sha1.update(pfin.clientname.encode('utf-8'))
-                pfout.clientid = sha1.hexdigest()
+                if pfin.clientname != None:
+                    sha1 = hashlib.sha1()
+                    sha1.update(pfin.clientname.encode('utf-8'))
+                    pfout.clientid = sha1.hexdigest()
 
                 if pfin.currcst != None:
-                    pfout.currcst = pfin.currcst
+                    pfout.currcst = pfin.currcst.replace("/","")
                 pfout.currbusinessunit = pfin.currbusinessunit
                 pfout.currcostcenter = pfin.currcostcenter
                 pfout.currgadname = pfin.currgadname

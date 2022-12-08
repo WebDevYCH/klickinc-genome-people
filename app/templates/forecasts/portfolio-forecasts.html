@@ -15,23 +15,41 @@
 {% block app_content %}
 
 <div style="max-width: 150px" id="yearcombo"></div>
-<div style="max-width: 600px; width: 100%;" id="ccombo"></div>
+
+<table><tr>
+    <td><div style="width: 300px; " id="cstcombo"></div></td>
+    <td style="padding-left: 15px; padding-right: 15px;"><i>or</i></td>
+    <td><div style="width: 600px; " id="clientcombo"></div></td>
+</tr></table>
 
 <div style="width: 100%; min-height: 500px; height: 100%; border:1px;" id="grid"></div>
 
 <script>
 
-    const ccombo = new dhx.Combobox("ccombo", {
+    const cstcombo = new dhx.Combobox("cstcombo", {
+        multiselection: true,
+        label: "CST",
+    });
+    cstcomboonchange = function(id) {
+        var year = yearcombo.getValue();
+        var csts = cstcombo.getValue();
+        if (csts != "")
+            treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
+    }
+    cstcombo.events.on("change", cstcomboonchange);
+
+
+    const clientcombo = new dhx.Combobox("clientcombo", {
         multiselection: true,
         label: "Client",
     });
-    ccomboonchange = function(id) {
+    clientcomboonchange = function(id) {
         var year = yearcombo.getValue();
-        var clients = ccombo.getValue();
+        var clients = clientcombo.getValue();
         if (clients != "")
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
     }
-    ccombo.events.on("change", ccomboonchange);
+    clientcombo.events.on("change", clientcomboonchange);
 
 
     const years = [
@@ -48,7 +66,8 @@
     });
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
-        ccombo.data.load('/forecasts/client-list?year='+year);
+        cstcombo.data.load('/forecasts/cst-list?year='+year);
+        clientcombo.data.load('/forecasts/client-list?year='+year);
     }
     yearcombo.events.on("change", yearcomboonchange);
     yearcomboonchange(null);
