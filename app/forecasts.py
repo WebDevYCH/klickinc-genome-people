@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -60,8 +61,9 @@ def portfolio_forecasts_data():
         pfout['id'] = f"{pf.portfolioid}"
         pfout['parent'] = pf.portfolio.clientid
         pfout['name'] = pf.portfolio.name
-        pfout[f"m{pf.yearmonth.month}"] = pf.forecast
-        bypfid[key] = pfout
+        if pf.forecast != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.forecast)
+            bypfid[key] = pfout
 
         # clients (as parent nodes)
         key = pf.portfolio.clientname
@@ -75,9 +77,10 @@ def portfolio_forecasts_data():
         pfout = bypfid.get(key) or {}
         pfout['id'] = f"t{pf.portfolioid}"
         pfout['parent'] = f"{pf.portfolioid}"
-        pfout['name'] = "Targets"
-        pfout[f"m{pf.yearmonth.month}"] = pf.target
-        bypfid[key] = pfout
+        pfout['name'] = "Target"
+        if pf.target != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.target)
+            bypfid[key] = pfout
 
         # targets (as child nodes)
         key = f"a{pf.portfolioid}"
@@ -85,8 +88,9 @@ def portfolio_forecasts_data():
         pfout['id'] = f"a{pf.portfolioid}"
         pfout['parent'] = f"{pf.portfolioid}"
         pfout['name'] = "Actuals"
-        pfout[f"m{pf.yearmonth.month}"] = pf.actuals
-        bypfid[key] = pfout
+        if pf.actuals != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.actuals)
+            bypfid[key] = pfout
 
     return list(bypfid.values())
 
