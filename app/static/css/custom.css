@@ -16,6 +16,9 @@
     word-break: break-all;
 }
 
+.profile-page .dropdown-menu {
+    min-width: 38rem !important;
+}
 div.loading {
     width: 135px;
     height: 135px;
