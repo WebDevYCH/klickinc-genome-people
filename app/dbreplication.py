@@ -376,12 +376,12 @@ class SkillReplicationView(AdminBaseView):
         for skill in skills['data']:
             current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
             if not current_skill:
-                new_skill = Skill(name=skill['name'], is_klick=False)
+                new_skill = Skill(name=skill['name'], is_klick=False, description=skill['description'])
                 db.session.add(new_skill)
                 loglines.append(f"Creating new skill {skill['name']}")
             else:
                 loglines.append(f"Skipping existing skill {skill['name']}")
-        db.session.commit()
+            db.session.commit()
         loglines.append("Finished autofilling new skills repliaction via LightCast API")
         return self.render('admin/job_log.html', loglines=loglines)
 

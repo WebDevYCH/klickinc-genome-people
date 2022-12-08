@@ -39,7 +39,12 @@
                     </div>
                 </div>
                 {% for skill in skills %}
-                <a href="#" class="badge bg-primary me-1 my-1">{{ skill.name }}</a>
+                <div class="dropdown position-relative">
+                    <a href="#" class="badge bg-primary me-1 my-1" data-bs-toggle="dropdown" data-bs-display="static">{{ skill.name }}</a>
+                    <div class="dropdown-menu dropdown-menu-right text-center" style="background-color: #90baeb; font-style: italic;">
+                        <span>{{ skill.description }}</span>
+                    </div>
+                </div>
                 {% endfor %}
             </div>
         </div>

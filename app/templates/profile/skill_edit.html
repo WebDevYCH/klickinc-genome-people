@@ -51,11 +51,14 @@
     multiselection: true,
     label: "Skills",
     });
-    pcombo.data.load('/profile/total-skills-data');
+    pcombo.disable()
+    pcombo.data.load('/profile/total-skills-data').then(function() {
+        pcombo.enable()
+        pcombo.focus()
+    });
 
     $("#skills-edit-btn").on('click', function(){
         var newSkills = pcombo.getValue()
-        console.log(">>>", newSkills)
         if (newSkills != "") {
             $.ajax({
                 method: "POST",
