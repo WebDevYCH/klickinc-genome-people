@@ -17,7 +17,7 @@ def get_lightcast_auth_token():
 def get_allskills_from_lightcast():
     url = "https://emsiservices.com/skills/versions/latest/skills"
 
-    querystring = {"typeIds":"ST1,ST2","fields":"id,name"}
+    querystring = {"typeIds":"ST1,ST2","fields":"id,name,description"}
 
     bearer_token = 'Bearer ' + get_lightcast_auth_token()
     headers = {'Authorization': bearer_token}
@@ -25,16 +25,6 @@ def get_allskills_from_lightcast():
     response = requests.request("GET", url, headers=headers, params=querystring)
 
     return response.json()
-
-def fill_skills_by_lightcast_api():
-    skills = get_allskills_from_lightcast()
-    for skill in skills['data']:
-        current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
-        if not current_skill:
-            new_skill = Skill(name=skill['name'], is_klick=False)
-            db.session.add(new_skill)
-    db.session.commit()
-    return True
 
 def extract_skills_from_text(text):
     url = "https://emsiservices.com/skills/versions/latest/extract"
@@ -50,7 +40,7 @@ def extract_skills_from_text(text):
 
     response = requests.request("POST", url, data=payload, headers=headers)
     data = response.json()
-    return data['data']
+    return data
 
 def auto_fill_user_skill_from_resume(data):
     db.session.query(UserSkill).filter(UserSkill.user_id == current_user.userid).delete(synchronize_session="fetch")
