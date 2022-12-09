@@ -1,4 +1,5 @@
 import datetime
+import re
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -36,36 +37,90 @@ def portfolio_forecasts():
 @login_required
 def portfolio_forecasts_data():
     year = int(request.args.get('year'))
-    portfolios = request.args.get('portfolios')
+    clients = request.args.get('clients')
+    csts = request.args.get('csts')
+
+    if csts != None:
+        queryfilter = Portfolio.currcst.in_(csts.split(','))
+    else:
+        queryfilter = Portfolio.clientid.in_(clients.split(','))
+
     pfs = db.session.query(PortfolioForecast).\
         join(Portfolio).\
         filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1),\
             PortfolioForecast.yearmonth < datetime.date(year+1,1,1),\
-            PortfolioForecast.portfolioid.in_(list(map(int, portfolios.split(','))))\
+            queryfilter,\
         ).\
         all()
 
     bypfid= {}
     for pf in pfs:
-        pfout = bypfid.get(pf.portfolioid) or {}
-        pfout['client'] = pf.portfolio.clientname
-        pfout['portfolio'] = pf.portfolio.name
-        pfout[f"m{pf.yearmonth.month}"] = pf.forecast
-        bypfid[pf.portfolio.id] = pfout
+        # portfolios with forecasts
+        key = f"{pf.portfolioid}"
+        pfout = bypfid.get(key) or {}
+        pfout['id'] = f"{pf.portfolioid}"
+        pfout['parent'] = pf.portfolio.clientid
+        pfout['name'] = pf.portfolio.name
+        if pf.forecast != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.forecast)
+            bypfid[key] = pfout
+
+        # clients (as parent nodes)
+        key = pf.portfolio.clientname
+        pfout = bypfid.get(key) or {}
+        pfout['id'] = pf.portfolio.clientid
+        pfout['name'] = pf.portfolio.clientname
+        bypfid[key] = pfout
+
+        # targets (as child nodes)
+        key = f"t{pf.portfolioid}"
+        pfout = bypfid.get(key) or {}
+        pfout['id'] = f"t{pf.portfolioid}"
+        pfout['parent'] = f"{pf.portfolioid}"
+        pfout['name'] = "Target"
+        if pf.target != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.target)
+            bypfid[key] = pfout
+
+        # targets (as child nodes)
+        key = f"a{pf.portfolioid}"
+        pfout = bypfid.get(key) or {}
+        pfout['id'] = f"a{pf.portfolioid}"
+        pfout['parent'] = f"{pf.portfolioid}"
+        pfout['name'] = "Actuals"
+        if pf.actuals != None:
+            pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.actuals)
+            bypfid[key] = pfout
 
     return list(bypfid.values())
 
-@app.route('/forecasts/portfolio-data')
+
+@app.route('/forecasts/client-list')
 @login_required
-def portfolio_data():
-    thisyear = datetime.date.today().year
-    startyear = thisyear-2
-    endyear = thisyear+1
-    portfolios = db.session.query(Portfolio).\
+def pf_client_list():
+    year = int(request.args.get('year'))
+    clients = db.session.query(Portfolio).\
+        distinct(Portfolio.clientid,Portfolio.clientname).\
         join(PortfolioForecast).\
-        filter(PortfolioForecast.yearmonth >= datetime.date(startyear,1,1)).\
-        order_by(Portfolio.clientname,Portfolio.name).\
+        filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1)).\
+        filter(PortfolioForecast.yearmonth < datetime.date(year+1,1,1)).\
+        order_by(Portfolio.clientname).\
         all()
-    return [{"id" : p.id, "value" : f"{p.clientname} - {p.name}"} for p in portfolios]
+
+    return [{"id":c.clientid, "value":c.clientname } for c in clients]
+
+@app.route('/forecasts/cst-list')
+@login_required
+def pf_cst_list():
+    year = int(request.args.get('year'))
+    csts = db.session.query(Portfolio).\
+        distinct(Portfolio.currcst).\
+        join(PortfolioForecast).\
+        filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1)).\
+        filter(PortfolioForecast.yearmonth < datetime.date(year+1,1,1)).\
+        order_by(Portfolio.currcst).\
+        all()
+
+    return [{"id":c.currcst, "value":c.currcst } for c in csts]
 
 

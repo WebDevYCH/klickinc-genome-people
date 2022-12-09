@@ -1,5 +1,7 @@
 import datetime
 import requests
+import re
+import hashlib
 
 from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
 from flask_login import LoginManager, login_required, current_user
@@ -194,6 +196,9 @@ class BQReplicationView(AdminBaseView):
             uout.loginname = uin.LoginName
             uout.firstname = uin.FirstName
             uout.lastname = uin.LastName
+            if app.config['APP_ENV'] != 'live':
+                uout.firstname = re.sub('^(.).*','\\1',uout.firstname)
+                uout.lastname = re.sub('^(.).*','\\1',uout.lastname)
             uout.email = uin.Email
             uout.title = uin.Title
             uout.started = uin.Started
@@ -277,8 +282,14 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
                 pfout.id = pfin.accountportfolioid
                 pfout.name = pfin.name
                 pfout.clientname = pfin.clientname
+
+                if pfin.clientname != None:
+                    sha1 = hashlib.sha1()
+                    sha1.update(pfin.clientname.encode('utf-8'))
+                    pfout.clientid = sha1.hexdigest()
+
                 if pfin.currcst != None:
-                    pfout.currcst = pfin.currcst
+                    pfout.currcst = pfin.currcst.replace("/","")
                 pfout.currbusinessunit = pfin.currbusinessunit
                 pfout.currcostcenter = pfin.currcostcenter
                 pfout.currgadname = pfin.currgadname
