@@ -61,3 +61,4 @@ def make_extract_json_string(text, threshold):
     json_string = json.dumps(result)
 
     return json_string
+
