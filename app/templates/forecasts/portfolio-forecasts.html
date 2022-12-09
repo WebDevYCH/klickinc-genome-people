@@ -20,32 +20,43 @@
 
 {% block app_content %}
 
-<div style="max-width: 150px" id="yearcombo"></div>
-
-<table><tr>
-    <td><div style="width: 300px; " id="cstcombo"></div></td>
-    <td style="padding-left: 15px; padding-right: 15px;"><i>or</i></td>
-    <td><div style="width: 600px; " id="clientcombo"></div></td>
-</tr></table>
-
-<div style="width: 100%; min-height: 500px; height: 100%; border:1px;" id="grid"></div>
+<div id="layout" style="height: calc(100% - 400px); width: 100%"></div>
 
 <script>
+    const layout = new dhx.Layout("layout", {
+        rows: [
+            { id: "yearcombo", width: "300px" },
+            {
+                cols: [
+                    { id: "cstcombo", width: "300px" },
+                    { id: "or", html: "<i>or</i>", padding: "30px" },
+                    { id: "clientcombo", width: "600px" },
+                    { id: "blank", gravity: 100 },
+                ],
+                height: "content",
+                align: "left",
+            },
+            { id: "treegrid" },
+        ]
+    });
 
-    const cstcombo = new dhx.Combobox("cstcombo", {
+
+    const cstcombo = new dhx.Combobox(null, {
         multiselection: true,
         label: "CST",
     });
     cstcomboonchange = function(id) {
         var year = yearcombo.getValue();
         var csts = cstcombo.getValue();
-        if (csts != "")
+        if (csts != "") {
+            treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
+        }
     }
     cstcombo.events.on("change", cstcomboonchange);
 
 
-    const clientcombo = new dhx.Combobox("clientcombo", {
+    const clientcombo = new dhx.Combobox(null, {
         multiselection: true,
         label: "Client",
     });
@@ -63,7 +74,7 @@
         { "id" : {{y}}, "value" : "{{y}}" },
         {% endfor %}
     ]
-    const yearcombo = new dhx.Combobox("yearcombo", {
+    const yearcombo = new dhx.Combobox(null, {
         multiselection: false,
         data: years,
         label: "Year",
@@ -78,6 +89,7 @@
     yearcombo.events.on("change", yearcomboonchange);
     yearcomboonchange(null);
 
+    const emptydata = [];
     const treegrid = new dhx.TreeGrid("grid", {
         columns: [
             { id: "name", gravity: 4, header: [{ text: "Name" }] },
@@ -98,12 +110,20 @@
         autoHeight: true,
         resizable: true,
         selection: true,
+        headerRowHeight: 32,
+        rowHeight: 32,
         label: "Forecasts and Targets",
     });
     treegrid.data.events.on("load", function() {
         treegrid.data.sort({ by:"name", dir:"asc" });
         treegrid.collapseAll();
     });
+
+    layout.getCell("yearcombo").attach(yearcombo);
+    layout.getCell("clientcombo").attach(clientcombo);
+    layout.getCell("cstcombo").attach(cstcombo);
+    layout.getCell("treegrid").attach(treegrid);
+
 </script>
 
 {% endblock %}
