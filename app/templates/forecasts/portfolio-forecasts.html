@@ -11,6 +11,7 @@
 <div id="layout" style="height: calc(100% - 400px); width: 100%"></div>
 
 <script>
+{% block layout %}
     const layout = new dhx.Layout("layout", {
         rows: [
             { id: "yearcombo", width: "300px" },
@@ -27,6 +28,7 @@
             { id: "treegrid" },
         ]
     });
+{% endblock %}
 
 
     const cstcombo = new dhx.Combobox(null, {

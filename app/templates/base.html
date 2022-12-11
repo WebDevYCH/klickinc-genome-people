@@ -445,22 +445,9 @@
 
     <script src="/static/js/app.js"></script>
     <script src="/static/js/jquery-3.6.1.min.js"></script>
+    <script src="/static/js/custom.js"></script>
 
     <div class="loading"></div>
-    <script type="text/javascript">// <![CDATA[
-        function loading(){
-            $(".loading").show();      
-        }
-        function unloading(){
-            $(".loading").hide();
-        }
-        function showModalLoading() {
-            $(".modal-spinner").removeClass('d-none');
-        }
-        function hideModalLoading() {
-            $(".modal-spinner").addClass('d-none');
-        }
-// ]]></script>
     {% block script %}{% endblock %}
 </body>
 
