@@ -8,8 +8,6 @@ from model import *
 from skillutils import *
 
 
-
-
 admin.add_view(AdminModelView(LaborRoleSkill, db.session, category='Skill'))
 admin.add_view(AdminModelView(TitleSkill, db.session, category='Skill'))
 admin.add_view(AdminModelView(Skill, db.session, category='Skill'))
@@ -21,7 +19,7 @@ class SkillReplicationView(AdminBaseView):
 
     @expose('/newskills')
     def newskills(self):
-        loglines = []
+        loglines = AdminLog()
         loglines.append("Starting autofill New Skills Replication via LightCast API")
         skills = get_allskills_from_lightcast()
         loglines.append("Comparing with current skills table")

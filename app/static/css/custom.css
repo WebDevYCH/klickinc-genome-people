@@ -33,3 +33,13 @@ div.loading {
     -webkit-transform: translate(-50%, -50%); /* Chrome, Safari, Opera */
     z-index: 9999999999;
 }
+
+.dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell, .dhx_tree-cell {
+    font-size: 12px;
+}
+.dxi.dxi-chevron-down:before {
+    content: "\F115";
+}
+.dxi.dxi-chevron-up:before {
+    content: "\F113";
+}
