@@ -3,11 +3,7 @@ import re
 
 from flask import render_template, request
 from flask_login import login_required
-
 from flask_admin import expose
-
-
-
 
 from core import *
 from model import *
@@ -15,6 +11,7 @@ from model import *
 ###################################################################
 ## UTILITIES
 
+# get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
     if csts != None:
         queryfilter = Portfolio.currcst.in_(csts.split(','))
@@ -31,29 +28,29 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
 
     bypfid= {}
     for pf in pfs:
+        # clients (as parent nodes)
+        key = f"{pf.portfolio.clientid}"
+        pfout = bypfid.get(key) or {}
+        pfout['id'] = key
+        pfout['name'] = pf.portfolio.clientname
+        bypfid[key] = pfout
+
         # portfolios with forecasts
         if doforecasts:
             key = f"{pf.portfolioid}"
             pfout = bypfid.get(key) or {}
-            pfout['id'] = f"{pf.portfolioid}"
-            pfout['parent'] = pf.portfolio.clientid
+            pfout['id'] = key
+            pfout['parent'] = f"{pf.portfolio.clientid}"
             pfout['name'] = pf.portfolio.name
             if pf.forecast != None:
                 pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.forecast)
                 bypfid[key] = pfout
 
-        # clients (as parent nodes)
-        key = pf.portfolio.clientname
-        pfout = bypfid.get(key) or {}
-        pfout['id'] = pf.portfolio.clientid
-        pfout['name'] = pf.portfolio.clientname
-        bypfid[key] = pfout
-
         # targets (as child nodes)
         if dotargets:
             key = f"t{pf.portfolioid}"
             pfout = bypfid.get(key) or {}
-            pfout['id'] = f"t{pf.portfolioid}"
+            pfout['id'] = key
             pfout['parent'] = f"{pf.portfolioid}"
             pfout['name'] = "Target"
             if pf.target != None:
@@ -64,13 +61,62 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
         if doactuals:
             key = f"a{pf.portfolioid}"
             pfout = bypfid.get(key) or {}
-            pfout['id'] = f"a{pf.portfolioid}"
+            pfout['id'] = key
             pfout['parent'] = f"{pf.portfolioid}"
             pfout['name'] = "Actuals"
             if pf.actuals != None:
                 pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.actuals)
                 bypfid[key] = pfout
     return bypfid
+
+# get the portfolio labor role forecasts (in hours), returns a dictionary
+def get_plrfs(year, clients, csts):
+    if csts != None:
+        queryfilter = Portfolio.currcst.in_(csts.split(','))
+    else:
+        queryfilter = Portfolio.clientid.in_(clients.split(','))
+
+    pflrs = db.session.query(PortfolioLRForecast).\
+        join(Portfolio).\
+        join(LaborRole).\
+        filter(PortfolioLRForecast.yearmonth >= datetime.date(year,1,1),
+            PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1),
+            queryfilter
+        ).all()
+
+    bypfid = {}
+    for pflr in pflrs:
+        # make sure the source is mentioned under the portfolio
+        sourcekey = f"{pflr.portfolioid}-{pflr.source}"
+        pfout = bypfid.get(sourcekey) or {}
+        pfout['id'] = sourcekey
+        pfout['parent'] = f"{pflr.portfolioid}"
+        pfout['name'] = f"'{pflr.source}' Forecast"
+        bypfid[sourcekey] = pfout
+
+        # make sure the source is mentioned under the portfolio
+        catkey = f"{pflr.portfolioid}-{pflr.source}-"+re.sub('[^a-zA-Z0-9]','_',pflr.labor_role.categoryname)
+        pfout = bypfid.get(catkey) or {}
+        pfout['id'] = catkey
+        pfout['parent'] = sourcekey
+        pfout['name'] = pflr.labor_role.categoryname
+        bypfid[catkey] = pfout
+
+        # now the labor role under the source
+        forecastkey = f"{pflr.portfolioid}-{pflr.source}-{pflr.laborroleid}"
+        pfout = bypfid.get(forecastkey) or {}
+        pfout['id'] = forecastkey
+        pfout['parent'] = catkey
+        pfout['name'] = pflr.labor_role.name
+        if pflr.forecastedhours != None:
+            pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+            bypfid[forecastkey] = pfout
+
+    return bypfid
+
+
+
+
 
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
@@ -84,6 +130,17 @@ def portfolio_forecasts():
     endyear = thisyear+1
     return render_template('forecasts/portfolio-forecasts.html', 
         title='Portfolio Forecasts', 
+        startyear=startyear, endyear=endyear, thisyear=thisyear)
+
+# GET /forecasts/portfolio-lr-forecasts
+@app.route('/forecasts/portfolio-lr-forecasts')
+@login_required
+def portfolio_lr_forecasts():
+    thisyear = datetime.date.today().year
+    startyear = thisyear-2
+    endyear = thisyear+1
+    return render_template('forecasts/portfolio-lr-forecasts.html', 
+        title='Portfolio Labor Role Forecasts', 
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
 # GET /forecasts/portfolio-forecasts-data
@@ -106,13 +163,8 @@ def portfolio_forecasts_lr_data():
     clients = request.args.get('clients')
     csts = request.args.get('csts')
 
-    bypfid = get_pfs(year, clients, csts)
-
-    sources = db.session.query(PortfolioForecast).distinct(PortfolioForecast.source).all()
-    for s in sources:
-        bypfid = bypfid | get_plrfs(year, clients, csts, s.source)
-
-
+    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts)
+    app.logger.info(f"portfolio_forecasts_lr_data: {bypfid}")
 
     return list(bypfid.values())
 
@@ -185,11 +237,11 @@ class ForecastAdminView(AdminBaseView):
                     key = f"{pfin['AccountPortfolioID']} // {pfin['YearMonth']} // {pfin['LaborRoleID']} // {sourcename}"
 
                     if pfin['PredictedHour'] != None:
-                        pflr = db.session.query(PortfolioForecastLaborRole).filter(
-                            PortfolioForecastLaborRole.portfolioid == pfin['AccountPortfolioID'],
-                            PortfolioForecastLaborRole.yearmonth == pfin['YearMonth'],
-                            PortfolioForecastLaborRole.laborroleid == pfin['LaborRoleID'],
-                            PortfolioForecastLaborRole.source == sourcename).first()
+                        pflr = db.session.query(PortfolioLRForecast).filter(
+                            PortfolioLRForecast.portfolioid == pfin['AccountPortfolioID'],
+                            PortfolioLRForecast.yearmonth == pfin['YearMonth'],
+                            PortfolioLRForecast.laborroleid == pfin['LaborRoleID'],
+                            PortfolioLRForecast.source == sourcename).first()
 
                         if pflr != None and pflr.forecastedhours == pfin['PredictedHour']:
                             loglines.append(f"  SKIPPED {key}")
@@ -198,7 +250,7 @@ class ForecastAdminView(AdminBaseView):
                                 loglines.append(f"  UPDATING {key} because not: {pflr.forecastedhours} == {pfin['PredictedHour']} and {pflr.forecasteddollars} == {pfin['PredictedAmount']}")
                             else:
                                 loglines.append(f"  NEW {key}")
-                                pflr = PortfolioForecastLaborRole()
+                                pflr = PortfolioLRForecast()
                                 db.session.add(pflr)
 
                             # set the fields

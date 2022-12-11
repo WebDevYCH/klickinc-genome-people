@@ -38,7 +38,7 @@
         var csts = cstcombo.getValue();
         if (csts != "") {
             treegrid.data.removeAll();
-            treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
+            treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&csts='+csts);
         }
     }
     cstcombo.events.on("change", cstcomboonchange);
@@ -52,7 +52,7 @@
         var year = yearcombo.getValue();
         var clients = clientcombo.getValue();
         if (clients != "")
-            treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
+            treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&clients='+clients);
     }
     clientcombo.events.on("change", clientcomboonchange);
 
@@ -81,18 +81,18 @@
     const treegrid = new dhx.TreeGrid("grid", {
         columns: [
             { id: "name", gravity: 4, header: [{ text: "Name" }] },
-            { id: "m1", type: "number", header: [{ text: "Jan" }] },
-            { id: "m2", type: "number", header: [{ text: "Feb" }] }, 
-            { id: "m3", type: "number", header: [{ text: "Mar" }] },
-            { id: "m4", type: "number", header: [{ text: "Apr" }] },
-            { id: "m5", type: "number", header: [{ text: "May" }] },
-            { id: "m6", type: "number", header: [{ text: "Jun" }] },
-            { id: "m7", type: "number", header: [{ text: "Jul" }] },
-            { id: "m8", type: "number", header: [{ text: "Aug" }] },
-            { id: "m9", type: "number", header: [{ text: "Sep" }] },
-            { id: "m10", type: "number", header: [{ text: "Oct" }] },
-            { id: "m11", type: "number", header: [{ text: "Nov" }] },
-            { id: "m12", type: "number", header: [{ text: "Dec" }] },
+            { id: "m1", type: "number", format: "#.0", header: [{ text: "Jan" }] },
+            { id: "m2", type: "number", format: "#.0", header: [{ text: "Feb" }] }, 
+            { id: "m3", type: "number", format: "#.0", header: [{ text: "Mar" }] },
+            { id: "m4", type: "number", format: "#.0", header: [{ text: "Apr" }] },
+            { id: "m5", type: "number", format: "#.0", header: [{ text: "May" }] },
+            { id: "m6", type: "number", format: "#.0", header: [{ text: "Jun" }] },
+            { id: "m7", type: "number", format: "#.0", header: [{ text: "Jul" }] },
+            { id: "m8", type: "number", format: "#.0", header: [{ text: "Aug" }] },
+            { id: "m9", type: "number", format: "#.0", header: [{ text: "Sep" }] },
+            { id: "m10", type: "number", format: "#.0", header: [{ text: "Oct" }] },
+            { id: "m11", type: "number", format: "#.0", header: [{ text: "Nov" }] },
+            { id: "m12", type: "number", format: "#.0", header: [{ text: "Dec" }] },
         ],
         autoWidth: true,
         autoHeight: true,

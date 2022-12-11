@@ -129,7 +129,7 @@ Portfolio = Base.classes.portfolio
 
 PortfolioForecast = Base.classes.portfolio_forecast
 
-PortfolioForecastLaborRole = Base.classes.portfolio_forecast_laborrole
+PortfolioLRForecast = Base.classes.portfolio_laborrole_forecast
 
 
 
