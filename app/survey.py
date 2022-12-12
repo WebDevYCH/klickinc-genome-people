@@ -9,7 +9,7 @@ from flask_admin import expose
 from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
+from wtforms import Form,StringField, PasswordField, BooleanField, SubmitField, SelectField, IntegerField, RadioField, SelectMultipleField, TextAreaField, widgets
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy import MetaData, delete, insert, update, or_, and_
@@ -58,22 +58,32 @@ admin.add_view(SurveyAnswerAnalysisModelView(SurveyAnswerAnalysis, db.session, c
 @login_required
 def survey():
     """Route to the survey."""
-    form = SurveyForm()
-
-    # TODO: use surveyid
-    query = db.session.query(SurveyQuestionCategory)
-    categories = [row.name for row in query.all()]
 
     surveys = db.session.query(Survey).filter(Survey.enabled == True).all()
 
-    return render_template('survey/index.html', title='Survey', form=form, surveys=surveys, categories=categories)
+    return render_template('survey/index.html', title='Survey', surveys=surveys)
+
+@app.route('/survey/<id>')
+@login_required
+def survey_detail(id):
+    
+    qlist = getQuestions()
+    for q in qlist:
+        exec(q)
+    form = SurveyForm()
+    query = db.session.query(SurveyQuestionCategory).join(SurveyQuestion).filter(SurveyQuestion.survey_id == int(id))
+    categories = [row.name for row in query.all()]
+
+    surveys = db.session.query(Survey).filter(Survey.enabled == True, Survey.id == id).all()
+
+    return render_template('survey/question.html', title='Survey', form=form, surveys=surveys, categories=categories)
 
 # route called by Ajax method
 @app.route('/survey/save', methods=['POST'])
 @login_required
 def survey_save():
     # TODO: use surveyid
-    userid=3446
+    userid=current_user.userid
     for k, v in request.form.items():
         if k.startswith('q'):
             qid = int(k[1:])
@@ -87,7 +97,7 @@ def survey_save():
                 values(user_id=userid, survey_question_id=qid, answer=v)
             )
             db.session.commit()
-    return jsonify({'status': 'ok'})
+    return redirect(url_for('survey'))
 
 # utility functions
 def getQuestions():
@@ -106,16 +116,16 @@ def getQuestions():
         # options in db are single_line_text, multi_line_text, dropdown, multi_select, likert
         if qtype == "StringField":
             qslist.append(
-                f'q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
+                f'SurveyForm.q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
         if qtype == "TextAreaField":
             qslist.append(
-                f'q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
+                f'SurveyForm.q{(q.id):08} = {qtype}("{q.question}", description="{q.survey_question_category.name}")')
         elif qtype == "RadioField" or qtype == "SelectField":
             qslist.append(
-                f'q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, description="{q.survey_question_category.name}")')
+                f'SurveyForm.q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, description="{q.survey_question_category.name}")')
         elif qtype == "SelectMultipleField" or qtype == "MultiCheckboxField":
             qslist.append(
-                f'q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.survey_question_category.name}")')
+                f'SurveyForm.q{(q.id):08} = {qtype}("{q.question}", choices={repr(choices)}, option_widget=widgets.CheckboxInput(), description="{q.survey_question_category.name}")')
     return qslist
 
 def generateChoices(q):
@@ -148,15 +158,10 @@ def generateChoices(q):
             "ans") and v != '' and v != None]
         l.sort()
         return l
-
+# qslist = getQuestions()
 class SurveyForm(FlaskForm):
-    """The final survey form. Generated on the fly from questions in the DB."""
-    def __init__(self):
-        qslist = getQuestions()
-        for qs in qslist:
-            exec(qs)
-        submit = SubmitField('Send')
-
+    """The final survey form. Generated on the fly from questions in the DB.""" 
+    pass
 # sentiment scoring
 def retrieveEntitySentiment(line):
     apiKey = app.config['GOOGLE_SENTIMENT_APIKEY']
@@ -169,7 +174,7 @@ def retrieveEntitySentiment(line):
         },
         'encodingType': 'UTF8'
     }
-    # Makes the API call.
+    # Makesure the API call.
     response = requests.post(apiEndpoint, json=nlData)
     return response.json()
 
@@ -214,8 +219,8 @@ class SurveyScoreView(AdminBaseView):
                     loglines.append(f"  score={sentiment['documentSentiment']['score']} magnitude={sentiment['documentSentiment']['magnitude']}")
                     db.session.execute(
                         insert(SurveyAnswerAnalysis).
-                        values(survey_answer_id=a.id, 
-                            topic='OVERALL', 
+                        values(survey_answer_id=a.id,
+                            topic='OVERALL',
                             topic_salience=1.0,
                             sentiment_score=sentiment['documentSentiment']['score'],
                             sentiment_magnitude=sentiment['documentSentiment']['magnitude'])
@@ -225,9 +230,9 @@ class SurveyScoreView(AdminBaseView):
                         loglines.append(f"entity: {e['name']} score={e['sentiment']['score']} magnitude={e['sentiment']['magnitude']}")
                         db.session.execute(
                             insert(SurveyAnswerAnalysis).
-                            values(survey_answer_id=a.id, 
-                                topic=e['name'], 
-                                topic_salience=e['salience'], 
+                            values(survey_answer_id=a.id,
+                                topic=e['name'],
+                                topic_salience=e['salience'],
                                 sentiment_score=e['sentiment']['score'],
                                 sentiment_magnitude=e['sentiment']['magnitude'])
                         )
