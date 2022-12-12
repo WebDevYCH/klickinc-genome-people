@@ -1,11 +1,11 @@
-{% extends "base.html" %} {% block app_head %}
-<link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
-<style></style>
-{% endblock %} {% block app_content %}
+{% extends "base.html" %} 
+
+{% block app_content %}
 <p id="survey-num">There are {{ surveys|length }} surveys</p>
 <div class="row">
   <!-- //////////////////// Job Lists ////////////////////// -->
   <div id="survey-list" class="col-12 col-xl-9">
+
     {% for survey in surveys %}
     <div class="row survey-card">
       <div class="col-md-9">
@@ -19,6 +19,7 @@
       </div>
     </div>
     {% endfor %}
+
   </div>
 </div>
 {% endblock %}

@@ -1,22 +1,98 @@
 {% extends "forecasts/portfolio-forecasts.html" %}
 
+<script language="javascript">
+{% block layout %}
+const layout = new dhx.Layout("layout", {
+    rows: [
+        { id: "yearcombo", width: "300px" },
+        {
+            cols: [
+                { id: "cstcombo", width: "300px" },
+                { id: "or", html: "<i>or</i>", padding: "30px" },
+                { id: "clientcombo", width: "600px" },
+                { id: "blank", gravity: 100 },
+            ],
+            height: "content",
+            align: "left",
+        },
+        { id: "note", html: "<i>Labor Role forecasts in italics come from automated models; double click on any forecast to override it.</i>" },
+        { id: "treegrid" },
+    ]
+});
+{% endblock %}
+
 {% block cstcomboonchange %}
-    cstcomboonchange = function(id) {
-        var year = yearcombo.getValue();
-        var csts = cstcombo.getValue();
-        if (csts != "") {
-            treegrid.data.removeAll();
-            treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&csts='+csts);
-        }
+cstcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var csts = cstcombo.getValue();
+    if (csts != "") {
+        treegrid.data.removeAll();
+        treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&csts='+csts);
     }
+}
 {% endblock %}
 
 {% block clientcomboonchange %}
-    clientcomboonchange = function(id) {
-        var year = yearcombo.getValue();
-        var clients = clientcombo.getValue();
-        if (clients != "")
-            treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&clients='+clients);
-    }
+clientcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var clients = clientcombo.getValue();
+    if (clients != "")
+        treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&clients='+clients);
+}
 {% endblock %}
 
+{% block treegridinit %}
+editable: true,
+{% endblock %}
+
+
+{% block treegridcelltemplate %}
+treegridcelltemplate = function(text, row, col) {
+    if (text && row.id.endsWith("MAIN") && col.id.startsWith("m") && row[col.id + '-source'] != 'MAIN') {
+        return "<i>"+text+"</i>";
+    }
+    else if (text && row.id.endsWith("MAIN") && col.id.startsWith("m") && row[col.id + '-source'] == 'MAIN') {
+        return "<b>"+text+"</b>";
+    }
+    else {
+        return text;
+    }
+}
+{% endblock %}
+
+
+{% block jsinit %}
+
+treegrid.events.on("cellClick", function(row,column) {
+    treegrid.edit(row.id,column.id);
+});
+
+var origValue;
+
+treegrid.events.on("beforeEditStart", function(row,col,editorType) {
+    // only allowed to edit if the id ends with MAIN, ie it's in the main row, also on a month column
+    if (row.id.endsWith("MAIN") && col.id.startsWith("m")) {
+        origValue = row[col.id];
+        return true;
+    }
+    else
+        return false;
+});
+
+treegrid.events.on("afterEditEnd", function(value,row,col) {
+    if (row.id.endsWith("MAIN") && col.id.startsWith("m")) {
+        if (value != (origValue||"") && value != "") {
+            //alert("You changed the value from " + origValue + " to " + value + " for " + row.id + " " + col.id)
+            row[col.id + '-source'] = 'MAIN';
+            // TODO: save the cell in the database
+        }
+        else if (value != (origValue||"") && value == "") {
+            //alert("You cleared the value for " + row.id + " " + col.id)
+            // TODO: clear the cell from the database
+        }
+    }
+});
+
+{% endblock %}
+
+</script>

@@ -70,7 +70,7 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
     return bypfid
 
 # get the portfolio labor role forecasts (in hours), returns a dictionary
-def get_plrfs(year, clients, csts):
+def get_plrfs(year, clients, csts, dosources=True):
     if csts != None:
         queryfilter = Portfolio.currcst.in_(csts.split(','))
     else:
@@ -86,31 +86,38 @@ def get_plrfs(year, clients, csts):
 
     bypfid = {}
     for pflr in pflrs:
-        # make sure the source is mentioned under the portfolio
-        sourcekey = f"{pflr.portfolioid}-{pflr.source}"
-        pfout = bypfid.get(sourcekey) or {}
-        pfout['id'] = sourcekey
-        pfout['parent'] = f"{pflr.portfolioid}"
-        pfout['name'] = f"'{pflr.source}' Forecast"
-        bypfid[sourcekey] = pfout
-
-        # make sure the source is mentioned under the portfolio
-        catkey = f"{pflr.portfolioid}-{pflr.source}-"+re.sub('[^a-zA-Z0-9]','_',pflr.labor_role.categoryname)
+        # add the labor category under the portfolio
+        catkey = f"{pflr.portfolioid}-"+re.sub('[^a-zA-Z0-9]','_',pflr.labor_role.categoryname)
         pfout = bypfid.get(catkey) or {}
         pfout['id'] = catkey
-        pfout['parent'] = sourcekey
+        pfout['parent'] = f"{pflr.portfolioid}"
         pfout['name'] = pflr.labor_role.categoryname
         bypfid[catkey] = pfout
 
-        # now the labor role under the source
-        forecastkey = f"{pflr.portfolioid}-{pflr.source}-{pflr.laborroleid}"
+        # add the labor role under the category, with the "main" forecast
+        forecastkey = f"{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
         pfout = bypfid.get(forecastkey) or {}
         pfout['id'] = forecastkey
         pfout['parent'] = catkey
         pfout['name'] = pflr.labor_role.name
         if pflr.forecastedhours != None:
-            pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+            monthkey = f"m{pflr.yearmonth.month}"
+            if pflr.source == 'MAIN' or monthkey not in pfout:
+                # TODO: have some hierarchy of the sources
+                pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+                pfout[f"m{pflr.yearmonth.month}-source"] = pflr.source
             bypfid[forecastkey] = pfout
+
+        # if this isn't the main source, add a line underneath that gives the source's forecast
+        if dosources and pflr.source != 'MAIN':
+            fsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+            pfout = bypfid.get(fsourcekey) or {}
+            pfout['id'] = fsourcekey
+            pfout['parent'] = forecastkey
+            pfout['name'] = f"'{pflr.source}' Forecast"
+            if pflr.forecastedhours != None:
+                pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+            bypfid[fsourcekey] = pfout
 
     return bypfid
 
@@ -140,7 +147,7 @@ def portfolio_lr_forecasts():
     startyear = thisyear-2
     endyear = thisyear+1
     return render_template('forecasts/portfolio-lr-forecasts.html', 
-        title='Portfolio Labor Role Forecasts', 
+        title='Labor Role Forecasts by Portfolio', 
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
 # GET /forecasts/portfolio-forecasts-data
@@ -152,8 +159,11 @@ def portfolio_forecasts_data():
     csts = request.args.get('csts')
 
     bypfid = get_pfs(year, clients, csts)
+    app.logger.info(f"portfolio_forecasts_data size: {len(bypfid)}")
 
-    return list(bypfid.values())
+    retval = list(bypfid.values())
+    retval.sort(key=lambda x: x['name'])
+    return retval
 
 # GET /forecasts/portfolio-lr-forecasts-data
 @app.route('/forecasts/portfolio-lr-forecasts-data')
@@ -163,10 +173,12 @@ def portfolio_forecasts_lr_data():
     clients = request.args.get('clients')
     csts = request.args.get('csts')
 
-    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts)
-    app.logger.info(f"portfolio_forecasts_lr_data: {bypfid}")
+    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=False)
+    app.logger.info(f"portfolio_lr_forecasts_data size: {len(bypfid)}")
 
-    return list(bypfid.values())
+    retval = list(bypfid.values())
+    retval.sort(key=lambda x: x['name'])
+    return retval
 
 # GET /forecasts/client-list
 @app.route('/forecasts/client-list')
@@ -197,6 +209,7 @@ def pf_cst_list():
         all()
 
     return [{"id":c.currcst, "value":c.currcst } for c in csts]
+
 
 ###################################################################
 ## ADMIN PAGES AND FORECASTING ALGORITHMS
