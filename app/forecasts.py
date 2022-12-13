@@ -1,5 +1,5 @@
-import datetime
-import re
+import datetime, json, os, re
+from dateutil.relativedelta import relativedelta
 
 from flask import render_template, request
 from flask_login import login_required
@@ -7,6 +7,8 @@ from flask_admin import expose
 
 from core import *
 from model import *
+
+from google.cloud import bigquery
 
 ###################################################################
 ## UTILITIES
@@ -121,9 +123,20 @@ def get_plrfs(year, clients, csts, dosources=True):
 
     return bypfid
 
+# get the current rate for each client per labor role (in dollars)
+# returns a dictionary of dictionaries, client -> laborroleid -> rate
+def get_clrrates():
+    # query from Genome Reports
+    #https://genome.klick.com/querytemplate/report-tool.html#/templateID/2093?nocache=true
+    json = retrieveGenomeReport(2093)
 
+    rates = {}
+    for row in json['Entries']:
+        clientrate = rates.get(row['Client']) or {}
+        clientrate[row['LaborRoleID']] = row['PerHour']
+        rates[row['Client']] = clientrate
 
-
+    return rates
 
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
@@ -256,7 +269,7 @@ class ForecastAdminView(AdminBaseView):
     @expose('/linear')
     def linear(self):
         loglines = AdminLog()
-        loglines.append("Starting Same-Portfolio Linear Extractor")
+        loglines.append("Starting Same-Portfolio Linear Extrapolator")
         loglines.append("")
 
         lookback = 10
@@ -316,6 +329,69 @@ class ForecastAdminView(AdminBaseView):
 
         return self.render('admin/job_log.html', loglines=loglines)
 
+    @expose('/cilinear')
+    def cilinear(self):
+        loglines = AdminLog()
+        loglines.append("Starting CI-Selected-Portfolio Linear Extrapolator")
+        loglines.append("")
+
+        lookahead = 3
+        sourcename = 'cilinear'
+        startdate = datetime.date.today().replace(day=1)
+        enddate = startdate + relativedelta(months=lookahead)
+
+        # gather the labor rates
+        loglines.append("gathering labor rates")
+        rates = get_clrrates()
+
+        loglines.append("querying Genome BQ model")
+        # query the CI-selected portfolios view in BigQuery
+        # query returns AccountPortfolioID, LaborRoleID, Pct, CST, Client
+        client = bigquery.Client()
+        query_job = client.query("SELECT * FROM `genome-datalake-prod.GenomeReports.vDemandPlanningByPortfolio`")
+        results = query_job.result()
+        # convert the results to a dictionary by portfolio ID with an array of labor role IDs and percentages 
+        ciportfolios = {}
+        for row in results:
+            ciportfolios[row['AccountPortfolioID']] = ciportfolios.get(row['AccountPortfolioID']) or []
+            ciportfolios[row['AccountPortfolioID']].append(row)
+
+        # grab each future forecast
+        loglines.append("grabbing portfolio forecast list")
+        # for each future forecast
+        for pf in db.session.query(PortfolioForecast).where(
+                    PortfolioForecast.yearmonth >= startdate,
+                    PortfolioForecast.yearmonth < enddate,
+                ).join(Portfolio).all():
+            loglines.append(f"portfolio {pf.portfolioid} forecast at {pf.yearmonth}, {pf.forecast}")
+
+            # delete existing portfolio labor role forecasts
+            db.session.query(PortfolioLRForecast).filter(
+                PortfolioLRForecast.portfolioid == pf.portfolioid,
+                PortfolioLRForecast.yearmonth == pf.yearmonth,
+                PortfolioLRForecast.source == sourcename).delete()
+
+            # if the portfolio is in the CI-selected portfolios and has a forecast
+            if pf.portfolioid in ciportfolios and pf.forecast != None and pf.forecast != '$0.00':
+                # convert forecast to a number
+                pfforecast = float(pf.forecast.replace('$','').replace(',',''))
+                # for each labor role in the model forecast
+                for cipflr in ciportfolios[pf.portfolioid]:
+                    # create a record with calculated hours in the portfolio labor role forecast
+                    pflr = PortfolioLRForecast()
+                    pflr.portfolioid = pf.portfolioid
+                    pflr.yearmonth = pf.yearmonth
+                    pflr.laborroleid = cipflr['LaborRoleID']
+                    pflr.forecasteddollars = pfforecast * cipflr['Pct'] #/ 100
+                    pflr.forecastedhours = pflr.forecasteddollars / rates[pf.portfolio.clientname][pflr.laborroleid]
+                    pflr.source = sourcename
+                    pflr.updateddate = datetime.date.today()
+                    db.session.add(pflr)
+                    loglines.append(f"  {pflr.laborroleid} {pflr.forecastedhours} hours")
+
+            db.session.commit()
+
+        return self.render('admin/job_log.html', loglines=loglines)
 
 admin.add_view(ForecastAdminView(name='Forecast Processing', category='Forecasts'))
 
