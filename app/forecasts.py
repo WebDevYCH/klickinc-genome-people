@@ -173,7 +173,7 @@ def portfolio_forecasts_lr_data():
     clients = request.args.get('clients')
     csts = request.args.get('csts')
 
-    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=False)
+    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=True)
     app.logger.info(f"portfolio_lr_forecasts_data size: {len(bypfid)}")
 
     retval = list(bypfid.values())
@@ -209,6 +209,40 @@ def pf_cst_list():
         all()
 
     return [{"id":c.currcst, "value":c.currcst } for c in csts]
+
+# POST /forecasts/portfolio-forecast-save
+@app.post('/forecasts/portfolio-lr-forecast-save')
+@login_required
+def portfolio_lr_forecast_save():
+    data = request.get_json()
+    app.logger.info(f"portfolio_lr_forecast_save: {data}")
+    # id is based on forecastkey = f"{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
+    portfolioid = int(data['id'].split('-')[0])
+    laborroleid = data['id'].split('-')[1]
+    source = data['id'].split('-')[2]
+    if source != 'MAIN':
+        return "ERROR: Only MAIN source is allowed"
+    year = int(data['year'])
+    month = int(data['month'])
+    yearmonth = datetime.date(year, month, 1)
+
+    pflr = db.session.query(PortfolioLRForecast).filter_by(portfolioid=portfolioid, laborroleid=laborroleid, yearmonth=yearmonth, source=source).first()
+    if data['value'] == '':
+        # blank value means they're removing the override (0 to override with 0 hours)
+        if pflr:
+            db.session.delete(pflr)
+        db.session.commit()
+        return "OK"
+    else:
+        # non-blank value means they're setting or changing the override
+        if not pflr:
+            pflr = PortfolioLRForecast(portfolioid=portfolioid, laborroleid=laborroleid, yearmonth=yearmonth, source='MAIN')
+            db.session.add(pflr)
+        pflr.forecastedhours = float(data['value'])
+        pflr.updateddate = datetime.datetime.now()
+        pflr.userid = current_user.userid
+        db.session.commit()
+    return "OK"
 
 
 ###################################################################
