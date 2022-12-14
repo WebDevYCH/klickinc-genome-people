@@ -20,7 +20,7 @@ div.loading {
     width: 135px;
     height: 135px;
     display: none;
-    background: url("img/spinning.gif") no-repeat;
+    background: url("../img/spinning.gif") no-repeat;
     cursor: wait;
     position: absolute;
     top: 50%;

@@ -10,7 +10,7 @@
     <meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="shortcut icon" href="img/icons/icon-48x48.png" />
+    <link rel="shortcut icon" href="/static/img/icons/icon-48x48.png" />
 
     <title>
         {% if title %}
@@ -62,7 +62,7 @@
                             {% if current_user.photourl %}
                             <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% else %}
-                            <img src="/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="/static/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-2">
@@ -358,7 +358,7 @@
                                 {% if current_user.photourl %}
                                 <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                                 {% else %}
-                                <img src="img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                                <img src="/static/img/avatars/avatar.jpg" class="avatar img-fluid rounded" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                                 {% endif %}
                             </a>
                             <div class="dropdown-menu dropdown-menu-end">
