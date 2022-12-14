@@ -8,7 +8,7 @@
 
 {% block app_content %}
 
-<div id="layout" style="height: calc(100% - 400px); width: 100%"></div>
+<div id="layout" style="height: 80%; width: 100%"></div>
 
 <script>
     {% block layout %}
@@ -76,13 +76,15 @@
         value: {{thisyear}},
         readOnly: true,
     });
+    {% block yearcomboonchange %}
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
         cstcombo.data.load('/forecasts/cst-list?year='+year);
         clientcombo.data.load('/forecasts/client-list?year='+year);
     }
     yearcombo.events.on("change", yearcomboonchange);
-    yearcomboonchange(null);
+    setTimeout(yearcomboonchange, 0);
+    {% endblock %}
 
     {% block treegridcelltemplate %}
     treegridcelltemplate = function(text, row, col) {

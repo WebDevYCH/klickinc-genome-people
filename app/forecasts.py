@@ -15,10 +15,12 @@ from google.cloud import bigquery
 
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
-    if csts != None:
+    if csts != None and csts != "":
         queryfilter = Portfolio.currcst.in_(csts.split(','))
-    else:
+    elif clients != None and clients != "":
         queryfilter = Portfolio.clientid.in_(clients.split(','))
+    else:
+        queryfilter = True
 
     pfs = db.session.query(PortfolioForecast).\
         join(Portfolio).\
@@ -73,10 +75,12 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
 
 # get the portfolio labor role forecasts (in hours), returns a dictionary
 def get_plrfs(year, clients, csts, dosources=True):
-    if csts != None:
+    if csts != None and csts != "":
         queryfilter = Portfolio.currcst.in_(csts.split(','))
-    else:
+    elif clients != None and clients != "":
         queryfilter = Portfolio.clientid.in_(clients.split(','))
+    else:
+        queryfilter = True
 
     pflrs = db.session.query(PortfolioLRForecast).\
         join(Portfolio).\
@@ -89,7 +93,7 @@ def get_plrfs(year, clients, csts, dosources=True):
     bypfid = {}
     for pflr in pflrs:
         # add the labor category under the portfolio
-        catkey = f"{pflr.portfolioid}-"+re.sub('[^a-zA-Z0-9]','_',pflr.labor_role.categoryname)
+        catkey = f"LRCAT-{pflr.portfolioid}-"+re.sub('[^a-zA-Z0-9]','_',pflr.labor_role.categoryname)
         pfout = bypfid.get(catkey) or {}
         pfout['id'] = catkey
         pfout['parent'] = f"{pflr.portfolioid}"
@@ -97,12 +101,14 @@ def get_plrfs(year, clients, csts, dosources=True):
         bypfid[catkey] = pfout
 
         # add the labor role under the category, with the "main" forecast
-        forecastkey = f"{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
-        pfout = bypfid.get(forecastkey) or {}
-        pfout['id'] = forecastkey
-        pfout['parent'] = catkey
-        pfout['name'] = pflr.labor_role.name
+        forecastkey = f"LR-(LRCAT{pflr.labor_role.categoryname})-{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
         if pflr.forecastedhours != None:
+            pfout = bypfid.get(forecastkey) or {}
+            pfout['id'] = forecastkey
+            pfout['parent'] = catkey
+            pfout['name'] = pflr.labor_role.name
+            pfout['lrname'] = pflr.labor_role.name
+            pfout['source'] = 'MAIN'
             monthkey = f"m{pflr.yearmonth.month}"
             if pflr.source == 'MAIN' or monthkey not in pfout:
                 # TODO: have some hierarchy of the sources
@@ -112,16 +118,82 @@ def get_plrfs(year, clients, csts, dosources=True):
 
         # if this isn't the main source, add a line underneath that gives the source's forecast
         if dosources and pflr.source != 'MAIN':
-            fsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+            fsourcekey = f"LR-(LRCAT{pflr.labor_role.categoryname})-{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
             pfout = bypfid.get(fsourcekey) or {}
             pfout['id'] = fsourcekey
             pfout['parent'] = forecastkey
             pfout['name'] = f"'{pflr.source}' Forecast"
+            pfout['lrname'] = pflr.labor_role.name
+            pfout['source'] = pflr.source
             if pflr.forecastedhours != None:
                 pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
             bypfid[fsourcekey] = pfout
 
     return bypfid
+
+# get the department labor role forecasts (in hours), returns a dictionary
+def get_dlrfs(year, clients, csts, lrcat, dosources=True):
+    # first get all portfolio labor role forecasts
+    plrfs = get_plrfs(year, clients, csts, dosources=True)
+    app.logger.info(f"get_dlrfs() plrfs data size: {len(plrfs)}")
+    
+    # then filter them by the labor role category and sum by labor role
+    dlrfs = {}
+    for key in plrfs:
+        if key.startswith(f"LR-(LRCAT{lrcat})-"):
+            # get the labor role id and source from the key
+            lrid = key.split('-')[3]
+            source = key.split('-')[4]
+
+            # make sure there's a root level MAIN record for this labor role
+            dlrmainkey = f"LR-{lrid}-SUMMARY"
+            dlrout = dlrfs.get(dlrmainkey) or {}
+            dlrout['id'] = dlrmainkey
+            dlrout['name'] = plrfs[key]['lrname']
+            # add the hours from each month, if this is the main source
+            if source == 'MAIN':
+                for month in range(1,13):
+                    monthkey = f"m{month}"
+                    if monthkey in plrfs[key]:
+                        dlrout[monthkey] = dlrout.get(monthkey) or 0 + plrfs[key][monthkey]
+            dlrfs[dlrmainkey] = dlrout
+
+            # make sure there's a record for this labor role and source
+            dlrkey = f"LR-{lrid}-{source}"
+            dlrout = dlrfs.get(dlrkey) or {}
+            dlrout['id'] = dlrkey
+            dlrout['name'] = f"'{plrfs[key]['source']}' Forecast"
+            dlrout['parent'] = dlrmainkey
+            # add the hours from each month
+            for month in range(1,13):
+                monthkey = f"m{month}"
+                if monthkey in plrfs[key]:
+                    dlrout[monthkey] = dlrout.get(monthkey) or 0 + plrfs[key][monthkey]
+            dlrfs[dlrkey] = dlrout
+
+    # one more pass through dlrfs, to fill in SUMMARY records with one of the sources
+    for key in dlrfs:
+        if key.endswith('-SUMMARY'):
+            for month in range(1,13):
+                monthkey = f"m{month}"
+                if monthkey not in dlrfs[key]:
+                    for sourcekey in dlrfs:
+                        if sourcekey.startswith(key+'-') and monthkey in dlrfs[sourcekey]:
+                            dlrfs[key][monthkey] = dlrfs[sourcekey][monthkey]
+                            dlrfs[key][monthkey+'-source'] = dlrfs[sourcekey]['name']
+                            break
+
+    # and one MORE pass through drlfs, to remove any sources that aren't SUMMARY if dosources is false
+    if not dosources:
+        for key in dlrfs:
+            if not key.endswith('-SUMMARY'):
+                del dlrfs[key]
+
+    return dlrfs
+
+
+
+
 
 # get the current rate for each client per labor role (in dollars)
 # returns a dictionary of dictionaries, client -> laborroleid -> rate
@@ -146,6 +218,10 @@ def get_clrrates():
 @login_required
 def portfolio_forecasts():
     thisyear = datetime.date.today().year
+    # if it's after October, show the next year's forecasts
+    if datetime.date.today().month > 10:
+        thisyear += 1
+
     startyear = thisyear-2
     endyear = thisyear+1
     return render_template('forecasts/portfolio-forecasts.html', 
@@ -157,6 +233,10 @@ def portfolio_forecasts():
 @login_required
 def portfolio_lr_forecasts():
     thisyear = datetime.date.today().year
+    # if it's after October, show the next year's forecasts
+    if datetime.date.today().month > 10:
+        thisyear += 1
+
     startyear = thisyear-2
     endyear = thisyear+1
     return render_template('forecasts/portfolio-lr-forecasts.html', 
@@ -188,10 +268,36 @@ def portfolio_forecasts_lr_data():
 
     bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=True)
     app.logger.info(f"portfolio_lr_forecasts_data size: {len(bypfid)}")
+    if len(bypfid) > 1000:
+        bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=False)
+        app.logger.info(f"portfolio_lr_forecasts_data minimized size: {len(bypfid)}")
 
     retval = list(bypfid.values())
     retval.sort(key=lambda x: x['name'])
+
     return retval
+
+# GET /forecasts/dept-lr-forecasts-data
+# note departments are also labor categories
+@app.route('/forecasts/dept-lr-forecasts-data')
+@login_required
+def dept_lr_forecasts_data():
+    year = int(request.args.get('year'))
+    clients = request.args.get('clients')
+    csts = request.args.get('csts')
+    lrcat = request.args.get('lrcat')
+
+    bylrid = get_dlrfs(year, clients, csts, lrcat, dosources=True)
+    app.logger.info(f"dept_lr_forecasts_data size: {len(bylrid)}")
+    if len(bylrid) > 1000:
+        bylrid = get_dlrfs(year, clients, csts, lrcat, dosources=False)
+        app.logger.info(f"dept_lr_forecasts_data minimized size: {len(bylrid)}")
+
+    retval = list(bylrid.values())
+    retval.sort(key=lambda x: x['name'])
+
+    return retval
+
 
 # GET /forecasts/client-list
 @app.route('/forecasts/client-list')
@@ -222,6 +328,21 @@ def pf_cst_list():
         all()
 
     return [{"id":c.currcst, "value":c.currcst } for c in csts]
+
+# GET /forecasts/lrcat-list
+@app.route('/forecasts/lrcat-list')
+@login_required
+def pf_lrcat_list():
+    year = int(request.args.get('year'))
+    lrcats = db.session.query(LaborRole).\
+        distinct(LaborRole.categoryname).\
+        join(PortfolioLRForecast).\
+        filter(PortfolioLRForecast.yearmonth >= datetime.date(year,1,1)).\
+        filter(PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1)).\
+        order_by(LaborRole.categoryname).\
+        all()
+
+    return [{"id":c.categoryname, "value":c.categoryname } for c in lrcats]
 
 # POST /forecasts/portfolio-forecast-save
 @app.post('/forecasts/portfolio-lr-forecast-save')
@@ -256,6 +377,22 @@ def portfolio_lr_forecast_save():
         pflr.userid = current_user.userid
         db.session.commit()
     return "OK"
+
+# GET /forecasts/dept-lr-forecasts
+@app.route('/forecasts/dept-lr-forecasts')
+@login_required
+def dept_lr_forecasts():
+    thisyear = datetime.date.today().year
+    # if it's after October, show the next year's forecasts
+    if datetime.date.today().month > 10:
+        thisyear += 1
+
+    startyear = thisyear-2
+    endyear = thisyear+1
+    return render_template('forecasts/dept-lr-forecasts.html', 
+        title='Labor Role Forecasts by Category', 
+        startyear=startyear, endyear=endyear, thisyear=thisyear)
+
 
 
 ###################################################################
