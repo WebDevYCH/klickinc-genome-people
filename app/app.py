@@ -17,11 +17,11 @@ from oauthlib.oauth2 import WebApplicationClient
 import survey
 import profile
 import compmgr
-import labor
 import requests
 import dbreplication
 import forecasts
 import jobads
+import skills
 
 ###################################################################
 ## HOME PAGE

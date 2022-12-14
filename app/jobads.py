@@ -8,7 +8,27 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
 from model import *
 
+###################################################################
+## MODEL
+
+Base.classes.job_posting.__str__ = obj_name
+Base.classes.job_posting.__json__ = obj_name_joined
+JobPosting = Base.classes.job_posting
+
+Base.classes.job_posting_category.__str__ = obj_name
+JobPostingCategory = Base.classes.job_posting_category
+
+JobPostingSkill = Base.classes.job_posting_skill
+
+Title = Base.classes.title
+
+###################################################################
+## ADMIN
+
 admin.add_view(AdminModelView(JobPosting, db.session, category='Job Ads'))
+
+###################################################################
+## FRONTEND
 
 @app.route('/jobads/postjob', methods=['GET', 'POST'])
 @login_required

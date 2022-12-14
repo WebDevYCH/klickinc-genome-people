@@ -68,67 +68,11 @@ class User(ModelUser):
     def get_id(self):
         return str(self.userid)
 
-# Compensation Manager
-CompMgr = Base.classes.comp_mgr
-
-# Survey
-Base.classes.survey.__str__ = obj_name
-Survey = Base.classes.survey
-
-Base.classes.survey_question_type.__str__ = obj_name
-SurveyQuestionType = Base.classes.survey_question_type
-
-Base.classes.survey_question_category.__str__ = obj_name
-SurveyQuestionCategory = Base.classes.survey_question_category
-
-Base.classes.survey_question.__str__ = obj_name_survey_question
-SurveyQuestion = Base.classes.survey_question
-
-Base.classes.survey_answer.__str__ = obj_name_survey_answer
-SurveyAnswer = Base.classes.survey_answer
-
-SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
-
-SurveyToken = Base.classes.survey_token
-
-# Job Ads
-Base.classes.job_posting.__str__ = obj_name
-Base.classes.job_posting.__json__ = obj_name_joined
-JobPosting = Base.classes.job_posting
-
-Base.classes.job_posting_category.__str__ = obj_name
-JobPostingCategory = Base.classes.job_posting_category
-
-JobPostingSkill = Base.classes.job_posting_skill
-
-# Skills
-Base.classes.skill.__str__ = obj_name
-Skill = Base.classes.skill
-
-Base.classes.user_skill_source.__str__ = obj_name
-UserSkillSource = Base.classes.user_skill_source
-
-UserSkill = Base.classes.user_skill
-
-Base.classes.title.__str__ = obj_name
-Title = Base.classes.title
-
-TitleSkill = Base.classes.title_skill
-
-Base.classes.labor_role.__str__ = obj_name
-LaborRole = Base.classes.labor_role
-
-LaborRoleSkill = Base.classes.labor_role_skill
-
 # profile
 UserProfile = Base.classes.user_profile
 
-# Portfolios etc.
-Base.classes.portfolio.__str__ = obj_name
-Portfolio = Base.classes.portfolio
-
-Base.classes.portfolio_forecast.__str__ = obj_name
-PortfolioForecast = Base.classes.portfolio_forecast
+Base.classes.labor_role.__str__ = obj_name
+LaborRole = Base.classes.labor_role
 
 
 

@@ -7,7 +7,7 @@ from wtforms.validators import InputRequired
 
 from core import *
 from model import *
-from helpers import *
+from skillutils import *
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
