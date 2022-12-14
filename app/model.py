@@ -71,5 +71,8 @@ class User(ModelUser):
 # profile
 UserProfile = Base.classes.user_profile
 
+Base.classes.labor_role.__str__ = obj_name
+LaborRole = Base.classes.labor_role
+
 
 

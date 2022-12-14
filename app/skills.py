@@ -24,9 +24,6 @@ Title = Base.classes.title
 
 TitleSkill = Base.classes.title_skill
 
-Base.classes.labor_role.__str__ = obj_name
-LaborRole = Base.classes.labor_role
-
 LaborRoleSkill = Base.classes.labor_role_skill
 
 ###################################################################

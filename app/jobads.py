@@ -20,6 +20,8 @@ JobPostingCategory = Base.classes.job_posting_category
 
 JobPostingSkill = Base.classes.job_posting_skill
 
+Title = Base.classes.title
+
 ###################################################################
 ## ADMIN
 
