@@ -2,7 +2,6 @@ from sqlite3 import Row
 from flask_login import login_required
 from datetime import date
 import json
-import pandas as pd
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
@@ -65,11 +64,26 @@ def jobsearch():
             jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
         else:
             jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-        data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-        return data
+       
+        data = []
+        for job in jobs:
+            # get json file from database
+            data_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
+            for category in categories:
+                data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
+                if data_category['id'] == data_job['job_posting_category_id']:
+                    data_job['job_posting_category_name'] = data_category['name']
+                    data.append(data_job)
+                else:
+                    continue
+
+        return json.dumps(data)
     else:
         delta = 7
         jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
+        print([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs])
+        
+    
     return render_template('jobads/jobsearch.html', jobs=jobs, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
 @app.route('/jobads/searchpeople', methods=['GET', 'POST'])
@@ -88,5 +102,21 @@ def searchpeople():
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 
+@app.route('/jobads/applyjob', methods=['GET', 'POST'])
+@login_required
+def applyjob():
+    jobpostingid = request.form['job_posting_id']
+    comments = request.form['comments']
+    skills = request.form['skills']
+    message = request.form['message']
+    # Do some DB operation
+    return "Applied!"
 
-
+@app.route('/jobads/getapplicants', methods=['GET', 'POST'])
+@login_required
+def getapplicants():
+    jobpostingid = request.form['job_posting_id']
+    # To be fixed for the applicants schema:
+    data = db.session.query(User).limit(5).all()
+    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
+    return applicants
