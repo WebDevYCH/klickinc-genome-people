@@ -11,6 +11,19 @@ from model import *
 from google.cloud import bigquery
 
 ###################################################################
+## MODEL
+
+Base.classes.portfolio.__str__ = obj_name
+Portfolio = Base.classes.portfolio
+
+PortfolioForecast = Base.classes.portfolio_forecast
+
+PortfolioLRForecast = Base.classes.portfolio_laborrole_forecast
+
+PortfolioLRForecastSheet = Base.classes.portfolio_laborrole_forecast_sheet
+
+
+###################################################################
 ## UTILITIES
 
 # get the portfolio forecasts (in dollars), returns a dictionary
@@ -100,9 +113,9 @@ def get_plrfs(year, clients, csts, dosources=True):
         pfout['name'] = pflr.labor_role.categoryname
         bypfid[catkey] = pfout
 
-        # add the labor role under the category, with the "main" forecast
+        # add the labor role under the category, with the "main" forecast or "linear", with main taking precedence
         forecastkey = f"LR-(LRCAT{pflr.labor_role.categoryname})-{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
-        if pflr.forecastedhours != None:
+        if pflr.forecastedhours != None :
             pfout = bypfid.get(forecastkey) or {}
             pfout['id'] = forecastkey
             pfout['parent'] = catkey
@@ -110,7 +123,7 @@ def get_plrfs(year, clients, csts, dosources=True):
             pfout['lrname'] = pflr.labor_role.name
             pfout['source'] = 'MAIN'
             monthkey = f"m{pflr.yearmonth.month}"
-            if pflr.source == 'MAIN' or monthkey not in pfout:
+            if pflr.source == 'MAIN' or (monthkey not in pfout and pflr.source == 'linear'):
                 # TODO: have some hierarchy of the sources
                 pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
                 pfout[f"m{pflr.yearmonth.month}-source"] = pflr.source
@@ -145,7 +158,7 @@ def get_dlrfs(year, clients, csts, lrcat, dosources=True):
             lrid = key.split('-')[3]
             source = key.split('-')[4]
 
-            # make sure there's a root level MAIN record for this labor role
+            # make sure there's a root level summary record for this labor role
             dlrmainkey = f"LR-{lrid}-SUMMARY"
             dlrout = dlrfs.get(dlrmainkey) or {}
             dlrout['id'] = dlrmainkey
@@ -351,9 +364,9 @@ def portfolio_lr_forecast_save():
     data = request.get_json()
     app.logger.info(f"portfolio_lr_forecast_save: {data}")
     # id is based on forecastkey = f"{pflr.portfolioid}-{pflr.laborroleid}-MAIN"
-    portfolioid = int(data['id'].split('-')[0])
-    laborroleid = data['id'].split('-')[1]
-    source = data['id'].split('-')[2]
+    portfolioid = int(data['id'].split('-')[1])
+    laborroleid = data['id'].split('-')[2]
+    source = data['id'].split('-')[3]
     if source != 'MAIN':
         return "ERROR: Only MAIN source is allowed"
     year = int(data['year'])
@@ -377,22 +390,6 @@ def portfolio_lr_forecast_save():
         pflr.userid = current_user.userid
         db.session.commit()
     return "OK"
-
-# GET /forecasts/dept-lr-forecasts
-@app.route('/forecasts/dept-lr-forecasts')
-@login_required
-def dept_lr_forecasts():
-    thisyear = datetime.date.today().year
-    # if it's after October, show the next year's forecasts
-    if datetime.date.today().month > 10:
-        thisyear += 1
-
-    startyear = thisyear-2
-    endyear = thisyear+1
-    return render_template('forecasts/dept-lr-forecasts.html', 
-        title='Labor Role Forecasts by Category', 
-        startyear=startyear, endyear=endyear, thisyear=thisyear)
-
 
 
 ###################################################################

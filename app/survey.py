@@ -20,9 +20,30 @@ from core import *
 from model import *
 
 ###################################################################
-## SURVEY
+## MODEL
 
-# admin
+Base.classes.survey.__str__ = obj_name
+Survey = Base.classes.survey
+
+Base.classes.survey_question_type.__str__ = obj_name
+SurveyQuestionType = Base.classes.survey_question_type
+
+Base.classes.survey_question_category.__str__ = obj_name
+SurveyQuestionCategory = Base.classes.survey_question_category
+
+Base.classes.survey_question.__str__ = obj_name_survey_question
+SurveyQuestion = Base.classes.survey_question
+
+Base.classes.survey_answer.__str__ = obj_name_survey_answer
+SurveyAnswer = Base.classes.survey_answer
+
+SurveyAnswerAnalysis = Base.classes.survey_answer_analysis
+
+SurveyToken = Base.classes.survey_token
+
+###################################################################
+## ADMIN
+
 admin.add_view(AdminModelView(Survey, db.session, category='Survey'))
 
 class SurveyQuestionModelView(AdminModelView):
@@ -53,7 +74,9 @@ class SurveyAnswerAnalysisModelView(ReadOnlyModelView):
     export_types = ['csv', 'xlsx']
 admin.add_view(SurveyAnswerAnalysisModelView(SurveyAnswerAnalysis, db.session, category='Survey'))
 
-# main frontend
+###################################################################
+## FRONTEND
+
 @app.route('/survey', methods=['GET', 'POST'])
 @login_required
 def survey():

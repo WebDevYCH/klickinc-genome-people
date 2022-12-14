@@ -20,7 +20,13 @@ from core import *
 from model import *
 
 ###################################################################
-## COMP MGR
+## MODEL
+
+CompMgr = Base.classes.comp_mgr
+
+
+###################################################################
+## ADMIN
 
 class CompMgrView(AdminModelView):
     def is_accessible(self):

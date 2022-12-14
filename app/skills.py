@@ -8,6 +8,30 @@ from model import *
 from skillutils import *
 
 
+###################################################################
+## MODEL
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
+
+Base.classes.user_skill_source.__str__ = obj_name
+UserSkillSource = Base.classes.user_skill_source
+
+UserSkill = Base.classes.user_skill
+
+Base.classes.title.__str__ = obj_name
+Title = Base.classes.title
+
+TitleSkill = Base.classes.title_skill
+
+Base.classes.labor_role.__str__ = obj_name
+LaborRole = Base.classes.labor_role
+
+LaborRoleSkill = Base.classes.labor_role_skill
+
+###################################################################
+## ADMIN
+
 admin.add_view(AdminModelView(LaborRoleSkill, db.session, category='Skill'))
 admin.add_view(AdminModelView(TitleSkill, db.session, category='Skill'))
 admin.add_view(AdminModelView(Skill, db.session, category='Skill'))

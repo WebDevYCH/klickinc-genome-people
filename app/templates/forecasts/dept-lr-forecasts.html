@@ -84,7 +84,7 @@ lrcatcomboonchange = function(id) {
     var csts = cstcombo.getValue();
     var clients = clientcombo.getValue();
     if (lrcat != "") {
-        //treegrid.data.removeAll();
+        treegrid.data.removeAll();
         if (csts != "") {
             treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
         }
