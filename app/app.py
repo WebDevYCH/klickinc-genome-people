@@ -129,8 +129,8 @@ def callback():
 
     if user:
         login_user(user)
-        if 'login_next' in session:
-            return redirect(session.pop('login_next'))
+        if 'login_next' in app.session:
+            return redirect(app.session.pop('login_next'))
         else:
             return redirect(url_for("index"))
     else:

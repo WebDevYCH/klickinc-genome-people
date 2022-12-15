@@ -539,9 +539,10 @@ class ForecastAdminView(AdminBaseView):
 
         source = 'gsheet'
 
-        # gather the labor rates
-        loglines.append("gathering labor rates")
+        # gather some lookup data
+        loglines.append("gathering lookup data")
         rates = get_clrrates()
+        laborroles = db.session.query(LaborRole).all()
 
         # for each Google Sheet forecast
         for gs in db.session.query(PortfolioLRForecastSheet).all():
@@ -564,9 +565,10 @@ class ForecastAdminView(AdminBaseView):
             worksheets = sheet.worksheets()
             # if it doesn't have an Export tab
             if not any(worksheet.title == 'Export' for worksheet in worksheets):
-                # create one, load into a dataframe
+                rows = 50000
+                # create one, load into a df
                 loglines.append("  creating Export tab")
-                sheet.add_worksheet('Export', rows=50000, cols=40)
+                sheet.add_worksheet('Export', rows=rows, cols=40)
                 worksheet = sheet.worksheet('Export')
                 # build the header row
                 headerrow = ['Client', 'Portfolio', 'Labor Category', 'Labor Role', 'MSA Rate']
@@ -575,54 +577,49 @@ class ForecastAdminView(AdminBaseView):
                     monthname = datetime.date(thisyear, month, 1).strftime('%b')
                     headerrow.append(f'{monthname} {thisyear} hrs')
                     headerrow.append(f'{monthname} {thisyear} $')
-                # insert the header row
-                worksheet.update('A1', [headerrow])
-                worksheet.update('A2', [[1]])
-                worksheet.format('1:1', { "textFormat": { "bold": True } })
-                # now load it into a dataframe
-                loglines.append("  loading Export tab into dataframe")
-                worksheet = sheet.worksheet('Export')
-                dataframe = pd.DataFrame(worksheet.get_all_records())
+                loglines.append("  building dataframe")
+                df = pd.DataFrame([["" for _ in range(29)] for _ in range(rows)], columns=headerrow)
                 # now, for each clientname and portfolio in the sheet's CST, add a row for each labor role and labor role's rate with the client
                 # including summary rows for each client and portfolio, also calculating the total dollars based on the hours and rate
                 rownum = 0
                 for clientdbrow in db.session.query(Portfolio.clientname).filter(Portfolio.currcst == gs.cstname).distinct().all():
                     clientname = clientdbrow[0]
-                    clientstartrow = rownum
+                    # client row
+                    df.iloc[rownum,0] = clientname
                     rownum += 1
                     for portfoliodbrow in db.session.query(Portfolio.name).filter(Portfolio.currcst == gs.cstname).distinct().all():
                         portfolio = portfoliodbrow[0]
+                        loglines.append(f"  portfolio {clientname} // {portfolio}")
+                        # portfolio row
+                        df.iloc[rownum,0] = clientname
+                        df.iloc[rownum,1] = portfolio
                         portfoliostartrow = rownum
                         rownum += 1
-                        loglines.append(f"  inserting {clientname} // {portfolio}")
-                        for lr in db.session.query(LaborRole).all():
-                            row = [clientname, portfolio, lr.categoryname, lr.name, (rates.get(clientname) or {}).get(lr.id)]
+                        # labor role rows
+                        for lr in laborroles:
+                            df.iloc[rownum,0] = clientname
+                            df.iloc[rownum,1] = portfolio
+                            df.iloc[rownum,2] = lr.categoryname
+                            df.iloc[rownum,3] = lr.name
+                            if clientname in rates and lr.id in rates.get(clientname):
+                                df.iloc[rownum,4] = round(rates[clientname][lr.id],2)
                             for month in range(1,13):
-                                hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
+                                hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
                                 ratecolname = 'E'
-                                row.append('')
-                                row.append(f'=IFERROR({hrscolname}{rownum}*{ratecolname}{rownum},0)')
-                            dataframe.loc[rownum] = row
+                                df.iloc[rownum,(month*2)+4] = f'=IFERROR({hrscolname}{rownum+2}*{ratecolname}{rownum+2},0)'
                             rownum += 1
+
                         # update the portfolio start row to sum the portfolio's hours and dollars
-                        row = [clientname, portfolio, "", "", ""]
                         for month in range(1,13):
-                            hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
-                            dollarscolname = openpyxl.utils.get_column_letter((month*2)+6)
-                            row.append(f'=SUM({hrscolname}{portfoliostartrow}:{hrscolname}{rownum-1})')
-                            row.append(f'=SUM({dollarscolname}{portfoliostartrow}:{dollarscolname}{rownum-1})')
-                        dataframe.loc[portfoliostartrow] = row
-                    # update the client start row to sum the client's hours and dollars
-                    row = [clientname, "", "", "", ""]
-                    for month in range(1,13):
-                        hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
-                        dollarscolname = openpyxl.utils.get_column_letter((month*2)+6)
-                        row.append(f'=SUM({hrscolname}{clientstartrow}:{hrscolname}{rownum-1})')
-                        row.append(f'=SUM({dollarscolname}{clientstartrow}:{dollarscolname}{rownum-1})')
-                    dataframe.loc[clientstartrow] = row
+                            hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
+                            dollarscolname = openpyxl.utils.get_column_letter((month*2)+5)
+                            df.iloc[portfoliostartrow,(month*2)+3] = f'=SUM({hrscolname}{portfoliostartrow+3}:{hrscolname}{rownum+1})'
+                            df.iloc[portfoliostartrow,(month*2)+4] = f'=SUM({dollarscolname}{portfoliostartrow+3}:{dollarscolname}{rownum+1})'
 
                     loglines.append(f"  saving worksheet")
-                    worksheet.update([dataframe.columns.values.tolist()] + dataframe.values.tolist(), raw=False)
+                    df = df.fillna('')
+                    worksheet.update([df.columns.values.tolist()] + df.values.tolist(), raw=False)
+                    worksheet.format('1:1', { "textFormat": { "bold": True } })
 
         return self.render('admin/job_log.html', loglines=loglines)
 
