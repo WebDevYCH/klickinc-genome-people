@@ -256,6 +256,21 @@ def portfolio_lr_forecasts():
         title='Labor Role Forecasts by Portfolio', 
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
+# GET /forecasts/dept-lr-forecasts
+@app.route('/forecasts/dept-lr-forecasts')
+@login_required
+def dept_lr_forecasts():
+    thisyear = datetime.date.today().year
+    # if it's after October, show the next year's forecasts
+    if datetime.date.today().month > 10:
+        thisyear += 1
+
+    startyear = thisyear-2
+    endyear = thisyear+1
+    return render_template('forecasts/dept-lr-forecasts.html', 
+        title='Labor Role Forecasts by Dept', 
+        startyear=startyear, endyear=endyear, thisyear=thisyear)
+
 # GET /forecasts/portfolio-forecasts-data
 @app.route('/forecasts/portfolio-forecasts-data')
 @login_required
@@ -565,7 +580,7 @@ class ForecastAdminView(AdminBaseView):
             worksheets = sheet.worksheets()
             # if it doesn't have an Export tab
             if not any(worksheet.title == 'Export' for worksheet in worksheets):
-                rows = 50000
+                rows = 80000
                 # create one, load into a df
                 loglines.append("  creating Export tab")
                 sheet.add_worksheet('Export', rows=rows, cols=40)
@@ -604,6 +619,7 @@ class ForecastAdminView(AdminBaseView):
                             if clientname in rates and lr.id in rates.get(clientname):
                                 df.iloc[rownum,4] = round(rates[clientname][lr.id],2)
                             for month in range(1,13):
+                                hrscolname = 'E'
                                 hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
                                 ratecolname = 'E'
                                 df.iloc[rownum,(month*2)+4] = f'=IFERROR({hrscolname}{rownum+2}*{ratecolname}{rownum+2},0)'

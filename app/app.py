@@ -1,27 +1,26 @@
-import datetime
 import os
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_bootstrap import Bootstrap
-from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
-import flask_admin
+from flask import render_template, redirect, json, url_for, request, session
+from flask_login import current_user, login_required, login_user, logout_user
+from flask_admin.menu import MenuLink
 
 import sqlalchemy
-from sqlalchemy import delete, insert, update, or_, and_
 
 from core import *
 from model import *
 
-from oauthlib.oauth2 import WebApplicationClient
-import survey
-import profile
 import compmgr
-import requests
 import dbreplication
 import forecasts
 import jobads
+import model
+import profile
 import skills
+import survey
+
+
+from oauthlib.oauth2 import WebApplicationClient
+import requests
 
 ###################################################################
 ## HOME PAGE
@@ -61,7 +60,7 @@ def login():
 
     login_next = request.args.get('next')
     if login_next:
-        app.session['login_next'] = login_next
+        session['login_next'] = login_next
 
     # Use library to construct the request for Google login and provide
     # scopes that let you retrieve user's profile from Google
@@ -129,8 +128,8 @@ def callback():
 
     if user:
         login_user(user)
-        if 'login_next' in app.session:
-            return redirect(app.session.pop('login_next'))
+        if 'login_next' in session:
+            return redirect(session.pop('login_next'))
         else:
             return redirect(url_for("index"))
     else:
