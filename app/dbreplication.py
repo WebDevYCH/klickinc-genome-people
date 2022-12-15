@@ -1,27 +1,22 @@
 import datetime
-import requests
 import re
 import hashlib
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_login import LoginManager, login_required, current_user
 from flask_admin import expose
-
-from sqlalchemy.ext.automap import automap_base
-from sqlalchemy.orm import Session
-from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
-
-from sqlalchemy.ext.serializer import loads, dumps
-
-from google.cloud import language_v1
+from sqlalchemy.ext.serializer import dumps
 from google.cloud import bigquery
 
 from core import *
 from model import *
 
+###################################################################
+## MODEL CLASSES (possibly redundant to the main modules)
+
+PortfolioForecast = Base.classes.portfolio_forecast
+
 
 ###################################################################
-## DATABASE REPLICATION
+## ADMIN PAGES FOR REPLICATION
 
 class DbReplicationView(AdminBaseView):
     @expose('/')

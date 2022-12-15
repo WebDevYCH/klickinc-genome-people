@@ -1,5 +1,6 @@
 import datetime, json, os, re
 from dateutil.relativedelta import relativedelta
+import pandas as pd
 
 from flask import render_template, request
 from flask_login import login_required
@@ -9,12 +10,10 @@ from core import *
 from model import *
 
 from google.cloud import bigquery
+import openpyxl
 
 ###################################################################
 ## MODEL
-
-Base.classes.portfolio.__str__ = obj_name
-Portfolio = Base.classes.portfolio
 
 PortfolioForecast = Base.classes.portfolio_forecast
 
@@ -22,6 +21,7 @@ PortfolioLRForecast = Base.classes.portfolio_laborrole_forecast
 
 PortfolioLRForecastSheet = Base.classes.portfolio_laborrole_forecast_sheet
 
+admin.add_view(AdminModelView(PortfolioLRForecastSheet, db.session, category='Forecasts'))
 
 ###################################################################
 ## UTILITIES
@@ -526,6 +526,110 @@ class ForecastAdminView(AdminBaseView):
             db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
+
+    @expose('/gsheets')
+    def gsheets(self):
+        loglines = AdminLog()
+        loglines.append("Starting Google Sheets Forecast Importer")
+        loglines.append("")
+
+        thisyear = datetime.date.today().year
+        if datetime.date.today().month > 10:
+            thisyear += 1
+
+        source = 'gsheet'
+
+        # gather the labor rates
+        loglines.append("gathering labor rates")
+        rates = get_clrrates()
+
+        # for each Google Sheet forecast
+        for gs in db.session.query(PortfolioLRForecastSheet).all():
+            # delete any existing future portfolio labor role forecasts attached to a portfolio that's in the sheet's CST
+            db.session.query(PortfolioLRForecast).filter(
+                PortfolioLRForecast.portfolioid.in_(db.session.query(Portfolio.id).filter(Portfolio.currcst == gs.cstname)),
+                PortfolioLRForecast.yearmonth >= datetime.date.today().replace(day=1),
+                PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
+            
+            # get the sheet
+            loglines.append(f"for CST {gs.cstname}, getting sheet {gs.gsheet_url}")
+            sheet = getGoogleSheet(gs.gsheet_url)
+
+            worksheets = sheet.worksheets()
+            # if it has an Export tab, delete it
+            if any(worksheet.title == 'Export' for worksheet in worksheets):
+                loglines.append("  deleting Export tab")
+                sheet.del_worksheet(sheet.worksheet('Export'))
+
+            worksheets = sheet.worksheets()
+            # if it doesn't have an Export tab
+            if not any(worksheet.title == 'Export' for worksheet in worksheets):
+                # create one, load into a dataframe
+                loglines.append("  creating Export tab")
+                sheet.add_worksheet('Export', rows=50000, cols=40)
+                worksheet = sheet.worksheet('Export')
+                # build the header row
+                headerrow = ['Client', 'Portfolio', 'Labor Category', 'Labor Role', 'MSA Rate']
+                for month in range(1,13):
+                    # determine month's name
+                    monthname = datetime.date(thisyear, month, 1).strftime('%b')
+                    headerrow.append(f'{monthname} {thisyear} hrs')
+                    headerrow.append(f'{monthname} {thisyear} $')
+                # insert the header row
+                worksheet.update('A1', [headerrow])
+                worksheet.update('A2', [[1]])
+                worksheet.format('1:1', { "textFormat": { "bold": True } })
+                # now load it into a dataframe
+                loglines.append("  loading Export tab into dataframe")
+                worksheet = sheet.worksheet('Export')
+                dataframe = pd.DataFrame(worksheet.get_all_records())
+                # now, for each clientname and portfolio in the sheet's CST, add a row for each labor role and labor role's rate with the client
+                # including summary rows for each client and portfolio, also calculating the total dollars based on the hours and rate
+                rownum = 0
+                for clientdbrow in db.session.query(Portfolio.clientname).filter(Portfolio.currcst == gs.cstname).distinct().all():
+                    clientname = clientdbrow[0]
+                    clientstartrow = rownum
+                    rownum += 1
+                    for portfoliodbrow in db.session.query(Portfolio.name).filter(Portfolio.currcst == gs.cstname).distinct().all():
+                        portfolio = portfoliodbrow[0]
+                        portfoliostartrow = rownum
+                        rownum += 1
+                        loglines.append(f"  inserting {clientname} // {portfolio}")
+                        for lr in db.session.query(LaborRole).all():
+                            row = [clientname, portfolio, lr.categoryname, lr.name, (rates.get(clientname) or {}).get(lr.id)]
+                            for month in range(1,13):
+                                hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
+                                ratecolname = 'E'
+                                row.append('')
+                                row.append(f'=IFERROR({hrscolname}{rownum}*{ratecolname}{rownum},0)')
+                            dataframe.loc[rownum] = row
+                            rownum += 1
+                        # update the portfolio start row to sum the portfolio's hours and dollars
+                        row = [clientname, portfolio, "", "", ""]
+                        for month in range(1,13):
+                            hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
+                            dollarscolname = openpyxl.utils.get_column_letter((month*2)+6)
+                            row.append(f'=SUM({hrscolname}{portfoliostartrow}:{hrscolname}{rownum-1})')
+                            row.append(f'=SUM({dollarscolname}{portfoliostartrow}:{dollarscolname}{rownum-1})')
+                        dataframe.loc[portfoliostartrow] = row
+                    # update the client start row to sum the client's hours and dollars
+                    row = [clientname, "", "", "", ""]
+                    for month in range(1,13):
+                        hrscolname = openpyxl.utils.get_column_letter((month*2)+5)
+                        dollarscolname = openpyxl.utils.get_column_letter((month*2)+6)
+                        row.append(f'=SUM({hrscolname}{clientstartrow}:{hrscolname}{rownum-1})')
+                        row.append(f'=SUM({dollarscolname}{clientstartrow}:{dollarscolname}{rownum-1})')
+                    dataframe.loc[clientstartrow] = row
+
+                    loglines.append(f"  saving worksheet")
+                    worksheet.update([dataframe.columns.values.tolist()] + dataframe.values.tolist(), raw=False)
+
+        return self.render('admin/job_log.html', loglines=loglines)
+
+
+
+
+
 
 admin.add_view(ForecastAdminView(name='Forecast Processing', category='Forecasts'))
 

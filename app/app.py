@@ -61,7 +61,7 @@ def login():
 
     login_next = request.args.get('next')
     if login_next:
-        session['login_next'] = login_next
+        app.session['login_next'] = login_next
 
     # Use library to construct the request for Google login and provide
     # scopes that let you retrieve user's profile from Google

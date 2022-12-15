@@ -1,15 +1,16 @@
 import datetime
 import os
-import os.path as op
 import requests
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request, session
+from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
 import config
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 ###################################################################
 ## INITIALIZATION
@@ -27,6 +28,9 @@ login_manager.session_protection = 'strong'
 # Create db reference
 db = SQLAlchemy(app)
 db.init_app(app)
+
+###################################################################
+## ADMIN CLASSES
 
 # Flask-Admin interfaces
 class MyAdminIndexView(flask_admin.AdminIndexView):
@@ -56,6 +60,9 @@ class AdminBaseView(flask_admin.BaseView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
+###################################################################
+## UTILITY CLASSES AND FUNCTIONS
+
 # overridden array that saves in the array and also logs to the webapp logfile
 class AdminLog(list):
     def append(self, item):
@@ -80,5 +87,12 @@ def parseGenomeDate(weirdstring):
     # date comes back in the format '/Date(1262322000000-0500)/', ie milliseconds since 1970-01-01
     return datetime.datetime.fromtimestamp(int(weirdstring[6:16]))
 
+def getGoogleSheet(url):
+    #scope = ['https://spreadsheets.google.com/feeds']
+    #credentials = ServiceAccountCredentials.from_json_keyfile_name(app.config['GOOGLE_CREDENTIALS'], scope)
+    #gc = gspread.authorize(credentials)
+    #return gc.open_by_url(url)
+    gc = gspread.service_account(filename = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
+    return gc.open_by_url(url)
 
 

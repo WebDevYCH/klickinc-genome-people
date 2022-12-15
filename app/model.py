@@ -68,11 +68,14 @@ class User(ModelUser):
     def get_id(self):
         return str(self.userid)
 
-# profile
+# some core Model concepts
+
 UserProfile = Base.classes.user_profile
 
 Base.classes.labor_role.__str__ = obj_name
 LaborRole = Base.classes.labor_role
 
+Base.classes.portfolio.__str__ = obj_name
+Portfolio = Base.classes.portfolio
 
 

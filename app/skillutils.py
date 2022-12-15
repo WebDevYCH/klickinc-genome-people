@@ -43,6 +43,7 @@ def extract_skills_from_text(text):
     return data
 
 def auto_fill_user_skill_from_resume(data):
+    UserSkill = Base.classes.user_skill
     db.session.query(UserSkill).filter(UserSkill.user_id == current_user.userid).delete(synchronize_session="fetch")
     for skill in data:
         current_skill =db.session.query(Skill).filter(Skill.name==skill['skill']['name']).first()
