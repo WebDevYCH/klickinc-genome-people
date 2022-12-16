@@ -74,13 +74,15 @@
             <div class="col-md-9">
                 <div>
                     <span class="card-title mb-0 text-primary fs-3" job-posting-id="{{ job.id }}">{{ job.title }}</span>
-                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category.name }}</span>)</i></span>
+                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category_name }}</span>)</i></span>
                 </div>
                 <div class="job-details">
                     Description: <span class="card-description">{{ job.description | safe }}</span>
                 </div>
                 <div class="other-info">
-                    Skills: React.js, Node.js (To be fixed soon...)
+                    {% for skill in job.job_posting_skills %}
+                        {{ skill }},
+                    {% endfor %}
                 </div>
             </div>
             <div class="col-md-3">
@@ -357,6 +359,17 @@
         }
         search_jobs(data);
     })
+    // function search_skill(){
+    //     $.ajax({
+    //         url:"/jobads/skillsearchauth",
+    //         method: 'POST',
+    //         data: '',
+    //         success: function(res){
+    //             var liteCase = JSON.parse(res);
+    //             console.log(liteCase.access_token)
+    //         }
+    //     })
+    // }
     function search_jobs(data) {
         $.ajax({
             url: "/jobads/jobsearch",
@@ -364,6 +377,7 @@
             data: data,
             success: function(res) {
                 var jobs = JSON.parse(res);
+                console.log(jobs)
                 var data = "";
                 jobs.forEach(job => {
                     var current_user_id = "{{ current_user.userid }}";
