@@ -28,6 +28,7 @@ cstcomboonchange = function(id) {
     if (csts != "") {
         treegrid.data.removeAll();
         treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&csts='+csts);
+        loading();
     }
 }
 {% endblock %}
@@ -36,8 +37,11 @@ cstcomboonchange = function(id) {
 clientcomboonchange = function(id) {
     var year = yearcombo.getValue();
     var clients = clientcombo.getValue();
-    if (clients != "")
+    if (clients != "") {
+        treegrid.data.removeAll();
         treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&clients='+clients);
+        loading();
+    }
 }
 {% endblock %}
 

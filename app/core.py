@@ -1,5 +1,5 @@
 import datetime
-import os
+import os, time
 import requests
 
 from flask import Flask, redirect, url_for, request
@@ -95,4 +95,15 @@ def getGoogleSheet(url):
     gc = gspread.service_account(filename = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
     return gc.open_by_url(url)
 
+# set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit
+def setGoogleSheetCellFormat(worksheet, cellpos, format):
+    for i in range(0, 60):
+        try:
+            worksheet.format(cellpos, format)
+            return
+        except gspread.exceptions.APIError as e:
+            if e.response.status_code == 429:
+                time.sleep(1)
+            else:
+                raise e
 

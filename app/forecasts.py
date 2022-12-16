@@ -26,14 +26,18 @@ admin.add_view(AdminModelView(PortfolioLRForecastSheet, db.session, category='Fo
 ###################################################################
 ## UTILITIES
 
-# get the portfolio forecasts (in dollars), returns a dictionary
-def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
+def queryClientCst(clients, csts):
     if csts != None and csts != "":
         queryfilter = Portfolio.currcst.in_(csts.split(','))
     elif clients != None and clients != "":
         queryfilter = Portfolio.clientid.in_(clients.split(','))
     else:
         queryfilter = True
+    return queryfilter
+
+# get the portfolio forecasts (in dollars), returns a dictionary
+def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
+    queryfilter = queryClientCst(clients, csts)
 
     pfs = db.session.query(PortfolioForecast).\
         join(Portfolio).\
@@ -88,12 +92,7 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
 
 # get the portfolio labor role forecasts (in hours), returns a dictionary
 def get_plrfs(year, clients, csts, dosources=True):
-    if csts != None and csts != "":
-        queryfilter = Portfolio.currcst.in_(csts.split(','))
-    elif clients != None and clients != "":
-        queryfilter = Portfolio.clientid.in_(clients.split(','))
-    else:
-        queryfilter = True
+    queryfilter = queryClientCst(clients, csts)
 
     pflrs = db.session.query(PortfolioLRForecast).\
         join(Portfolio).\
@@ -145,68 +144,75 @@ def get_plrfs(year, clients, csts, dosources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a dictionary
-def get_dlrfs(year, clients, csts, lrcat, dosources=True):
-    # first get all portfolio labor role forecasts
-    plrfs = get_plrfs(year, clients, csts, dosources=True)
-    app.logger.info(f"get_dlrfs() plrfs data size: {len(plrfs)}")
-    
-    # then filter them by the labor role category and sum by labor role
-    dlrfs = {}
-    for key in plrfs:
-        if key.startswith(f"LR-(LRCAT{lrcat})-"):
-            # get the labor role id and source from the key
-            lrid = key.split('-')[3]
-            source = key.split('-')[4]
+def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
+    queryfilter = queryClientCst(clients, csts)
 
-            # make sure there's a root level summary record for this labor role
-            dlrmainkey = f"LR-{lrid}-SUMMARY"
-            dlrout = dlrfs.get(dlrmainkey) or {}
-            dlrout['id'] = dlrmainkey
-            dlrout['name'] = plrfs[key]['lrname']
-            # add the hours from each month, if this is the main source
-            if source == 'MAIN':
-                for month in range(1,13):
-                    monthkey = f"m{month}"
-                    if monthkey in plrfs[key]:
-                        dlrout[monthkey] = dlrout.get(monthkey) or 0 + plrfs[key][monthkey]
-            dlrfs[dlrmainkey] = dlrout
+    # create a pandas dataframe of the portfolio labor role forecasts
+    header = ['id','parent','name','issourcedetail','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
+    df = pd.DataFrame([['', None, lrcat, None, None, None, None, None, None, None, None, None, None, None, None, None]], columns=header)
 
-            # make sure there's a record for this labor role and source
-            dlrkey = f"LR-{lrid}-{source}"
-            dlrout = dlrfs.get(dlrkey) or {}
-            dlrout['id'] = dlrkey
-            dlrout['name'] = f"'{plrfs[key]['source']}' Forecast"
-            dlrout['parent'] = dlrmainkey
-            # add the hours from each month
-            for month in range(1,13):
-                monthkey = f"m{month}"
-                if monthkey in plrfs[key]:
-                    dlrout[monthkey] = dlrout.get(monthkey) or 0 + plrfs[key][monthkey]
-            dlrfs[dlrkey] = dlrout
+    # get the portfolio labor role forecasts, querying by lrcat and optionally by client or cst
+    if csts != None and csts != "":
+        queryfilter = Portfolio.currcst.in_(csts.split(','))
+    elif clients != None and clients != "":
+        queryfilter = Portfolio.clientid.in_(clients.split(','))
+    else:
+        queryfilter = True
 
-    # one more pass through dlrfs, to fill in SUMMARY records with one of the sources
-    for key in dlrfs:
-        if key.endswith('-SUMMARY'):
-            for month in range(1,13):
-                monthkey = f"m{month}"
-                if monthkey not in dlrfs[key]:
-                    for sourcekey in dlrfs:
-                        if sourcekey.startswith(key+'-') and monthkey in dlrfs[sourcekey]:
-                            dlrfs[key][monthkey] = dlrfs[sourcekey][monthkey]
-                            dlrfs[key][monthkey+'-source'] = dlrfs[sourcekey]['name']
-                            break
+    # query the labor role forecasts
+    pflrs = db.session.query(PortfolioLRForecast).\
+        join(Portfolio).\
+        join(LaborRole).\
+        filter(PortfolioLRForecast.yearmonth >= datetime.date(year,1,1),
+            PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1),
+            LaborRole.categoryname == lrcat,
+            queryfilter
+        ).all()
 
-    # and one MORE pass through drlfs, to remove any sources that aren't SUMMARY if dosources is false
-    if not dosources:
-        for key in dlrfs:
-            if not key.endswith('-SUMMARY'):
-                del dlrfs[key]
+    # add the portfolio labor role forecasts to the dataframe
+    for pflr in pflrs:
+        # we want the hierarchy to be: labor role -> portfolio -> source
 
-    return dlrfs
+        # add a row for the labor role as a root node, if it isn't already there (but use the concat function to avoid a warning)
+        lrmainkey = f"{pflr.laborroleid}"
+        if lrmainkey not in df.id.values:
+            df = pd.concat([df, 
+                pd.DataFrame({ 'id': lrmainkey,
+                'parent': None,
+                'name': pflr.labor_role.name,
+                'source': pflr.source }, index=[0])])
+        
+        # add a row for the sum of the forecasted hours for the labor role by portfolio
+        lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
+        if lrportfoliokey not in df.id.values:
+            df = pd.concat([df, 
+                pd.DataFrame({ 'id': lrportfoliokey,
+                'parent': lrmainkey,
+                'name': pflr.portfolio.name,
+                'source': pflr.source }, index=[0])])
+
+        if dosources:
+            # add a row for the sum of the forecasted hours for the labor role by portfolio and source
+            lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+            if lrsourcekey not in df.id.values:
+                df = pd.concat([df,
+                    pd.DataFrame({ 'id': lrsourcekey,
+                    'parent': lrportfoliokey,
+                    'name': f"'{pflr.source}' Forecast",
+                    'issourcedetail': 1,
+                    'source': pflr.source }, index=[0])])
+
+            # fill in the month columns just for the source row
+            if pflr.forecastedhours != None:
+                df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+
+    # switch dataframe nulls to blank
+    df = df.fillna('')
+    # switch blank strings to nulls in the parent column
+    df['parent'] = df['parent'].replace('', None)
 
 
-
-
+    return df
 
 # get the current rate for each client per labor role (in dollars)
 # returns a dictionary of dictionaries, client -> laborroleid -> rate
@@ -296,7 +302,7 @@ def portfolio_forecasts_lr_data():
 
     bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=True)
     app.logger.info(f"portfolio_lr_forecasts_data size: {len(bypfid)}")
-    if len(bypfid) > 1000:
+    if len(bypfid) > 2000:
         bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=False)
         app.logger.info(f"portfolio_lr_forecasts_data minimized size: {len(bypfid)}")
 
@@ -306,7 +312,6 @@ def portfolio_forecasts_lr_data():
     return retval
 
 # GET /forecasts/dept-lr-forecasts-data
-# note departments are also labor categories
 @app.route('/forecasts/dept-lr-forecasts-data')
 @login_required
 def dept_lr_forecasts_data():
@@ -315,17 +320,20 @@ def dept_lr_forecasts_data():
     csts = request.args.get('csts')
     lrcat = request.args.get('lrcat')
 
-    bylrid = get_dlrfs(year, clients, csts, lrcat, dosources=True)
-    app.logger.info(f"dept_lr_forecasts_data size: {len(bylrid)}")
-    if len(bylrid) > 1000:
-        bylrid = get_dlrfs(year, clients, csts, lrcat, dosources=False)
-        app.logger.info(f"dept_lr_forecasts_data minimized size: {len(bylrid)}")
+    app.logger.info(f"dept_lr_forecasts_data year: {year} clients: {clients} csts: {csts} lrcat: {lrcat}")
 
-    retval = list(bylrid.values())
-    retval.sort(key=lambda x: x['name'])
+    df = get_dlrfs(year, lrcat, clients, csts, dosources=True)
+    app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
+    if len(df) > 2000:
+        # remove all rows with issourcedetail = 1
+        df = df[df['issourcedetail'] != 1]
+        app.logger.info(f"dept_lr_forecasts_data minimized size: {len(df)}")
+    # sort the dataframe
+    df.sort_values(by=['name'], inplace=True)
+    app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
 
-    return retval
-
+    # return array of dictionaries from df
+    return df.to_dict(orient='records')
 
 # GET /forecasts/client-list
 @app.route('/forecasts/client-list')
@@ -406,7 +414,6 @@ def portfolio_lr_forecast_save():
         db.session.commit()
     return "OK"
 
-
 ###################################################################
 ## ADMIN PAGES AND FORECASTING ALGORITHMS
 
@@ -422,7 +429,7 @@ class ForecastAdminView(AdminBaseView):
         loglines.append("")
 
         lookback = 10
-        lookahead = 3
+        lookahead = 4
         sourcename = 'linear'
         startdate = datetime.date.today().replace(day=1)
 
@@ -484,7 +491,7 @@ class ForecastAdminView(AdminBaseView):
         loglines.append("Starting CI-Selected-Portfolio Linear Extrapolator")
         loglines.append("")
 
-        lookahead = 3
+        lookahead = 4
         sourcename = 'cilinear'
         startdate = datetime.date.today().replace(day=1)
         enddate = startdate + relativedelta(months=lookahead)
@@ -561,30 +568,41 @@ class ForecastAdminView(AdminBaseView):
 
         # for each Google Sheet forecast
         for gs in db.session.query(PortfolioLRForecastSheet).all():
+            # gs is linked to the CST, but also sometimes to the client name
+            # if it's linked to the client name, use that
+            clientqueryarg = True
+            if gs.clientname != None and gs.clientname != '':
+                clientqueryarg = Portfolio.clientname == gs.clientname
+
             # delete any existing future portfolio labor role forecasts attached to a portfolio that's in the sheet's CST
             db.session.query(PortfolioLRForecast).filter(
                 PortfolioLRForecast.portfolioid.in_(db.session.query(Portfolio.id).filter(Portfolio.currcst == gs.cstname)),
                 PortfolioLRForecast.yearmonth >= datetime.date.today().replace(day=1),
+                clientqueryarg,
                 PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
+
+            tabname = gs.tabname
+            if tabname == None or tabname == '':
+                tabname = 'Export'
             
             # get the sheet
             loglines.append(f"for CST {gs.cstname}, getting sheet {gs.gsheet_url}")
             sheet = getGoogleSheet(gs.gsheet_url)
 
-            worksheets = sheet.worksheets()
             # if it has an Export tab, delete it
-            if any(worksheet.title == 'Export' for worksheet in worksheets):
-                loglines.append("  deleting Export tab")
-                sheet.del_worksheet(sheet.worksheet('Export'))
+            #worksheets = sheet.worksheets()
+            #if any(worksheet.title == tabname for worksheet in worksheets):
+            #    loglines.append(f"  deleting {tabname} tab")
+            #    sheet.del_worksheet(sheet.worksheet(tabname))
 
             worksheets = sheet.worksheets()
             # if it doesn't have an Export tab
-            if not any(worksheet.title == 'Export' for worksheet in worksheets):
+            if not any(worksheet.title == tabname for worksheet in worksheets):
                 rows = 80000
                 # create one, load into a df
-                loglines.append("  creating Export tab")
-                sheet.add_worksheet('Export', rows=rows, cols=40)
-                worksheet = sheet.worksheet('Export')
+                loglines.append(f"  creating {tabname} tab")
+                sheet.add_worksheet(tabname, rows=rows, cols=40)
+                worksheet = sheet.worksheet(tabname)
                 # build the header row
                 headerrow = ['Client', 'Portfolio', 'Labor Category', 'Labor Role', 'MSA Rate']
                 for month in range(1,13):
@@ -619,10 +637,11 @@ class ForecastAdminView(AdminBaseView):
                             if clientname in rates and lr.id in rates.get(clientname):
                                 df.iloc[rownum,4] = round(rates[clientname][lr.id],2)
                             for month in range(1,13):
-                                hrscolname = 'E'
                                 hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
                                 ratecolname = 'E'
                                 df.iloc[rownum,(month*2)+4] = f'=IFERROR({hrscolname}{rownum+2}*{ratecolname}{rownum+2},0)'
+                                # this is too slow
+                                #setGoogleSheetCellFormat(worksheet, f'{hrscolname}{rownum+2}', { 'backgroundColor': { 'red': 1.0, 'green': 1.0, 'blue': 0.8 } })
                             rownum += 1
 
                         # update the portfolio start row to sum the portfolio's hours and dollars
@@ -635,27 +654,53 @@ class ForecastAdminView(AdminBaseView):
                     loglines.append(f"  saving worksheet")
                     df = df.fillna('')
                     worksheet.update([df.columns.values.tolist()] + df.values.tolist(), raw=False)
-                    worksheet.format('1:1', { "textFormat": { "bold": True } })
+                    setGoogleSheetCellFormat(worksheet, '1:1', {'textFormat': {'bold': True}})
+
+        # for each forecast in the sheet, delete any labor role forecasts against that client and portfolio that are in the future
+        clientstodeletelrforecast = set()
+        for row in range(2, worksheet.row_count+1):
+            clientname = worksheet.cell(row, 1).value
+            if clientname != None and clientname != '':
+                clientstodeletelrforecast.add(clientname)
+
+        db.session.query(PortfolioLRForecast).filter(
+            PortfolioLRForecast.portfolioid.in_(db.session.query(Portfolio.id).filter(Portfolio.clientname.in_(clientstodeletelrforecast))),
+            PortfolioLRForecast.yearmonth >= datetime.date.today().replace(day=1)).delete(synchronize_session='fetch')
+        db.session.commit()
+
+        # create a dictionary of portfolio name to portfolio id
+        portfolionames = {}
+        for row in db.session.query(Portfolio.name, Portfolio.id).all():
+            portfolionames[row[0]] = row[1]
+        # create a dictionary of labor role name to labor role id
+        laborrolenames = {}
+        for row in db.session.query(LaborRole.name, LaborRole.id).all():
+            laborrolenames[row[0]] = row[1]
+
+        # for each completed forecast in the sheet for this month or a future month, add the forecast to the database (in batches of 100)
+        for row in range(2, worksheet.row_count+1):
+            portfolio = worksheet.cell(row, 2).value
+            portfolioid = portfolionames.get(portfolio) if portfolio != None and portfolio != '' else None
+
+            laborrole = worksheet.cell(row, 4).value
+            laborroleid = laborrolenames.get(laborrole) if laborrole != None and laborrole != '' else None
+
+            if portfolioid != None and laborroleid != None:
+                yearmonth = datetime.date(thisyear, thismonth, 1)
+                for month in range(1,13):
+                    hours = worksheet.cell(row, (month*2)+4).value
+                    if hours != None and hours != '':
+                        forecast = PortfolioLRForecast(portfolioid=portfolioid, laborroleid=laborroleid, yearmonth=yearmonth, hours=hours)
+                        db.session.add(forecast)
+                    yearmonth = yearmonth + relativedelta(months=1)
+                if row % 100 == 0:
+                    db.session.commit()
+        db.session.commit()
 
         return self.render('admin/job_log.html', loglines=loglines)
 
 
-
-
-
-
 admin.add_view(ForecastAdminView(name='Forecast Processing', category='Forecasts'))
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -45,6 +45,7 @@ cstcomboonchange = function(id) {
     if (csts != "") {
         treegrid.data.removeAll();
         treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
+        loading();
     }
 }
 {% endblock %}
@@ -54,8 +55,11 @@ clientcomboonchange = function(id) {
     var year = yearcombo.getValue();
     var clients = clientcombo.getValue();
     var lrcat = lrcatcombo.getValue();
-    if (clients != "")
+    if (clients != "") {
+        treegrid.data.removeAll();
         treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients);
+        loading();
+    }
 }
 {% endblock %}
 
@@ -76,7 +80,8 @@ treegridcelltemplate = function(text, row, col) {
 {% block jsinit %}
 const lrcatcombo = new dhx.Combobox(null, {
     multiselection: false,
-    label: "Labor Category",
+    readOnly: true,
+    label: "Labor Category (req'd)",
 });
 lrcatcomboonchange = function(id) {
     var year = yearcombo.getValue();
@@ -85,6 +90,7 @@ lrcatcomboonchange = function(id) {
     var clients = clientcombo.getValue();
     if (lrcat != "") {
         treegrid.data.removeAll();
+        loading();
         if (csts != "") {
             treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
         }

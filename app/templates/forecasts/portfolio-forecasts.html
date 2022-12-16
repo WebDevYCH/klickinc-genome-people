@@ -41,6 +41,7 @@
         if (csts != "") {
             treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
+            loading();
         }
     }
     {% endblock %}
@@ -58,6 +59,7 @@
         if (clients != "") {
             treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
+            loading();
         }
     }
     {% endblock %}
@@ -120,6 +122,7 @@
         {% endblock %}
     });
     treegrid.data.events.on("load", function() {
+        unloading();
         treegrid.collapseAll();
     });
     layout.getCell("yearcombo").attach(yearcombo);
