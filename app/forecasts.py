@@ -201,7 +201,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
                     'source': pflr.source }, index=[0])])
 
             # fill in the month columns for the source row, and add it to the rollup rows if it's the linear source
-            if pflr.forecastedhours != None:
+            if pflr.forecastedhours != None and pflr.forecastedhours != 0:
                 df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
                 if pflr.source == 'linear':
                     if df.loc[df['id'] == lrportfoliokey, f"m{pflr.yearmonth.month}"].isnull().all():
@@ -213,6 +213,18 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
                         df.loc[df['id'] == lrmainkey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
                     else:
                         df.loc[df['id'] == lrmainkey, f"m{pflr.yearmonth.month}"] += pflr.forecastedhours
+
+                    df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+                    if pflr.source == 'linear':
+                        for key in (lrportfoliokey, lrmainkey):
+                            df.loc[
+                                    df['id'] == key, 
+                                    f"m{pflr.yearmonth.month}"
+                                ] = df.loc[
+                                    df['id'] == key, 
+                                    f"m{pflr.yearmonth.month}"
+                                ].combine_first(pflr.forecastedhours)
+            
 
 
     # switch dataframe nulls to blank
@@ -601,15 +613,15 @@ class ForecastAdminView(AdminBaseView):
             sheet = getGoogleSheet(gs.gsheet_url)
 
             # if it has an Export tab, delete it
-            #worksheets = sheet.worksheets()
-            #if any(worksheet.title == tabname for worksheet in worksheets):
-            #    loglines.append(f"  deleting {tabname} tab")
-            #    sheet.del_worksheet(sheet.worksheet(tabname))
+            worksheets = sheet.worksheets()
+            if any(worksheet.title == tabname for worksheet in worksheets):
+                loglines.append(f"  deleting {tabname} tab")
+                sheet.del_worksheet(sheet.worksheet(tabname))
 
             worksheets = sheet.worksheets()
             # if it doesn't have an Export tab
             if not any(worksheet.title == tabname for worksheet in worksheets):
-                rows = 80000
+                rows = 100000
                 # create one, load into a df
                 loglines.append(f"  creating {tabname} tab")
                 sheet.add_worksheet(tabname, rows=rows, cols=40)
