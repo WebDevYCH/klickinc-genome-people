@@ -16,6 +16,7 @@ const layout = new dhx.Layout("layout", {
             height: "content",
             align: "left",
         },
+        { id: "checkboxformcontainer", html: '<form id="form"></form>' },
         { id: "note", html: "Forecasts in <i>italics</i> come from machine forecasts and <b>bold</b> are PM overrides</i>" },
         { id: "treegrid" },
     ]
@@ -88,22 +89,31 @@ lrcatcomboonchange = function(id) {
     var lrcat = lrcatcombo.getValue();
     var csts = cstcombo.getValue();
     var clients = clientcombo.getValue();
+    var showportfolios = form.getItem("showportfolios").getValue();
+    var showsources = form.getItem("showsources").getValue();
     if (lrcat != "") {
         treegrid.data.removeAll();
         loading();
-        if (csts != "") {
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
-        }
-        else if (clients != "") {
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients);
-        }
-        else {
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat);
-        }
+        if (csts != "")
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+'&showportfolios='+showportfolios+'&showsources='+showsources);
+        else if (clients != "")
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+'&showportfolios='+showportfolios+'&showsources='+showsources);
+        else
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&showportfolios='+showportfolios+'&showsources='+showsources);
     }
 }
 lrcatcombo.events.on("change", lrcatcomboonchange);
 layout.getCell("lrcatcombo").attach(lrcatcombo);
+
+const form = new dhx.Form("form", {
+    width: "300px",
+    height: "100%",
+    rows: [
+        { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
+        { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast; rendering will take a while" },
+    ]
+});
+form.events.on("change", lrcatcomboonchange);
 {% endblock %}
 
 

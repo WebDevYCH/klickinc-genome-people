@@ -91,7 +91,7 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
     return bypfid
 
 # get the portfolio labor role forecasts (in hours), returns a dictionary
-def get_plrfs(year, clients, csts, dosources=True):
+def get_plrfs(year, clients, csts, showsources=True):
     queryfilter = queryClientCst(clients, csts)
 
     pflrs = db.session.query(PortfolioLRForecast).\
@@ -129,7 +129,7 @@ def get_plrfs(year, clients, csts, dosources=True):
             bypfid[forecastkey] = pfout
 
         # if this isn't the main source, add a line underneath that gives the source's forecast
-        if dosources and pflr.source != 'MAIN':
+        if showsources and pflr.source != 'MAIN':
             fsourcekey = f"LR-(LRCAT{pflr.labor_role.categoryname})-{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
             pfout = bypfid.get(fsourcekey) or {}
             pfout['id'] = fsourcekey
@@ -144,11 +144,13 @@ def get_plrfs(year, clients, csts, dosources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a dictionary
-def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
     queryfilter = queryClientCst(clients, csts)
 
     # create a pandas dataframe of the portfolio labor role forecasts
-    header = ['id','parent','name','issourcedetail','m1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
+    header = ['id','parent','name','detail',
+    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12',
+    'm1src','m2src','m3src','m4src','m5src','m6src','m7src','m8src','m9src','m10src','m11src','m12src']
     df = pd.DataFrame(columns=header)
 
     # get the portfolio labor role forecasts, querying by lrcat and optionally by client or cst
@@ -171,14 +173,13 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
     for pflr in pflrs:
         # we want the hierarchy to be: labor role -> portfolio -> source
 
-        # add a row for the labor role as a root node, if it isn't already there (but use the concat function to avoid a warning)
+        # add a row for the labor role as a root node, if it isn't already there
         lrmainkey = f"{pflr.laborroleid}"
         if lrmainkey not in df.id.values:
             df = pd.concat([df, 
                 pd.DataFrame({ 'id': lrmainkey,
                 'parent': None,
-                'name': pflr.labor_role.name,
-                'source': pflr.source }, index=[0])])
+                'name': pflr.labor_role.name }, index=[0])])
         
         # add a row for the sum of the forecasted hours for the labor role by portfolio
         lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
@@ -186,50 +187,31 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, dosources=True):
             df = pd.concat([df, 
                 pd.DataFrame({ 'id': lrportfoliokey,
                 'parent': lrmainkey,
-                'name': pflr.portfolio.name,
-                'source': pflr.source }, index=[0])])
+                'name': f"{pflr.portfolio.clientname} - {pflr.portfolio.name}",
+                'detail': 'portfolio' }, index=[0])])
 
-        if dosources:
-            # add a row for the sum of the forecasted hours for the labor role by portfolio and source
-            lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
-            if lrsourcekey not in df.id.values:
-                df = pd.concat([df,
-                    pd.DataFrame({ 'id': lrsourcekey,
-                    'parent': lrportfoliokey,
-                    'name': f"'{pflr.source}' Forecast",
-                    'issourcedetail': 1,
-                    'source': pflr.source }, index=[0])])
+        # add a row for the sum of the forecasted hours for the labor role by portfolio and source
+        lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+        if lrsourcekey not in df.id.values:
+            df = pd.concat([df,
+                pd.DataFrame({ 'id': lrsourcekey,
+                'parent': lrportfoliokey,
+                'name': f"'{pflr.source}' Forecast",
+                'detail': 'source' }, index=[0])])
 
-            # fill in the month columns for the source row, and add it to the rollup rows if it's the linear source
-            if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-                df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
-                if pflr.source == 'linear':
-                    if df.loc[df['id'] == lrportfoliokey, f"m{pflr.yearmonth.month}"].isnull().all():
-                        df.loc[df['id'] == lrportfoliokey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
-                    else:
-                        df.loc[df['id'] == lrportfoliokey, f"m{pflr.yearmonth.month}"] += pflr.forecastedhours
+        # fill in the month columns in the source row
+        if pflr.forecastedhours != None and pflr.forecastedhours != 0:
+            df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
+            df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}src"] = pflr.source
 
-                    if df.loc[df['id'] == lrmainkey, f"m{pflr.yearmonth.month}"].isnull().all():
-                        df.loc[df['id'] == lrmainkey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
-                    else:
-                        df.loc[df['id'] == lrmainkey, f"m{pflr.yearmonth.month}"] += pflr.forecastedhours
-
-                    df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
-                    if pflr.source == 'linear':
-                        for key in (lrportfoliokey, lrmainkey):
-                            df.loc[
-                                    df['id'] == key, 
-                                    f"m{pflr.yearmonth.month}"
-                                ] = df.loc[
-                                    df['id'] == key, 
-                                    f"m{pflr.yearmonth.month}"
-                                ].combine_first(pflr.forecastedhours)
-            
-
+    # remove the portfolio and source rows if we don't want them
+    if not showportfolios:
+        df = df[df['detail'] != 'portfolio']
+    if not showsources:
+        df = df[df['detail'] != 'source']
 
     # switch dataframe nulls to blank
     df = df.fillna('')
-
 
     return df
 
@@ -319,10 +301,10 @@ def portfolio_forecasts_lr_data():
     clients = request.args.get('clients')
     csts = request.args.get('csts')
 
-    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=True)
+    bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, showsources=True)
     app.logger.info(f"portfolio_lr_forecasts_data size: {len(bypfid)}")
     if len(bypfid) > 2000:
-        bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, dosources=False)
+        bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, showsources=False)
         app.logger.info(f"portfolio_lr_forecasts_data minimized size: {len(bypfid)}")
 
     retval = list(bypfid.values())
@@ -338,16 +320,17 @@ def dept_lr_forecasts_data():
     clients = request.args.get('clients')
     csts = request.args.get('csts')
     lrcat = request.args.get('lrcat')
+    showportfolios = request.args.get('showportfolios') == 'true'
+    showsources = request.args.get('showsources') == 'true'
 
-    app.logger.info(f"dept_lr_forecasts_data year: {year} clients: {clients} csts: {csts} lrcat: {lrcat}")
-
-    df = get_dlrfs(year, lrcat, clients, csts, dosources=True)
-    app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
-    if len(df) > 2000:
-        df = df[df['issourcedetail'] != 1]
-        app.logger.info(f"dept_lr_forecasts_data minimized size: {len(df)}")
-    df.sort_values(by=['name'], inplace=True)
-    app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
+    # cache the results for 5 minutes
+    df = Cache.get(f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}")
+    if df is None:
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources)
+        app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
+        df.sort_values(by=['name'], inplace=True)
+        app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
+        Cache.set(f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}", df, timeout=300)
 
     retval = df.to_dict('records')
     # remove any null values for the parent column

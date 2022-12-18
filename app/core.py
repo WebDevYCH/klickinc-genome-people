@@ -69,6 +69,22 @@ class AdminLog(list):
         app.logger.info(item)
         super().append(item)
 
+# class to do basic in-memory caching of data
+cache_cache = {}
+class Cache:
+    def __init__(self):
+        cache_cache = {}
+    def get(key):
+        if key in cache_cache:
+            if cache_cache[key]['timeout'] == 0 or cache_cache[key]['time'] + cache_cache[key]['timeout'] > time.time():
+                return cache_cache[key]['value']
+            else:
+                del cache_cache[key]
+        return None
+    def set(key, value, timeout=0):
+        cache_cache[key] = {'value': value, 'timeout': timeout, 'time': time.time()}
+
+
 # function used in a bunch of places to pick up data from Genome
 def retrieveGenomeReport(queryid, tokenids=[], tokenvalues=[]):
     apikey = app.config['GENOME_API_TOKEN']
