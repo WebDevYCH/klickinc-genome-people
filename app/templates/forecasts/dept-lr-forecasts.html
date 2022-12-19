@@ -1,0 +1,104 @@
+{% extends "forecasts/portfolio-forecasts.html" %}
+
+<script language="javascript">
+{% block layout %}
+const layout = new dhx.Layout("layout", {
+    rows: [
+        { id: "yearcombo", width: "300px" },
+        { id: "lrcatcombo", width: "300px" },
+        {
+            cols: [
+                { id: "cstcombo", width: "300px" },
+                { id: "or", html: "<i>or</i>", padding: "30px" },
+                { id: "clientcombo", width: "600px" },
+                { id: "blank", gravity: 100 },
+            ],
+            height: "content",
+            align: "left",
+        },
+        { id: "note", html: "Forecasts in <i>italics</i> come from machine forecasts and <b>bold</b> are PM overrides</i>" },
+        { id: "treegrid" },
+    ]
+});
+{% endblock %}
+
+{% block yearcomboonchange %}
+yearcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    if (year == "") return;
+    cstcombo.data.removeAll();
+    cstcombo.data.load('/forecasts/cst-list?year='+year);
+    clientcombo.data.removeAll();
+    clientcombo.data.load('/forecasts/client-list?year='+year);
+    lrcatcombo.data.removeAll();
+    lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
+}
+yearcombo.events.on("change", yearcomboonchange);
+setTimeout(yearcomboonchange, 0);
+{% endblock %}
+
+{% block cstcomboonchange %}
+cstcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var csts = cstcombo.getValue();
+    var lrcat = lrcatcombo.getValue();
+    if (csts != "") {
+        treegrid.data.removeAll();
+        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
+    }
+}
+{% endblock %}
+
+{% block clientcomboonchange %}
+clientcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var clients = clientcombo.getValue();
+    var lrcat = lrcatcombo.getValue();
+    if (clients != "")
+        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients);
+}
+{% endblock %}
+
+{% block treegridcelltemplate %}
+treegridcelltemplate = function(text, row, col) {
+    if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] != 'MAIN') {
+        return "<i>"+text+"</i><span style='width:3px'></span>";
+    }
+    else if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] == 'MAIN') {
+        return "<b>"+text+"</b>";
+    }
+    else {
+        return text;
+    }
+}
+{% endblock %}
+
+{% block jsinit %}
+const lrcatcombo = new dhx.Combobox(null, {
+    multiselection: false,
+    label: "Labor Category",
+});
+lrcatcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var lrcat = lrcatcombo.getValue();
+    var csts = cstcombo.getValue();
+    var clients = clientcombo.getValue();
+    if (lrcat != "") {
+        treegrid.data.removeAll();
+        if (csts != "") {
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
+        }
+        else if (clients != "") {
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients);
+        }
+        else {
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat);
+        }
+    }
+}
+lrcatcombo.events.on("change", lrcatcomboonchange);
+layout.getCell("lrcatcombo").attach(lrcatcombo);
+{% endblock %}
+
+
+</script>

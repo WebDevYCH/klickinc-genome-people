@@ -18,23 +18,10 @@ from google.cloud import bigquery
 
 from core import *
 from model import *
-from helpers import *
+
 
 ###################################################################
 ## DATABASE REPLICATION
-
-
-def retrieveGenomeReport(queryid):
-    apikey = app.config['GENOME_API_TOKEN']
-    apiendpoint = app.config['GENOME_API_ROOT']+'/QueryTemplate/Report?_='+apikey
-    reqjson = {
-        'QueryTemplateID': queryid,
-        'TokenIDs': 1,
-        'TokenValues': 1
-    }
-    response = requests.post(apiendpoint, json=reqjson)
-    return response.json()
-
 
 class DbReplicationView(AdminBaseView):
     @expose('/')
@@ -43,7 +30,7 @@ class DbReplicationView(AdminBaseView):
 
     @expose('/userphotos')
     def userphotos(self):
-        loglines = []
+        loglines = AdminLog()
 
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via Report Queries")
@@ -54,14 +41,16 @@ class DbReplicationView(AdminBaseView):
         # and if the photo is different or not set yet, then set it
         loglines.append("EMPLOYEE LIST (for photos)")
         json = retrieveGenomeReport(1873)
-        usersdb = db.session.query(User).all()
+        usersdb = {}
+        for u in db.session.query(User).all(): 
+            usersdb[u.userid] = u
+
         for uin in json['Entries']:
-            if uin['PhotoURL'] != None:
-                uout = User()
-                for u in usersdb:
-                    if u.userid == uin['Employee'] and (u.photourl == None or u.photourl != uin['PhotoURL']):
-                        u.photourl = uin['PhotoURL']
-                        loglines.append(f"UPDATE user {uin['Email']} {uin['Name']} to {u.photourl}")
+            if uin['PhotoURL'] != None and uin['Employee'] in usersdb:
+                u = usersdb[uin['Employee']]
+                if u.photourl == None or u.photourl != uin['PhotoURL']:
+                    u.photourl = uin['PhotoURL']
+                    loglines.append(f"UPDATE user {uin['Email']} {uin['Name']} to {u.photourl}")
 
         loglines.append("")
         db.session.commit()
@@ -70,7 +59,7 @@ class DbReplicationView(AdminBaseView):
 
     @expose('/portfolioforecasts')
     def portfolioforecasts(self):
-        loglines = []
+        loglines = AdminLog()
 
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via Report Queries")
@@ -79,8 +68,7 @@ class DbReplicationView(AdminBaseView):
         loglines.append("PORTFOLIO FORECAST LIST")
         json = retrieveGenomeReport(1705)
         for pfin in json['Entries']:
-            # date comes back in the format '/Date(1262322000000-0500)/', ie milliseconds since 1970-01-01
-            pfin['YearMonth'] = datetime.datetime.fromtimestamp(int(pfin['YearMonth'][6:16]))
+            pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
 
             newupdateskip = 'u'
             pfout = db.session.query(PortfolioForecast).where(
@@ -132,7 +120,7 @@ class BQReplicationView(AdminBaseView):
 
     @expose('/users')
     def users(self):
-        loglines = []
+        loglines = AdminLog()
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via BigQuery")
         loglines.append("")
@@ -196,9 +184,9 @@ class BQReplicationView(AdminBaseView):
             uout.loginname = uin.LoginName
             uout.firstname = uin.FirstName
             uout.lastname = uin.LastName
-            if app.config['APP_ENV'] != 'live':
-                uout.firstname = re.sub('^(.).*','\\1',uout.firstname)
-                uout.lastname = re.sub('^(.).*','\\1',uout.lastname)
+            if app.config['APP_ENV'] != 'live' and uout.loginname not in ['willer','agoldstein','dhockley','seasby','smalhan']:
+                uout.firstname = re.sub('^(.).*','\\1',uout.firstname)+'xxxxxxxx'
+                uout.lastname = re.sub('^(.).*','\\1',uout.lastname)+'xxxxxxxx'
             uout.email = uin.Email
             uout.title = uin.Title
             uout.started = uin.Started
@@ -251,7 +239,7 @@ class BQReplicationView(AdminBaseView):
 
     @expose('/portfolios')
     def portfolios(self):
-        loglines = []
+        loglines = AdminLog()
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via BigQuery")
         loglines.append("")
@@ -315,7 +303,7 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
 
     @expose('/laborroles')
     def laborroles(self):
-        loglines = []
+        loglines = AdminLog()
         bqclient = bigquery.Client()
         loglines.append("Starting Genome DB Replication via BigQuery")
         loglines.append("")
@@ -362,29 +350,5 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
 
         return self.render('admin/job_log.html', loglines=loglines)
 
-class SkillReplicationView(AdminBaseView):
-    @expose('/')
-    def index(self):
-        return self.render('admin/skillrepl.html')
-
-    @expose('/newskills')
-    def newskills(self):
-        loglines = []
-        loglines.append("Starting autofill New Skills Replication via LightCast API")
-        skills = get_allskills_from_lightcast()
-        loglines.append("Comparing with current skills table")
-        for skill in skills['data']:
-            current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
-            if not current_skill:
-                new_skill = Skill(name=skill['name'], is_klick=False, description=skill['description'])
-                db.session.add(new_skill)
-                loglines.append(f"Creating new skill {skill['name']}")
-            else:
-                loglines.append(f"Skipping existing skill {skill['name']}")
-            db.session.commit()
-        loglines.append("Finished autofilling new skills repliaction via LightCast API")
-        return self.render('admin/job_log.html', loglines=loglines)
-
 admin.add_view(DbReplicationView(name='Genome DB', category='DB Replication'))
 admin.add_view(BQReplicationView(name='Genome BQ', category='DB Replication'))
-admin.add_view(SkillReplicationView(name='Autofill skills', category='DB Replication'))

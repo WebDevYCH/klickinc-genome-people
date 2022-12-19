@@ -55,3 +55,30 @@ class AdminBaseView(flask_admin.BaseView):
         return current_user.is_authenticated and current_user.has_roles('admin')
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
+
+# overridden array that saves in the array and also logs to the webapp logfile
+class AdminLog(list):
+    def append(self, item):
+        app.logger.info(item)
+        super().append(item)
+
+# function used in a bunch of places to pick up data from Genome
+def retrieveGenomeReport(queryid, tokenids=[], tokenvalues=[]):
+    apikey = app.config['GENOME_API_TOKEN']
+    apiendpoint = f"{app.config['GENOME_API_ROOT']}/QueryTemplate/Report?_={apikey}"
+    reqjson = {
+        'QueryTemplateID': queryid,
+        'TokenIDs': tokenids,
+        'TokenValues': tokenvalues
+    }
+
+    app.logger.info(f"GENOME QUERY JSON {reqjson}")
+    response = requests.post(apiendpoint, json=reqjson)
+    return response.json()
+
+def parseGenomeDate(weirdstring):
+    # date comes back in the format '/Date(1262322000000-0500)/', ie milliseconds since 1970-01-01
+    return datetime.datetime.fromtimestamp(int(weirdstring[6:16]))
+
+
+

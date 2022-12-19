@@ -3,58 +3,64 @@
 {% block app_head %}
 <script src="/static/js/dhtmlxsuite.js"></script>
 <link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
-
-<style>
-    .dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell, .dhx_tree-cell {
-        font-size: 12px;
-    }
-    .dxi.dxi-chevron-down:before {
-        content: "\F115";
-    }
-    .dxi.dxi-chevron-up:before {
-        content: "\F113";
-    }
-</style>
 {% endblock %}
 
 
 {% block app_content %}
 
-<div style="max-width: 150px" id="yearcombo"></div>
-
-<table><tr>
-    <td><div style="width: 300px; " id="cstcombo"></div></td>
-    <td style="padding-left: 15px; padding-right: 15px;"><i>or</i></td>
-    <td><div style="width: 600px; " id="clientcombo"></div></td>
-</tr></table>
-
-<div style="width: 100%; min-height: 500px; height: 100%; border:1px;" id="grid"></div>
+<div id="layout" style="height: 80%; width: 100%"></div>
 
 <script>
+    {% block layout %}
+    const layout = new dhx.Layout("layout", {
+        rows: [
+            { id: "yearcombo", width: "300px" },
+            {
+                cols: [
+                    { id: "cstcombo", width: "300px" },
+                    { id: "or", html: "<i>or</i>", padding: "30px" },
+                    { id: "clientcombo", width: "600px" },
+                    { id: "blank", gravity: 100 },
+                ],
+                height: "content",
+                align: "left",
+            },
+            { id: "treegrid" },
+        ]
+    });
+    {% endblock %}
 
-    const cstcombo = new dhx.Combobox("cstcombo", {
+    const cstcombo = new dhx.Combobox(null, {
         multiselection: true,
         label: "CST",
     });
+    {% block cstcomboonchange %}
     cstcomboonchange = function(id) {
         var year = yearcombo.getValue();
         var csts = cstcombo.getValue();
-        if (csts != "")
+        if (csts != "") {
+            treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
+        }
     }
+    {% endblock %}
     cstcombo.events.on("change", cstcomboonchange);
 
 
-    const clientcombo = new dhx.Combobox("clientcombo", {
+    const clientcombo = new dhx.Combobox(null, {
         multiselection: true,
         label: "Client",
     });
+    {% block clientcomboonchange %}
     clientcomboonchange = function(id) {
         var year = yearcombo.getValue();
         var clients = clientcombo.getValue();
-        if (clients != "")
+        if (clients != "") {
+            treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
+        }
     }
+    {% endblock %}
     clientcombo.events.on("change", clientcomboonchange);
 
 
@@ -63,47 +69,67 @@
         { "id" : {{y}}, "value" : "{{y}}" },
         {% endfor %}
     ]
-    const yearcombo = new dhx.Combobox("yearcombo", {
+    const yearcombo = new dhx.Combobox(null, {
         multiselection: false,
         data: years,
         label: "Year",
         value: {{thisyear}},
         readOnly: true,
     });
+    {% block yearcomboonchange %}
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
         cstcombo.data.load('/forecasts/cst-list?year='+year);
         clientcombo.data.load('/forecasts/client-list?year='+year);
     }
     yearcombo.events.on("change", yearcomboonchange);
-    yearcomboonchange(null);
+    setTimeout(yearcomboonchange, 0);
+    {% endblock %}
 
+    {% block treegridcelltemplate %}
+    treegridcelltemplate = function(text, row, col) {
+        return text;
+    }
+    {% endblock %}
+
+    const emptydata = [];
     const treegrid = new dhx.TreeGrid("grid", {
         columns: [
-            { id: "name", gravity: 4, header: [{ text: "Name" }] },
-            { id: "m1", type: "number", header: [{ text: "Jan" }] },
-            { id: "m2", type: "number", header: [{ text: "Feb" }] }, 
-            { id: "m3", type: "number", header: [{ text: "Mar" }] },
-            { id: "m4", type: "number", header: [{ text: "Apr" }] },
-            { id: "m5", type: "number", header: [{ text: "May" }] },
-            { id: "m6", type: "number", header: [{ text: "Jun" }] },
-            { id: "m7", type: "number", header: [{ text: "Jul" }] },
-            { id: "m8", type: "number", header: [{ text: "Aug" }] },
-            { id: "m9", type: "number", header: [{ text: "Sep" }] },
-            { id: "m10", type: "number", header: [{ text: "Oct" }] },
-            { id: "m11", type: "number", header: [{ text: "Nov" }] },
-            { id: "m12", type: "number", header: [{ text: "Dec" }] },
+            { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] },
+            { id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] },
+            { id: "m2", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Feb" }] }, 
+            { id: "m3", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Mar" }] },
+            { id: "m4", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Apr" }] },
+            { id: "m5", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "May" }] },
+            { id: "m6", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jun" }] },
+            { id: "m7", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jul" }] },
+            { id: "m8", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Aug" }] },
+            { id: "m9", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Sep" }] },
+            { id: "m10", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Oct" }] },
+            { id: "m11", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Nov" }] },
+            { id: "m12", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Dec" }] },
         ],
         autoWidth: true,
         autoHeight: true,
         resizable: true,
         selection: true,
+        headerRowHeight: 32,
+        rowHeight: 32,
         label: "Forecasts and Targets",
+        {% block treegridinit %}
+        {% endblock %}
     });
     treegrid.data.events.on("load", function() {
-        treegrid.data.sort({ by:"name", dir:"asc" });
         treegrid.collapseAll();
     });
+    layout.getCell("yearcombo").attach(yearcombo);
+    layout.getCell("clientcombo").attach(clientcombo);
+    layout.getCell("cstcombo").attach(cstcombo);
+    layout.getCell("treegrid").attach(treegrid);
+
+    {% block jsinit %}
+    {% endblock %}
+
 </script>
 
 {% endblock %}

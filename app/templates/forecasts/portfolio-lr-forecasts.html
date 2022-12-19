@@ -1,0 +1,119 @@
+{% extends "forecasts/portfolio-forecasts.html" %}
+
+<script language="javascript">
+{% block layout %}
+const layout = new dhx.Layout("layout", {
+    rows: [
+        { id: "yearcombo", width: "300px" },
+        {
+            cols: [
+                { id: "cstcombo", width: "300px" },
+                { id: "or", html: "<i>or</i>", padding: "30px" },
+                { id: "clientcombo", width: "600px" },
+                { id: "blank", gravity: 100 },
+            ],
+            height: "content",
+            align: "left",
+        },
+        { id: "note", html: "Forecasts in <i>italics</i> come from machine forecasts and <b>bold</b> are PM overrides; double click on any forecast to override it.</i>" },
+        { id: "treegrid" },
+    ]
+});
+{% endblock %}
+
+{% block cstcomboonchange %}
+cstcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var csts = cstcombo.getValue();
+    if (csts != "") {
+        treegrid.data.removeAll();
+        treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&csts='+csts);
+    }
+}
+{% endblock %}
+
+{% block clientcomboonchange %}
+clientcomboonchange = function(id) {
+    var year = yearcombo.getValue();
+    var clients = clientcombo.getValue();
+    if (clients != "")
+        treegrid.data.load('portfolio-lr-forecasts-data?year='+year+'&clients='+clients);
+}
+{% endblock %}
+
+{% block treegridinit %}
+editable: true,
+{% endblock %}
+
+
+{% block treegridcelltemplate %}
+treegridcelltemplate = function(text, row, col) {
+    if (text && row.id.endsWith("MAIN") && col.id.startsWith("m") && row[col.id + '-source'] != 'MAIN') {
+        return "<i>"+text+"</i><span style='width:3px'></span>";
+    }
+    else if (text && row.id.endsWith("MAIN") && col.id.startsWith("m") && row[col.id + '-source'] == 'MAIN') {
+        return "<b>"+text+"</b>";
+    }
+    else {
+        return text;
+    }
+}
+{% endblock %}
+
+
+{% block jsinit %}
+
+treegrid.events.on("cellClick", function(row,column) {
+    treegrid.edit(row.id,column.id);
+});
+
+var origValue;
+
+treegrid.events.on("beforeEditStart", function(row,col,editorType) {
+    // only allowed to edit if the id ends with MAIN, ie it's in the main row, also on a month column
+    if (row.id.endsWith("MAIN") && col.id.startsWith("m")) {
+        origValue = row[col.id];
+        return true;
+    }
+    else {
+        return false;
+    }
+});
+
+saveCell = function(row,col,value) {
+    var json = {
+        "year": yearcombo.getValue(),
+        "month": col.id.substring(1),
+        "id": row.id,
+        "value": value,
+    };
+    var url = "portfolio-lr-forecast-save";
+    dhx.ajax.post(url, json, function(text,xml,xmlHttpRequest) {
+        if (text == "OK") {
+            treegrid.refresh();
+        }
+        else {
+            dhx.alert(text);
+        }
+    });
+}
+
+treegrid.events.on("afterEditEnd", function(value,row,col) {
+    // only allowed to edit if the id ends with MAIN, ie it's in the main row, also on a month column
+    if (row.id.endsWith("MAIN") && col.id.startsWith("m")) {
+        if (value != (origValue||"") && value != "") {
+            row[col.id + '-source'] = 'MAIN';
+            saveCell(row,col,value);
+        }
+        else if (value != (origValue||"") && value == "") {
+            saveCell(row,col,value);
+        }
+    }
+    else {
+        dhx.alert("can't edit: " + row.id + " " + col.id + " " + value + " " + origValue);
+    }
+});
+
+{% endblock %}
+
+</script>
