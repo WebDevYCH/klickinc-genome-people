@@ -14,7 +14,7 @@ from wtforms import Form,StringField, PasswordField, BooleanField, SubmitField, 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy import MetaData, delete, insert, update, or_, and_
 
-from google.cloud import language_v1
+# from google.cloud import language_v1
 
 from core import *
 from model import *

@@ -13,7 +13,7 @@ from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
 
 from sqlalchemy.ext.serializer import loads, dumps
 
-from google.cloud import language_v1
+# from google.cloud import language_v1
 from google.cloud import bigquery
 
 from core import *

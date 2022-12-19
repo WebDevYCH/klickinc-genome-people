@@ -8,10 +8,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
 from model import *
 from core import app
-def row2dict(row):
-    d = {}
-    for column in row.__table__.columns:
-        d[column.name] = str(getattr(row, column.name))
+from skillutils import *
 
 ###################################################################
 ## MODEL
@@ -24,6 +21,9 @@ Base.classes.job_posting_category.__str__ = obj_name
 JobPostingCategory = Base.classes.job_posting_category
 
 JobPostingSkill = Base.classes.job_posting_skill
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
 
 Title = Base.classes.title
 
@@ -49,23 +49,14 @@ def postjob():
     db.session.add(createJob)
     db.session.commit()
     
-    datas = skillSearchAuth(job_description)
+    datas = extract_skills_from_text(job_description)['data']
 
     for data in datas:
         skill_name = data['skill']['name']
-        skill_description = data['skill']['description']
 
         db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
         if(db_skill):
             createSkill = JobPostingSkill(job_posting_id = createJob.id, skill_id = db_skill.id)
-            db.session.add(createSkill)
-            db.session.commit()
-        else:
-            print('no db skill')
-            create_skill = Skill(name = skill_name, description = skill_description)
-            db.session.add(create_skill)
-            db.session.commit()
-            createSkill = JobPostingSkill(job_posting_id = createJob.id, skill_id = create_skill.id)
             db.session.add(createSkill)
             db.session.commit()
 
@@ -80,6 +71,18 @@ def editjob():
     posted_date = date.today()
     expiry_date = request.form['expiry_date']
     id = request.form['job_posting_id']
+
+    datas = extract_skills_from_text(description)['data']
+
+    for data in datas:
+        skill_name = data['skill']['name']
+
+        db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
+        if(db_skill):
+            createSkill = JobPostingSkill(job_posting_id = id, skill_id = db_skill.id)
+            db.session.add(createSkill)
+            db.session.commit()
+
     db.session.execute(
         update(JobPosting).
         filter(JobPosting.id == id).
@@ -87,39 +90,6 @@ def editjob():
     )
     db.session.commit()
     return redirect(url_for('jobsearch'))
-
-@app.route('/jobads/skillsearchauth', methods=['GET', 'POST'])
-@login_required
-def skillSearchAuth(description):
-
-    url = "https://auth.emsicloud.com/connect/token"
-
-    payload = "client_id="+app.config['LIGHTCAST_API_CLIENTID']+"&client_secret="+app.config['LIGHTCAST_API_SECRET']+"&grant_type=client_credentials&scope="+app.config['LIGHTCAST_API_SCOPE']
-    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    response = requests.request("POST", url, data=payload, headers=headers)
-    token = json.loads(response.text)
-
-    # for test
-    return (skillSearch(token['access_token'], description))
-
-@app.route('/jobads/skillsearch', methods=['GET', 'POST'])
-@login_required
-def skillSearch(token, data):
-    url = "https://emsiservices.com/skills/versions/latest/extract"
-
-    querystring = {"language":"en"}
-
-    payload = {}
-    payload['text'] = data
-    payload['confidenceThreshold'] = 0.6
-
-    headers = {
-        'Authorization': "Bearer "+ token,
-        'Content-Type': "application/json"
-        }
-    response = requests.request("POST", url, data=json.dumps(payload), headers=headers, params=querystring)
-    result = json.loads(response.text)
-    return(result['data'])
 
 @app.route('/jobads/jobsearch', methods=['GET', 'POST'])
 @login_required
@@ -145,7 +115,7 @@ def jobsearch():
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
         else:
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-       
+
         result = []   
         for job in jobs:
             job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()

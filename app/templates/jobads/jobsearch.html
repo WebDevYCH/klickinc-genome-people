@@ -359,17 +359,7 @@
         }
         search_jobs(data);
     })
-    // function search_skill(){
-    //     $.ajax({
-    //         url:"/jobads/skillsearchauth",
-    //         method: 'POST',
-    //         data: '',
-    //         success: function(res){
-    //             var liteCase = JSON.parse(res);
-    //             console.log(liteCase.access_token)
-    //         }
-    //     })
-    // }
+
     function search_jobs(data) {
         $.ajax({
             url: "/jobads/jobsearch",
@@ -377,9 +367,13 @@
             data: data,
             success: function(res) {
                 var jobs = JSON.parse(res);
-                console.log(jobs)
                 var data = "";
                 jobs.forEach(job => {
+                    let skill_txt = '';
+                    for (let skill in job.job_posting_skills){
+                        skill_txt += job.job_posting_skills[skill] + `,`
+                    }
+                    console.log(skill_txt)
                     var current_user_id = "{{ current_user.userid }}";
                     data += `<div class="row job-card">
                                 <div class="col-md-9">
@@ -391,7 +385,7 @@
                                         Description: <span class="card-description">`+job.description+`</span>
                                     </div>
                                     <div class="other-info">
-                                        Skills: Python, React.js, Node.js...
+                                        Skills:`+skill_txt+`
                                     </div>
                                 </div>
                                 <div class="col-md-3">
