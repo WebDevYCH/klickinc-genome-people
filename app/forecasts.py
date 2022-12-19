@@ -204,6 +204,9 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
             df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}src"] = pflr.source
 
+    # second pass: fill in portfolio and labor role totals
+    # TODO: finish this
+
     # remove the portfolio and source rows if we don't want them
     if not showportfolios:
         df = df[df['detail'] != 'portfolio']
@@ -434,7 +437,7 @@ class ForecastAdminView(AdminBaseView):
         loglines.append("Starting Same-Portfolio Linear Extrapolator")
         loglines.append("")
 
-        lookback = 10
+        lookback = 4
         lookahead = 4
         sourcename = 'linear'
         startdate = datetime.date.today().replace(day=1)
@@ -684,6 +687,7 @@ class ForecastAdminView(AdminBaseView):
             laborrolenames[row[0]] = row[1]
 
         # for each completed forecast in the sheet for this month or a future month, add the forecast to the database (in batches of 100)
+        # TODO: finish this
         for row in range(2, worksheet.row_count+1):
             portfolio = worksheet.cell(row, 2).value
             portfolioid = portfolionames.get(portfolio) if portfolio != None and portfolio != '' else None
