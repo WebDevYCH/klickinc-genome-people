@@ -2,11 +2,13 @@ from sqlite3 import Row
 from flask_login import login_required
 from datetime import date
 import json
-import pandas as pd
+import requests
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
 from model import *
+from core import app
+from skillutils import *
 
 ###################################################################
 ## MODEL
@@ -19,6 +21,9 @@ Base.classes.job_posting_category.__str__ = obj_name
 JobPostingCategory = Base.classes.job_posting_category
 
 JobPostingSkill = Base.classes.job_posting_skill
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
 
 Title = Base.classes.title
 
@@ -35,15 +40,26 @@ admin.add_view(AdminModelView(JobPosting, db.session, category='Job Ads'))
 def postjob():
     title = request.form['title']
     category_id = request.form['category_id']
-    description = request.form['description']
+    job_description = request.form['description']
     poster_id = request.form['poster_id']
     posted_date = date.today()
     expiry_date = request.form['expiry_date']
-    db.session.execute(
-        insert(JobPosting).
-        values(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title, description=description)
-    )
+
+    createJob = JobPosting(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title, description=job_description)
+    db.session.add(createJob)
     db.session.commit()
+    
+    datas = extract_skills_from_text(job_description)['data']
+
+    for data in datas:
+        skill_name = data['skill']['name']
+
+        db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
+        if(db_skill):
+            createSkill = JobPostingSkill(job_posting_id = createJob.id, skill_id = db_skill.id)
+            db.session.add(createSkill)
+            db.session.commit()
+
     return redirect(url_for('jobsearch'))
 
 @app.route('/jobads/editjob', methods=['GET', 'POST'])
@@ -55,6 +71,18 @@ def editjob():
     posted_date = date.today()
     expiry_date = request.form['expiry_date']
     id = request.form['job_posting_id']
+
+    datas = extract_skills_from_text(description)['data']
+
+    for data in datas:
+        skill_name = data['skill']['name']
+
+        db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
+        if(db_skill):
+            createSkill = JobPostingSkill(job_posting_id = id, skill_id = db_skill.id)
+            db.session.add(createSkill)
+            db.session.commit()
+
     db.session.execute(
         update(JobPosting).
         filter(JobPosting.id == id).
@@ -67,6 +95,8 @@ def editjob():
 @login_required
 def jobsearch():
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+
+    # skill = db.session.query(Skill).all()
     titles = db.session.query(Title).order_by(Title.name).all()
     csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
     csts = [row.cst for row in csts]
@@ -78,19 +108,58 @@ def jobsearch():
         category_id = int(request.form['category_id'])
         title = request.form['title']
         if(category_id == 0 and title != 'Select job title'):
-            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.title==title).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.title==title).all()
         elif(category_id != 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all() 
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all() 
         elif(category_id == 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
         else:
-            jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-        data = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in jobs], default=str)
-        return data
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
+
+        result = []   
+        for job in jobs:
+            job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
+            result_posting_skill = []
+            result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
+            for category in categories:
+                data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
+                if data_category['id'] == result_job['job_posting_category_id']:
+                    result_job['job_posting_category_name'] = data_category['name']
+                else:
+                    continue
+            for key, r in job_posting_skills:
+                # print(dir(r))
+                value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+                result_posting_skill.append(value['name'])
+                # print(result_posting_skill)
+            result_job['job_posting_skills'] = result_posting_skill
+            result.append(result_job)
+
+        return json.dumps(result)
     else:
         delta = 7
-        jobs = db.session.query(JobPosting).join(JobPostingCategory).filter(today-JobPosting.posted_date<delta).all()
-    return render_template('jobads/jobsearch.html', jobs=jobs, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
+        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
+        
+        result = []
+        for job in jobs:
+            job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
+            result_posting_skill = []
+            result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
+            for category in categories:
+                data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
+                if data_category['id'] == result_job['job_posting_category_id']:
+                    result_job['job_posting_category_name'] = data_category['name']
+                else:
+                    continue
+            for key, r in job_posting_skills:
+                # print(dir(r))
+                value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+                result_posting_skill.append(value['name'])
+                # print(result_posting_skill)
+            result_job['job_posting_skills'] = result_posting_skill
+            result.append(result_job)
+        
+    return render_template('jobads/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
 @app.route('/jobads/searchpeople', methods=['GET', 'POST'])
 @login_required
@@ -108,5 +177,21 @@ def searchpeople():
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 
+@app.route('/jobads/applyjob', methods=['GET', 'POST'])
+@login_required
+def applyjob():
+    jobpostingid = request.form['job_posting_id']
+    comments = request.form['comments']
+    skills = request.form['skills']
+    message = request.form['message']
+    # Do some DB operation
+    return "Applied!"
 
-
+@app.route('/jobads/getapplicants', methods=['GET', 'POST'])
+@login_required
+def getapplicants():
+    jobpostingid = request.form['job_posting_id']
+    # To be fixed for the applicants schema:
+    data = db.session.query(User).limit(5).all()
+    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
+    return applicants

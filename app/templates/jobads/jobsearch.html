@@ -74,13 +74,15 @@
             <div class="col-md-9">
                 <div>
                     <span class="card-title mb-0 text-primary fs-3" job-posting-id="{{ job.id }}">{{ job.title }}</span>
-                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category.name }}</span>)</i></span>
+                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category_name }}</span>)</i></span>
                 </div>
                 <div class="job-details">
                     Description: <span class="card-description">{{ job.description | safe }}</span>
                 </div>
                 <div class="other-info">
-                    Skills: React.js, Node.js (To be fixed soon...)
+                    {% for skill in job.job_posting_skills %}
+                        {{ skill }},
+                    {% endfor %}
                 </div>
             </div>
             <div class="col-md-3">
@@ -93,7 +95,7 @@
                 </div>
                 {% if current_user.userid == job.poster_user_id %}
                 <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline">View applicants</a>
+                    <a href="#" class="float-end text-decoration-underline view-applicants" data-bs-toggle="modal" data-bs-target="#applicants_modal">View applicants</a>
                 </div>
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
@@ -103,7 +105,7 @@
                 </div>
                 {% endif %}
                 <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline">Apply</a>
+                    <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                 </div>
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline">Cancel application</a>
@@ -250,6 +252,78 @@
         </div>
     </div>
 </div>
+
+<!-- //////////////////// Job Application Modal /////////////////////// -->
+<div class="modal fade" id="job_application_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Job Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div class="d-flex align-items-center modal-spinner d-none">
+                    <strong>Loading...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
+                <div class="row">
+                    <div>
+                        <span class="card-title mb-0 text-primary fs-3" id="apply-modal-title" job-posting-id=""></span>
+                        <span class="fs-6"><i>(<span id="apply-modal-posted-date"></span> ~ <span id="apply-modal-expiry"></span>, <span id="apply-modal-category"></span>)</i></span>
+                    </div>
+                    <div class="job-details">
+                        Description: <span id="apply-modal-description"></span>
+                    </div>
+                    <div class="other-info mb-3">
+                        Skills: React.js, Node.js (To be fixed soon...)
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-form-label col-sm-2 text-sm">Comments*</label>
+                        <div class="col-sm-10">
+                            <textarea id="apply-comments" class="form-control" rows="3" maxlength="5000"></textarea>
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-form-label col-sm-2 text-sm">Relevant Skills*</label>
+                        <div class="col-sm-10">
+                            <input type="text" id="apply-skills" class="form-control" maxlength="1000">
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-form-label col-sm-2 text-sm"></label>
+                        <div class="col-sm-10">
+                            <button class="btn btn-primary me-3" id="apply-btn">Apply</button>
+                            <button class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ////////////////////// Applicants Modal ////////////////////////// -->
+<div class="modal fade" id="applicants_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Applicants</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div class="d-flex align-items-center modal-spinner d-none">
+                    <strong>Loading...</strong>
+                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+                </div>
+                <div class="row" id="applicants-list">
+                    
+                </div>
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 {% block script %}
 <script>
@@ -285,27 +359,33 @@
         }
         search_jobs(data);
     })
+
     function search_jobs(data) {
         $.ajax({
-            url: "/jobsearch",
+            url: "/jobads/jobsearch",
             method: "POST",
             data: data,
             success: function(res) {
                 var jobs = JSON.parse(res);
                 var data = "";
                 jobs.forEach(job => {
+                    let skill_txt = '';
+                    for (let skill in job.job_posting_skills){
+                        skill_txt += job.job_posting_skills[skill] + `,`
+                    }
+                    console.log(skill_txt)
                     var current_user_id = "{{ current_user.userid }}";
                     data += `<div class="row job-card">
                                 <div class="col-md-9">
                                     <div>
                                         <span class="card-title mb-0 text-primary fs-3" job-posting-id="`+job.id+`">`+job.title+`</span>
-                                        <span class="fs-6">(`+job.posted_date+` ~ <span class="card-expiry">`+job.expiry_date+`</span>, <span class="card-category" category-id="`+job.job_posting_category_id+`">Full Time</span>)</span>
+                                        <span class="fs-6">(`+job.posted_date+` ~ <span class="card-expiry">`+job.expiry_date+`</span>, <span class="card-category" category-id="`+job.job_posting_category_id+`">`+job.job_posting_category_name+`</span>)</span>
                                     </div>
                                     <div class="job-details">
                                         Description: <span class="card-description">`+job.description+`</span>
                                     </div>
                                     <div class="other-info">
-                                        Skills: Python, React.js, Node.js...
+                                        Skills:`+skill_txt+`
                                     </div>
                                 </div>
                                 <div class="col-md-3">
@@ -385,7 +465,7 @@
                 },
                 success: function() {
                     loading();
-                    window.location.href = '/jobsearch';
+                    window.location.href = '/jobads/jobsearch';
                 }
             });
             unloading();
@@ -479,5 +559,75 @@
             }
         });
     }
+    /////////////////////////// Job Application /////////////////////////
+    $("#job-list").on('click', '.job-apply', function() {
+        let title = $(this).closest('.job-card').find('.card-title').html();
+        let category = $(this).closest('.job-card').find('.card-category').html();
+        let description = $(this).closest('.job-card').find('.card-description').text();
+        let posted_date = $(this).closest('.job-card').find('.card-posted-date').html();
+        let expiry = $(this).closest('.job-card').find('.card-expiry').html();
+        let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
+        $('#apply-modal-title').html(title);
+        $('#apply-modal-title').attr('job-posting-id', job_posting_id);
+        $('#apply-modal-posted-date').html(posted_date);
+        $('#apply-modal-expiry').html(expiry);
+        $('#apply-modal-category').html(category);
+        $('#apply-modal-description').html(description);
+    });
+    $('#apply-btn').click(function() {
+        let title = $('#apply-modal-title').html();
+        let job_posting_id = $('#apply-modal-title').attr('job-posting-id');
+        let comments = $('#apply-comments').val();
+        let skills = $('#apply-skills').val();
+        $.ajax({
+            url: "{{ url_for('applyjob') }}",
+            method: "POST",
+            data: {
+                job_posting_id: job_posting_id,
+                comments: comments,
+                skills: skills,
+                message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
+            },
+            success: function() {
+                window.location.href = '/jobads/jobsearch';
+            }
+        });
+    });
+    ////////////// View Applicants ///////////////////
+    $('#job-list').on('click', '.view-applicants', function() {
+        let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
+        $.ajax({
+            url: "{{ url_for('getapplicants') }}",
+            method: "POST",
+            data: {
+                job_posting_id: job_posting_id
+            },
+            success: function(response) {
+                var html_str = "";
+                var applicants = JSON.parse(response);
+                applicants.forEach(applicant => {
+                    html_str += `
+                        <div class="row applicant-card">
+                            <div class="col-12">
+                                <div>
+                                    <span class="card-title mb-0 text-primary fs-4">`+applicant.firstname+` `+applicant.lastname+`</span>
+                                </div>
+                                <div class="other-info">
+                                    `+applicant.cst+` `+applicant.jobfunction+`
+                                </div>
+                                <div class="clearfix">
+                                    <a href="#" class="float-end text-decoration-underline">View profile</a>
+                                </div>
+                                <div class="clearfix">
+                                    <a href="#" class="float-end text-decoration-underline">Request approval</a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                $("#applicants-list").html(html_str);
+            }
+        }); 
+    });
 </script>
 {% endblock %}

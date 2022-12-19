@@ -3,7 +3,18 @@ import re
 import hashlib
 
 from flask_admin import expose
+<<<<<<< HEAD
 from sqlalchemy.ext.serializer import dumps
+=======
+
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
+from sqlalchemy import MetaData, delete, insert, update, or_, and_, select
+
+from sqlalchemy.ext.serializer import loads, dumps
+
+# from google.cloud import language_v1
+>>>>>>> main
 from google.cloud import bigquery
 
 from core import *

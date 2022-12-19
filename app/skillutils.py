@@ -5,6 +5,16 @@ import json
 from core import *
 from model import *
 
+###################################################################
+## MODEL
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
+UserSkill = Base.classes.user_skill
+
+###################################################################
+## ADMIN
+
 def get_lightcast_auth_token():
     url = "https://auth.emsicloud.com/connect/token"
     payload = "client_id=" + app.config['LIGHTCAST_API_CLIENTID'] + "&client_secret=" + app.config['LIGHTCAST_API_SECRET'] + "&grant_type=client_credentials&scope=emsi_open"
