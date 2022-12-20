@@ -9,6 +9,7 @@ import sqlalchemy
 from core import *
 from model import *
 
+# don't trim out these imports -- they carry the routes
 import compmgr
 import dbreplication
 import forecasts

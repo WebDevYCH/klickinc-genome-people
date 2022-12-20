@@ -8,9 +8,9 @@ import flask_admin
 from flask_admin.contrib.sqla import ModelView
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
+from flask_crontab import Crontab
 import config
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 ###################################################################
 ## INITIALIZATION
@@ -19,6 +19,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
 Bootstrap(app)
+crontab = Crontab(app)
 
 # login manager
 login_manager = LoginManager()
@@ -28,6 +29,11 @@ login_manager.session_protection = 'strong'
 # Create db reference
 db = SQLAlchemy(app)
 db.init_app(app)
+
+# filter out some sqlalchemy warnings
+import warnings
+from sqlalchemy import exc as sa_exc
+warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
 
 ###################################################################
 ## ADMIN CLASSES

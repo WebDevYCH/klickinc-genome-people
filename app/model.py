@@ -1,24 +1,14 @@
-import datetime
-import os
-import os.path as op
-import requests
 # from sqlalchemy_serializer import SerializerMixin
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_sqlalchemy import SQLAlchemy
-from flask_bootstrap import Bootstrap
-from flask_login import LoginManager,UserMixin
-import flask_admin
 
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, insert, update, or_, and_, select
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.automap import automap_base
 
-from core import app, db, login_manager
+from core import app, db
 
 ###################################################################
 ## MODEL

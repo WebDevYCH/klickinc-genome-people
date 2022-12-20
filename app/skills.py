@@ -36,24 +36,39 @@ admin.add_view(AdminModelView(Skill, db.session, category='Skill'))
 class SkillReplicationView(AdminBaseView):
     @expose('/')
     def index(self):
-        return self.render('admin/skillrepl.html')
+        pages = {
+            'newskills': 'Autofill skills from Lightcast'
+        }
+        return self.render('admin/job_index.html', title="Skills Replication", pages=pages)
 
     @expose('/newskills')
     def newskills(self):
-        loglines = AdminLog()
-        loglines.append("Starting autofill New Skills Replication via LightCast API")
-        skills = get_allskills_from_lightcast()
-        loglines.append("Comparing with current skills table")
-        for skill in skills['data']:
-            current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
-            if not current_skill:
-                new_skill = Skill(name=skill['name'], is_klick=False, description=skill['description'])
-                db.session.add(new_skill)
-                loglines.append(f"Creating new skill {skill['name']}")
-            else:
-                loglines.append(f"Skipping existing skill {skill['name']}")
-            db.session.commit()
-        loglines.append("Finished autofilling new skills repliaction via LightCast API")
-        return self.render('admin/job_log.html', loglines=loglines)
-admin.add_view(SkillReplicationView(name='Autofill skills', category='Skill'))
+        return self.render('admin/job_log.html', loglines=replicate_skills())
+
+admin.add_view(SkillReplicationView(name='Skills Replication', category='Skill'))
+
+
+@app.cli.command('replicate_skills')
+def replicate_skills_cmd():
+    replicate_skills()
+
+def replicate_skills():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting autofill New Skills Replication via LightCast API")
+    skills = get_allskills_from_lightcast()
+    loglines.append("Comparing with current skills table")
+    for skill in skills['data']:
+        current_skill =db.session.query(Skill).filter(Skill.name==skill['name']).first()
+        if not current_skill:
+            new_skill = Skill(name=skill['name'], is_klick=False, description=skill['description'])
+            db.session.add(new_skill)
+            loglines.append(f"Creating new skill {skill['name']}")
+        else:
+            loglines.append(f"Skipping existing skill {skill['name']}")
+        db.session.commit()
+    loglines.append("Finished autofilling new skills repliaction via LightCast API")
+    return loglines
+
 

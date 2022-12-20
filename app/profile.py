@@ -1,9 +1,6 @@
 from flask import render_template, flash, request
 from flask_login import login_required, current_user
 
-from flask_wtf import FlaskForm
-from wtforms import SelectField, TextAreaField
-from wtforms.validators import InputRequired
 
 from core import *
 from model import *
@@ -12,7 +9,6 @@ from skillutils import *
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    """Route to the job."""
     profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
     my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
 
@@ -27,8 +23,9 @@ def profile():
             db.session.commit()
             flash("Successfully added your resume")
         relevant_skills = extract_skills_from_text(request.form["resume"])
+
         if "message" in relevant_skills:
-            flash("Something error happened! Please wait.")
+            flash("An error happened extracting skills! Please try again.")
         else:
             auto_fill_user_skill_from_resume(relevant_skills['data'])
     return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills)
