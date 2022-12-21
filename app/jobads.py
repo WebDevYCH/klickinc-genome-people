@@ -219,6 +219,6 @@ def closepost():
 def cancelapplication():
     userId = request.form['userId']
     postId = request.form['postId']
-    userAvailable = request.form['userAvailable']
+
     # Do some DB operation
     return "Applied!"
