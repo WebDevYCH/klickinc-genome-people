@@ -195,3 +195,30 @@ def getapplicants():
     data = db.session.query(User).limit(5).all()
     applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return applicants
+
+@app.route('/jobads/setusersetting', methods=['GET', 'POST'])
+@login_required
+def setusersetting():
+    userId = request.form['userId']
+    # postId = request.form['postId']
+    userAvailable = request.form['userAvailable']
+    # Do some DB operation
+    return userAvailable
+
+@app.route('/jobads/closepost', methods=['GET', 'POST'])
+@login_required
+def closepost():
+    userId = request.form['userId']
+    postId = request.form['postId']
+    # userAvailable = request.form['userAvailable']
+    # Do some DB operation
+    return postId
+
+@app.route('/jobads/cancelapplication', methods=['GET', 'POST'])
+@login_required
+def cancelapplication():
+    userId = request.form['userId']
+    postId = request.form['postId']
+    userAvailable = request.form['userAvailable']
+    # Do some DB operation
+    return "Applied!"

@@ -101,14 +101,14 @@
                     <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
                 </div>
                 <div class="clearfix">
-                    <a href="#" id="close_post_btn" onclick="poster_userid = '{{job.poster_user_id}}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
+                    <a href="#" id="close_post_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                 </div>
                 {% endif %}
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                 </div>
                 <div class="clearfix">
-                    <a href="#" id="cancel_application_btn" class="float-end text-decoration-underline"data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
+                    <a href="#" id="cancel_application_btn" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                 </div>
             </div>
         </div>
@@ -337,15 +337,15 @@
             <div class="modal-body m-3">
                 <div>
                     Make myself as available
-                    <input class="form-check-input" type="checkbox" value="" id="flexCheckDefault">
-                    <label class="font-italic" for="flexCheckDefault">
+                    <input class="form-check-input" type="checkbox" id="user-available-check">
+                    <label class="font-italic" for="user-available-check">
                         <em> This means that any Klickster can see that you are available</em>
                     </label>
                 </div>  
 
             </div>  
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Save</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="user-available-btn">Save</button>
                 <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
             </div>    
         </div>
@@ -367,7 +367,7 @@
 
             </div>  
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Yes</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="close-post-btn">Yes</button>
                 <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
             </div>    
         </div>
@@ -389,7 +389,7 @@
 
             </div>  
             <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Yes</button>
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="cancel-app-btn">Yes</button>
                 <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
             </div>    
         </div>
@@ -399,7 +399,7 @@
     var editor;
     var category_id = 0;
     var flag = "create";
-    var poster_userid = ''
+    var job_id = ''
 
     
     //////////// Search Job Functions ////////////////
@@ -476,13 +476,13 @@
                                         <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
                                     </div>
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Close post</a>
+                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                                     </div>` : '') + `
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Apply</a>
+                                        <a href="#" class="float-end text-decoration-underline"  data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                                     </div>
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Cancel application</a>
+                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                                     </div>
                                 </div>
                             </div>`;
@@ -650,6 +650,7 @@
         $('#apply-modal-description').html(description);
     });
     $('#apply-btn').click(function() {
+        console.log("{{ url_for('applyjob') }}")
         let title = $('#apply-modal-title').html();
         let job_posting_id = $('#apply-modal-title').attr('job-posting-id');
         let comments = $('#apply-comments').val();
@@ -668,6 +669,61 @@
             }
         });
     });
+
+    ///////////////////////// Personal Setting //////////////////
+    $('#user-available-btn').click(function() {
+        var user_available = 'f'
+        if ($('#user-available-check').is(":checked"))
+        {
+            user_available = 't'
+        }
+        $.ajax({
+            url: "{{ url_for('setusersetting') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                userAvailable: user_available
+            },
+            success: function(response) {
+                console.log(response)
+            }
+        })
+    })    
+    ///////////////////////// Personal Setting //////////////////
+    $('#close-post-btn').click(function() {  
+        $.ajax({
+            url: "{{ url_for('closepost') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                postId: job_id
+            },
+            success: function(response) {
+                console.log('.... ' +response)
+            }
+        })
+    })    
+
+    ///////////////////////// Personal Setting //////////////////
+    $('#user-available-btn').click(function() {
+        var user_available = 'f'
+        if ($('#user-available-check').is(":checked"))
+        {
+            user_available = 't'
+        }
+        $.ajax({
+            url: "{{ url_for('setusersetting') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                userAvailable: user_available
+            },
+            success: function(response) {
+                console.log(response)
+            }
+        })
+    })
+
     ////////////// View Applicants ///////////////////
     $('#job-list').on('click', '.view-applicants', function() {
         let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
