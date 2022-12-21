@@ -21,10 +21,8 @@ def obj_name_withid(obj):
     return f"{obj.name} [{obj.id}]"
 def obj_name_user(obj):
     return f"{obj.firstname} {obj.lastname}"
-def obj_name_survey_question(obj):
-    return f"{obj.survey.name} - {obj.name}"
-def obj_name_survey_answer(obj):
-    return f"{obj.survey_question.name} - {obj.answer}"
+def obj_name_portfolio(obj):
+    return f"{obj.clientname} - {obj.name}"
 def obj_name_joined(obj):
     return ['id', 'job_or_availadble', 'job_posting_category_id', 'poster_user_id', 'posted_date', 'expiry_date', 'removed_date', 'title', 'description', 'contact_user_id', 'name']
 
@@ -66,7 +64,7 @@ UserProfile = Base.classes.user_profile
 Base.classes.labor_role.__str__ = obj_name
 LaborRole = Base.classes.labor_role
 
-Base.classes.portfolio.__str__ = obj_name
+Base.classes.portfolio.__str__ = obj_name_portfolio
 Portfolio = Base.classes.portfolio
 
 

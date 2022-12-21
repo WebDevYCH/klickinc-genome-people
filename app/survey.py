@@ -6,9 +6,9 @@ from flask_admin import expose
 
 from flask_wtf import FlaskForm
 
-from sqlalchemy import delete, insert
+from wtforms.fields import *
 
-# from google.cloud import language_v1
+from sqlalchemy import delete, insert
 
 from core import *
 from model import *
@@ -25,8 +25,14 @@ SurveyQuestionType = Base.classes.survey_question_type
 Base.classes.survey_question_category.__str__ = obj_name
 SurveyQuestionCategory = Base.classes.survey_question_category
 
+def obj_name_survey_question(obj):
+    return f"{obj.survey.name} - {obj.name}"
+
 Base.classes.survey_question.__str__ = obj_name_survey_question
 SurveyQuestion = Base.classes.survey_question
+
+def obj_name_survey_answer(obj):
+    return f"{obj.survey_question.name} - {obj.answer}"
 
 Base.classes.survey_answer.__str__ = obj_name_survey_answer
 SurveyAnswer = Base.classes.survey_answer

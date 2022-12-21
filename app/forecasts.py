@@ -23,7 +23,16 @@ PortfolioLRForecastSheet = Base.classes.portfolio_laborrole_forecast_sheet
 
 LaborRoleHoursDayRatio = Base.classes.labor_role_hours_day_ratio
 
-admin.add_view(AdminModelView(PortfolioLRForecastSheet, db.session, category='Forecasts'))
+class PortfolioLRForecastSheetView(AdminModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('admin')
+    column_searchable_list = ['portfolio.name','gsheet_url','tabname']
+    column_sortable_list = ['gsheet_url','tabname']
+    #column_filters = ['survey','survey_question_category']
+    #can_export = True
+    #export_types = ['csv', 'xlsx']
+
+admin.add_view(PortfolioLRForecastSheetView(PortfolioLRForecastSheet, db.session, category='Forecasts'))
 admin.add_view(AdminModelView(LaborRoleHoursDayRatio, db.session, category='Forecasts'))
 
 ###################################################################
@@ -313,6 +322,9 @@ def portfolio_forecasts_lr_data():
         bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, showsources=False)
         app.logger.info(f"portfolio_lr_forecasts_data minimized size: {len(bypfid)}")
 
+    # TODO: incorporate headcount
+    # TODO: incorporate requisitions
+
     retval = list(bypfid.values())
     retval.sort(key=lambda x: x['name'])
 
@@ -436,7 +448,8 @@ class ForecastAdminView(AdminBaseView):
             'linear': 'Linear Extrapolation Model',
             'cilinear': 'CI + Linear Extrapolation Model',
             'gsheets': 'Google Sheets Forecasts Import',
-            'lr_hours_day_ratio': 'Labor Role Hours/Day Ratio Import'
+            'lr_hours_day_ratio': 'Labor Role Hours/Day Ratio Import',
+            'lr_forecast_sheet': 'Labor Role Forecast Sheet Map Replication',
         }
         return self.render('admin/job_index.html', title="Resource Forecast Processing", pages=pages)
 
@@ -455,6 +468,10 @@ class ForecastAdminView(AdminBaseView):
     @expose('/lr_hours_day_ratio')
     def lr_hours_day_ratio(self):
         return self.render('admin/job_log.html', loglines=replicate_labor_role_hours_day_ratio())
+
+    @expose('/lr_forecast_sheet')
+    def lr_forecast_sheet(self):
+        return self.render('admin/job_log.html', loglines=replicate_portfolio_laborrole_forecast_sheet())
 
 @app.cli.command('model_linear')
 def model_linear_cmd():
@@ -616,10 +633,9 @@ def forecast_gsheets():
     laborroles = db.session.query(LaborRole).all()
 
     # for each Google Sheet forecast
-    for gs in db.session.query(PortfolioLRForecastSheet).all():
-        # gs is linked to the CST, but also sometimes to the client name
-        # if it's linked to the client name, use that
-        clientqueryarg = True
+    for gs in db.session.query(PortfolioLRForecastSheet).filter().all():
+
+
         if gs.clientname != None and gs.clientname != '':
             clientqueryarg = Portfolio.clientname == gs.clientname
 
@@ -751,6 +767,37 @@ def forecast_gsheets():
     db.session.commit()
 
     return loglines
+
+@app.cli.command('replicate_portfolio_laborrole_forecast_sheet')
+def replicate_portfolio_laborrole_forecast_sheet_cmd():
+    replicate_portfolio_laborrole_forecast_sheet()
+
+def replicate_portfolio_laborrole_forecast_sheet():
+    loglines = AdminLog()
+    loglines.append(f"REPLICATING PORTFOLIO LABOR ROLE FORECAST SHEET")
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+
+    thisyear = datetime.date.today().year
+
+    # replicate from portfolio table to portfolio labor role forecast sheet
+    loglines.append(f"  replicating from portfolio table to portfolio labor role forecast sheet")
+    for pin in db.session.query(Portfolio).all():
+        pout = db.session.query(PortfolioLRForecastSheet).filter(
+            PortfolioLRForecastSheet.portfolioid == pin.id,
+            PortfolioLRForecastSheet.year == thisyear
+            ).first()
+        if pout == None:
+            pout = PortfolioLRForecastSheet()
+            pout.portfolioid = pin.id
+            pout.year = thisyear
+            db.session.add(pout)
+        # fields gsheet_url and tabname are left null
+    db.session.commit()
+
+    loglines.append(f"  done")
+    return loglines
+
 
 @app.cli.command('replicate_labor_role_hours_day_ratio')
 def replicate_labor_role_hours_day_ratio_cmd():
