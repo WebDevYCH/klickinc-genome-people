@@ -446,6 +446,7 @@ class ForecastAdminView(AdminBaseView):
     def index(self):
         pages = {
             'linear': 'Linear Extrapolation Model',
+            'linreg': 'linreg Extrapolation Model',
             'cilinear': 'CI + Linear Extrapolation Model',
             'gsheets': 'Google Sheets Forecasts Import',
             'lr_hours_day_ratio': 'Labor Role Hours/Day Ratio Import',
@@ -456,6 +457,10 @@ class ForecastAdminView(AdminBaseView):
     @expose('/linear')
     def linear(self):
         return self.render('admin/job_log.html', loglines=model_linear())
+
+    @expose('/linreg')
+    def linreg(self):
+        return self.render('admin/job_log.html', loglines=model_linreg())
 
     @expose('/cilinear')
     def cilinear(self):
@@ -499,6 +504,72 @@ def model_linear():
         loglines.append(f"portfolio {p.portfolioid}")
         # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
         json = retrieveGenomeReport(2145, [2434,2435,2436], [p.portfolioid,lookback,lookahead])
+        loglines.append(f"{json}")
+
+        if 'Entries' in json:
+            # for each Genome forecast
+            for pfin in json['Entries']:
+                # {'AccountPortfolioID': 174, 'YearMonth': '/Date(1669870800000-0500)/', 'Forecast': 54000.0, 'LaborCategory': 'Analytics', 'LaborRoleID': 'ANLTCADR', 'LaborRoleName': 'Analytics, Associate Director', 'PredictedHour': 0.14, 'PredictedAmount': 17.2267}
+                pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
+                key = f"{pfin['AccountPortfolioID']} // {pfin['YearMonth']} // {pfin['LaborRoleID']} // {sourcename}"
+
+                if pfin['PredictedHour'] != None:
+                    pflr = db.session.query(PortfolioLRForecast).filter(
+                        PortfolioLRForecast.portfolioid == pfin['AccountPortfolioID'],
+                        PortfolioLRForecast.yearmonth == pfin['YearMonth'],
+                        PortfolioLRForecast.laborroleid == pfin['LaborRoleID'],
+                        PortfolioLRForecast.source == sourcename).first()
+
+                    if pflr != None and pflr.forecastedhours == pfin['PredictedHour']:
+                        loglines.append(f"  SKIPPED {key}")
+                    else:
+                        if pflr != None:
+                            loglines.append(f"  UPDATING {key} because not: {pflr.forecastedhours} == {pfin['PredictedHour']} and {pflr.forecasteddollars} == {pfin['PredictedAmount']}")
+                        else:
+                            loglines.append(f"  NEW {key}")
+                            pflr = PortfolioLRForecast()
+                            db.session.add(pflr)
+
+                        # set the fields
+                        pflr.portfolioid = pfin['AccountPortfolioID']
+                        pflr.yearmonth = pfin['YearMonth']
+                        pflr.laborroleid = pfin['LaborRoleID']
+                        pflr.source = sourcename
+                        pflr.userid = None
+                        pflr.updateddate = datetime.date.today()
+                        pflr.forecasteddollars = pfin['PredictedAmount']
+                        pflr.forecastedhours = pfin['PredictedHour']
+        else:
+            loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+
+        db.session.commit()
+
+    return loglines
+
+@app.cli.command('model_linreg')
+def model_linreg_cmd():
+    model_linreg()
+
+def model_linreg():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Same-Portfolio Linear Regression Extrapolator")
+    loglines.append("")
+
+    sourcename = 'linreg'
+    startdate = datetime.date.today().replace(day=1)
+
+    # for each portfolio with forecasts in the next lookahead months
+    loglines.append("grabbing portfolio list")
+    for p in db.session.query(PortfolioForecast).where(
+                PortfolioForecast.yearmonth >= startdate,
+                PortfolioForecast.forecast != None,
+                PortfolioForecast.forecast != "0.00"
+            ).distinct(PortfolioForecast.portfolioid).all():
+        loglines.append(f"portfolio {p.portfolioid}")
+        # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+        json = retrieveGenomeReport(2145, [2434], [p.portfolioid])
         loglines.append(f"{json}")
 
         if 'Entries' in json:
