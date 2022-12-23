@@ -22,6 +22,10 @@ JobPostingCategory = Base.classes.job_posting_category
 
 JobPostingSkill = Base.classes.job_posting_skill
 
+UserAvailable = Base.classes.user_available
+
+ApplyJob = Base.classes.apply_job
+
 Base.classes.skill.__str__ = obj_name
 Skill = Base.classes.skill
 
@@ -184,7 +188,11 @@ def applyjob():
     comments = request.form['comments']
     skills = request.form['skills']
     message = request.form['message']
-    # Do some DB operation
+    userId = request.form['userId']
+    apply = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills)
+    db.session.add(apply)
+    db.session.commit()
+
     return "Applied!"
 
 @app.route('/jobads/getapplicants', methods=['GET', 'POST'])
@@ -201,24 +209,36 @@ def getapplicants():
 def setusersetting():
     userId = request.form['userId']
     # postId = request.form['postId']
-    userAvailable = request.form['userAvailable']
+    user_Available = request.form['userAvailable']
     # Do some DB operation
-    return userAvailable
+    UserAvailable = UserAvailable(user_id = userId, user_av = user_Available)
+    db.session.add(UserAvailable)
+    db.session.commit()
+    return user_Available
 
 @app.route('/jobads/closepost', methods=['GET', 'POST'])
 @login_required
 def closepost():
     userId = request.form['userId']
     postId = request.form['postId']
-    # userAvailable = request.form['userAvailable']
     # Do some DB operation
-    return postId
+    db.session.execute(
+        update(JobPosting).
+        filter(JobPosting.id == postId).
+        values(removed_date=date.today())
+    )
+    db.session.commit()
+    return userId
 
 @app.route('/jobads/cancelapplication', methods=['GET', 'POST'])
 @login_required
 def cancelapplication():
     userId = request.form['userId']
     postId = request.form['postId']
-
+    db.session.execute(
+        update(ApplyJob).
+        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId).
+        values(available = '0')
+    )
     # Do some DB operation
     return "Applied!"

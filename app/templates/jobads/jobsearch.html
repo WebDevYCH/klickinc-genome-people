@@ -662,6 +662,7 @@
                 job_posting_id: job_posting_id,
                 comments: comments,
                 skills: skills,
+                userId: "{{ current_user.userid }}",
                 message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
             },
             success: function() {
@@ -722,10 +723,10 @@
 
     ///////////////////////// Personal Setting //////////////////
     $('#user-available-btn').click(function() {
-        var user_available = 'f'
+        var user_available = '0'
         if ($('#user-available-check').is(":checked"))
         {
-            user_available = 't'
+            user_available = '1'
         }
         $.ajax({
             url: "{{ url_for('setusersetting') }}",
