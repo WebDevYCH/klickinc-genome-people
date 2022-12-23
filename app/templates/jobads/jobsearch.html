@@ -673,10 +673,10 @@
 
     ///////////////////////// Personal Setting //////////////////
     $('#user-available-btn').click(function() {
-        var user_available = 'f'
+        var user_available = '0'
         if ($('#user-available-check').is(":checked"))
         {
-            user_available = 't'
+            user_available = '1'
         }
         $.ajax({
             url: "{{ url_for('setusersetting') }}",
@@ -717,26 +717,6 @@
             },
             success: function(response) {
                 console.log('.... ' +response)
-            }
-        })
-    })
-
-    ///////////////////////// Personal Setting //////////////////
-    $('#user-available-btn').click(function() {
-        var user_available = '0'
-        if ($('#user-available-check').is(":checked"))
-        {
-            user_available = '1'
-        }
-        $.ajax({
-            url: "{{ url_for('setusersetting') }}",
-            method: "POST",
-            data: {
-                userId: "{{ current_user.userid }}",
-                userAvailable: user_available
-            },
-            success: function(response) {
-                console.log(response)
             }
         })
     })
