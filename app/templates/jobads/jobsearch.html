@@ -21,7 +21,7 @@
 
 {% block app_content %}
 <p class="clearfix">
-    <a href="#" class="float-end text-decoration-underline ms-3">Personal Settings</a>
+    <a href="#" class="float-end text-decoration-underline ms-3" id="personal-settings-btn" data-bs-toggle="modal" data-bs-target="#personal_settings_modal">Personal Settings</a>
     <a href="#" class="float-end text-decoration-underline ms-3" id="create-job-btn" data-bs-toggle="modal" data-bs-target="#create_job_modal">Create a Job</a>
     <a href="#" class="float-end text-decoration-underline ms-3" id="available-people-btn" data-bs-toggle="modal" data-bs-target="#available_people_modal">View Available People</a>
 </p>
@@ -101,14 +101,14 @@
                     <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
                 </div>
                 <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline">Close post</a>
+                    <a href="#" id="close_post_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                 </div>
                 {% endif %}
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                 </div>
                 <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline">Cancel application</a>
+                    <a href="#" id="cancel_application_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                 </div>
             </div>
         </div>
@@ -326,10 +326,82 @@
 </div>
 {% endblock %}
 {% block script %}
+<!-- //////////////////// Personal Settings Modal ///////////////////// -->
+<div class="modal fade" id="personal_settings_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Personal Settings</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div>
+                    Make myself as available
+                    <input class="form-check-input" type="checkbox" id="user-available-check">
+                    <label class="font-italic" for="user-available-check">
+                        <em> This means that any Klickster can see that you are available</em>
+                    </label>
+                </div>  
+
+            </div>  
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="user-available-btn">Save</button>
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
+            </div>    
+        </div>
+    </div>
+</div>
+
+<!-- //////////////////// Close post Modal ///////////////////// -->
+<div class="modal fade" id="close_post_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Close Post</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div>
+                    Are you sure?
+                </div>  
+
+            </div>  
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="close-post-btn">Yes</button>
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+            </div>    
+        </div>
+    </div>
+</div>
+
+<!--///////////////////// Cancel Application////////////////////-->
+<div class="modal fade" id="cancel_application_modal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Cancel Application</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body m-3">
+                <div>
+                    Are you sure?
+                </div>  
+
+            </div>  
+            <div class="modal-footer justify-content-center">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="cancel-app-btn">Yes</button>
+                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
+            </div>    
+        </div>
+    </div>
+</div>
 <script>
     var editor;
     var category_id = 0;
     var flag = "create";
+    var job_id = ''
+
+    
     //////////// Search Job Functions ////////////////
     $("#delta_box").change(function() {
         loading();
@@ -404,13 +476,13 @@
                                         <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
                                     </div>
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Close post</a>
+                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                                     </div>` : '') + `
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Apply</a>
+                                        <a href="#" class="float-end text-decoration-underline"  data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                                     </div>
                                     <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">Cancel application</a>
+                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                                     </div>
                                 </div>
                             </div>`;
@@ -421,6 +493,7 @@
             }
         });
     }
+
     ////////////// Widgets Ready ///////////////////////////
     document.addEventListener("DOMContentLoaded", function() {
 		flatpickr(".flatpickr-minimum", {
@@ -490,6 +563,7 @@
         $(".modal-title").html("Edit a Job");
     });
     $("#create-job-btn").click(function() {
+        console.log(poster_userid)
         flag = "create";
         category_id = 0;
         $("#modal-job-title").val("Select job title");
@@ -499,6 +573,7 @@
         $("#job_posting_id").val("");
         $(".modal-title").html("Create a Job");
     });
+
     //////////////////// Available People Functions ///////////
     $("#available-people-btn").click(function() {
         showModalLoading();
@@ -575,6 +650,7 @@
         $('#apply-modal-description').html(description);
     });
     $('#apply-btn').click(function() {
+        console.log("{{ url_for('applyjob') }}")
         let title = $('#apply-modal-title').html();
         let job_posting_id = $('#apply-modal-title').attr('job-posting-id');
         let comments = $('#apply-comments').val();
@@ -586,6 +662,7 @@
                 job_posting_id: job_posting_id,
                 comments: comments,
                 skills: skills,
+                userId: "{{ current_user.userid }}",
                 message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
             },
             success: function() {
@@ -593,6 +670,57 @@
             }
         });
     });
+
+    ///////////////////////// Personal Setting //////////////////
+    $('#user-available-btn').click(function() {
+        var user_available = '0'
+        if ($('#user-available-check').is(":checked"))
+        {
+            user_available = '1'
+        }
+        $.ajax({
+            url: "{{ url_for('setusersetting') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                userAvailable: user_available
+            },
+            success: function(response) {
+                console.log(response)
+            }
+        })
+    })    
+
+    ///////////////////////// Personal Setting //////////////////
+    $('#close-post-btn').click(function() {  
+        $.ajax({
+            url: "{{ url_for('closepost') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                postId: job_id
+            },
+            success: function(response) {
+                console.log('.... ' +response)
+            }
+        })
+    })
+
+    ///////////////////////// Personal Setting //////////////////
+    $('#cancel-app-btn').click(function() {  
+        $.ajax({
+            url: "{{ url_for('cancelapplication') }}",
+            method: "POST",
+            data: {
+                userId: "{{ current_user.userid }}",
+                postId: job_id
+            },
+            success: function(response) {
+                console.log('.... ' +response)
+            }
+        })
+    })
+
     ////////////// View Applicants ///////////////////
     $('#job-list').on('click', '.view-applicants', function() {
         let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
