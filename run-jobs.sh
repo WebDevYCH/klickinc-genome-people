@@ -14,7 +14,7 @@ set -e
 jobs_core_often="replicate_userphotos replicate_portfolioforecasts"
 jobs_core_daily="replicate_users replicate_portfolios replicate_laborroles"
 jobs_skills="replicate_skills"
-jobs_forecast="model_linear model_cilinear model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
+jobs_forecast="model_linear model_cilinear model_linreg model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
 # forecast_gsheets not working yet
 
 

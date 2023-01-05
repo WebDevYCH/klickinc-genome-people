@@ -12,7 +12,8 @@ from model import *
 # don't trim out these imports -- they carry the routes
 import compmgr
 import dbreplication
-import forecasts
+import forecasts_fe
+import forecasts_be
 import jobads
 import model
 import profile
