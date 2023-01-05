@@ -159,6 +159,10 @@ def get_plrfs(year, clients, csts, showsources=True):
 def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
     queryfilter = queryClientCst(clients, csts)
 
+    # TODO: show forecasted headcount instead of hours
+    # TODO: show current headcount
+    # TODO: show 
+
     # create a pandas dataframe of the portfolio labor role forecasts
     header = ['id','parent','name','detail',
     'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12',
@@ -681,11 +685,11 @@ def model_cilinear():
 
     return loglines
 
-@app.cli.command('forecast_gsheets')
-def forecast_gsheets_cmd():
-    forecast_gsheets()
+@app.cli.command('model_gsheets')
+def model_gsheets_cmd():
+    model_gsheets()
 
-def forecast_gsheets():
+def model_gsheets():
     loglines = AdminLog()
     with app.app_context():
         Base.prepare(autoload_with=db.engine, reflect=True)
@@ -700,145 +704,69 @@ def forecast_gsheets():
 
     # gather some lookup data
     loglines.append("gathering lookup data")
-    rates = get_clrrates()
-    laborroles = db.session.query(LaborRole).all()
+    #rates = get_clrrates()
+    #laborroles = db.session.query(LaborRole).all()
 
     # for each Google Sheet forecast
-    for gs in db.session.query(PortfolioLRForecastSheet).filter().all():
+    for gs in db.session.query(PortfolioLRForecastSheet).filter(
+        PortfolioLRForecastSheet.year >= thisyear,
+        PortfolioLRForecastSheet.gsheet_url != None,
+        PortfolioLRForecastSheet.gsheet_url != '',
+        PortfolioLRForecastSheet.tabname != None,
+        PortfolioLRForecastSheet.tabname != ''
+    ).order_by(PortfolioLRForecastSheet.gsheet_url,PortfolioLRForecastSheet.tabname).all():
 
-
-        if gs.clientname != None and gs.clientname != '':
-            clientqueryarg = Portfolio.clientname == gs.clientname
-
-        # delete any existing future portfolio labor role forecasts attached to a portfolio that's in the sheet's CST
-        db.session.query(PortfolioLRForecast).filter(
-            PortfolioLRForecast.portfolioid.in_(db.session.query(Portfolio.id).filter(Portfolio.currcst == gs.cstname)),
-            PortfolioLRForecast.yearmonth >= datetime.date.today().replace(day=1),
-            clientqueryarg,
-            PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
-
-        tabname = gs.tabname
-        if tabname == None or tabname == '':
-            tabname = 'Export'
-        
-        # get the sheet
-        loglines.append(f"for CST {gs.cstname}, getting sheet {gs.gsheet_url}")
+        # get the sheet with gspread
+        loglines.append(f"for portfolio {gs.portfolioid}, getting sheet {gs.gsheet_url}")
         sheet = getGoogleSheet(gs.gsheet_url)
 
-        # if it has an Export tab, delete it
-        worksheets = sheet.worksheets()
-        if any(worksheet.title == tabname for worksheet in worksheets):
-            loglines.append(f"  deleting {tabname} tab")
-            sheet.del_worksheet(sheet.worksheet(tabname))
+        # get the worksheet and convert to a dataframe for speed
+        loglines.append(f"for portfolio {gs.portfolioid}, getting worksheet {gs.tabname}")
+        worksheet = sheet.worksheet(gs.tabname)
+        df = pd.DataFrame(worksheet.get_all_values())
 
-        worksheets = sheet.worksheets()
-        # if it doesn't have an Export tab
-        if not any(worksheet.title == tabname for worksheet in worksheets):
-            rows = 300000
-            # create one, load into a df
-            loglines.append(f"  creating {tabname} tab")
-            sheet.add_worksheet(tabname, rows=rows, cols=40)
-            worksheet = sheet.worksheet(tabname)
-            # build the header row
-            headerrow = ['Client', 'Portfolio', 'Labor Category', 'Labor Role', 'MSA Rate']
-            for month in range(1,13):
-                # determine month's name
-                monthname = datetime.date(thisyear, month, 1).strftime('%b')
-                headerrow.append(f'{monthname} {thisyear} hrs')
-                headerrow.append(f'{monthname} {thisyear} $')
-            loglines.append("  building dataframe")
-            df = pd.DataFrame([["" for _ in range(29)] for _ in range(rows)], columns=headerrow)
-            # now, for each clientname and portfolio in the sheet's CST, add a row for each labor role and labor role's rate with the client
-            # including summary rows for each client and portfolio, also calculating the total dollars based on the hours and rate
-            rownum = 0
-            for clientdbrow in db.session.query(Portfolio.clientname).filter(Portfolio.currcst == gs.cstname).distinct().all():
-                clientname = clientdbrow[0]
-                # client row
-                df.iloc[rownum,0] = clientname
-                rownum += 1
-                loglines.append(f"    row {rownum}")
-                for portfoliodbrow in db.session.query(Portfolio.name).filter(Portfolio.currcst == gs.cstname).distinct().all():
-                    portfolio = portfoliodbrow[0]
-                    #loglines.append(f"  portfolio {clientname} // {portfolio}")
-                    # portfolio row
-                    df.iloc[rownum,0] = clientname
-                    df.iloc[rownum,1] = portfolio
-                    portfoliostartrow = rownum
-                    rownum += 1
-                    #loglines.append(f"    row {rownum}")
-                    # labor role rows
-                    for lr in laborroles:
-                        df.iloc[rownum,0] = clientname
-                        df.iloc[rownum,1] = portfolio
-                        df.iloc[rownum,2] = lr.categoryname
-                        df.iloc[rownum,3] = lr.name
-                        if clientname in rates and lr.id in rates.get(clientname):
-                            df.iloc[rownum,4] = round(rates[clientname][lr.id],2)
-                        for month in range(1,13):
-                            hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
-                            ratecolname = 'E'
-                            df.iloc[rownum,(month*2)+4] = f'=IFERROR({hrscolname}{rownum+2}*{ratecolname}{rownum+2},0)'
-                            # this is too slow
-                            #setGoogleSheetCellFormat(worksheet, f'{hrscolname}{rownum+2}', { 'backgroundColor': { 'red': 1.0, 'green': 1.0, 'blue': 0.8 } })
-                        rownum += 1
-                        #loglines.append(f"    row {rownum}")
+        # delete any existing plr forecasts for this portfolio in this record's year
+        loglines.append(f"for portfolio {gs.portfolioid}, deleting existing forecasts")
+        db.session.query(PortfolioLRForecast).filter(
+            PortfolioLRForecast.portfolioid == gs.portfolioid,
+            PortfolioLRForecast.yearmonth >= datetime.date(gs.year, 1, 1),
+            PortfolioLRForecast.yearmonth < datetime.date(gs.year+1, 1, 1),
+            PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
-                    # update the portfolio start row to sum the portfolio's hours and dollars
-                    for month in range(1,13):
-                        hrscolname = openpyxl.utils.get_column_letter((month*2)+4)
-                        dollarscolname = openpyxl.utils.get_column_letter((month*2)+5)
-                        df.iloc[portfoliostartrow,(month*2)+3] = f'=SUM({hrscolname}{portfoliostartrow+3}:{hrscolname}{rownum+1})'
-                        df.iloc[portfoliostartrow,(month*2)+4] = f'=SUM({dollarscolname}{portfoliostartrow+3}:{dollarscolname}{rownum+1})'
+        # the sheet has plr forecasts starting in row 15, with laborroleid in col 0
+        # forecasted hours are in columns for each month based on the weeks in them: 8=Jan, 13=Feb, 18=Mar, 
+        # for each row in the sheet starting at row 15
+        loglines.append(f"for portfolio {gs.portfolioid}, processing rows")
+        monthcols = {1:8,2:13,3:18,4:24,5:29,6:35,7:40,8:45,9:51,10:56,11:61,12:67}
+        for index, row in df.iterrows():
+            # if the row is >=14 and has a labor role ID
+            if index >= 14 and row[0] != None and row[0] != '':
+                # for each month in the year
+                for month in range(1,13):
+                    monthcol = monthcols[month]
+                    # if the month's forecasted hours is not blank
+                    if row[monthcol] != None and row[monthcol] != '' and row[monthcol] != '0':
+                        # create a record with the forecasted hours and dollars
+                        pflr = PortfolioLRForecast()
+                        pflr.portfolioid = gs.portfolioid
+                        pflr.yearmonth = datetime.date(gs.year, month, 1)
+                        pflr.laborroleid = row[0]
+                        pflr.forecastedhours = row[monthcol]
+                        pflr.forecasteddollars = re.sub(r'[^0-9.]', '', row[monthcol+2])
+                        pflr.source = source
+                        pflr.updateddate = datetime.date.today()
+                        db.session.add(pflr)
+                        loglines.append(f"  {pflr.laborroleid} {pflr.forecastedhours} hours at ${pflr.forecasteddollars} in {pflr.yearmonth}")
+                        if index % 100 == 0:
+                            db.session.commit()
 
-            loglines.append(f"  saving worksheet")
-            df = df.fillna('')
-            worksheet.update([df.columns.values.tolist()] + df.values.tolist(), raw=False)
-            setGoogleSheetCellFormat(worksheet, '1:1', {'textFormat': {'bold': True}})
-
-    # for each forecast in the sheet, delete any labor role forecasts against that client and portfolio that are in the future
-    clientstodeletelrforecast = set()
-    for row in range(2, worksheet.row_count+1):
-        clientname = worksheet.cell(row, 1).value
-        if clientname != None and clientname != '':
-            clientstodeletelrforecast.add(clientname)
-
-    db.session.query(PortfolioLRForecast).filter(
-        PortfolioLRForecast.portfolioid.in_(db.session.query(Portfolio.id).filter(Portfolio.clientname.in_(clientstodeletelrforecast))),
-        PortfolioLRForecast.yearmonth >= datetime.date.today().replace(day=1)).delete(synchronize_session='fetch')
-    db.session.commit()
-
-    # create a dictionary of portfolio name to portfolio id
-    portfolionames = {}
-    for row in db.session.query(Portfolio.name, Portfolio.id).all():
-        portfolionames[row[0]] = row[1]
-    # create a dictionary of labor role name to labor role id
-    laborrolenames = {}
-    for row in db.session.query(LaborRole.name, LaborRole.id).all():
-        laborrolenames[row[0]] = row[1]
-
-    # for each completed forecast in the sheet for this month or a future month, add the forecast to the database (in batches of 100)
-    # TODO: finish this
-    for row in range(2, worksheet.row_count+1):
-        portfolio = worksheet.cell(row, 2).value
-        portfolioid = portfolionames.get(portfolio) if portfolio != None and portfolio != '' else None
-
-        laborrole = worksheet.cell(row, 4).value
-        laborroleid = laborrolenames.get(laborrole) if laborrole != None and laborrole != '' else None
-
-        if portfolioid != None and laborroleid != None:
-            yearmonth = datetime.date(thisyear, thismonth, 1)
-            for month in range(1,13):
-                hours = worksheet.cell(row, (month*2)+4).value
-                if hours != None and hours != '':
-                    forecast = PortfolioLRForecast(portfolioid=portfolioid, laborroleid=laborroleid, yearmonth=yearmonth, hours=hours)
-                    db.session.add(forecast)
-                yearmonth = yearmonth + relativedelta(months=1)
-            if row % 100 == 0:
-                db.session.commit()
-    db.session.commit()
+        db.session.commit()
 
     return loglines
 
+
+
+# replicate portfolio list to gsheet mapping table (i.e. create empty records for each portfolio)
 @app.cli.command('replicate_portfolio_laborrole_forecast_sheet')
 def replicate_portfolio_laborrole_forecast_sheet_cmd():
     replicate_portfolio_laborrole_forecast_sheet()
@@ -932,8 +860,6 @@ order by HoursPerDay desc
     loglines.append("  committing")
     db.session.commit()
     return loglines
-
-
 
 
 
