@@ -112,13 +112,13 @@ def jobsearch():
         category_id = int(request.form['category_id'])
         title = request.form['title']
         if(category_id == 0 and title != 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.title==title).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.title==title).all()
         elif(category_id != 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all() 
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id).all() 
         elif(category_id == 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         else:
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
 
         result = []   
         for job in jobs:
@@ -142,7 +142,7 @@ def jobsearch():
         return json.dumps(result)
     else:
         delta = 7
-        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
+        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         
         result = []
         for job in jobs:
