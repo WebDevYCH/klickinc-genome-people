@@ -662,10 +662,10 @@
                 job_posting_id: job_posting_id,
                 comments: comments,
                 skills: skills,
-                userId: "{{ current_user.userid }}",
+                userId: parseInt("{{ current_user.userid }}"),
                 message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
             },
-            success: function() {
+            success: function(response) {
                 window.location.href = '/jobads/jobsearch';
             }
         });
@@ -682,7 +682,7 @@
             url: "{{ url_for('setusersetting') }}",
             method: "POST",
             data: {
-                userId: "{{ current_user.userid }}",
+                userId: parseInt("{{ current_user.userid }}"),
                 userAvailable: user_available
             },
             success: function(response) {
@@ -697,7 +697,7 @@
             url: "{{ url_for('closepost') }}",
             method: "POST",
             data: {
-                userId: "{{ current_user.userid }}",
+                userId: parseInt("{{ current_user.userid }}"),
                 postId: job_id
             },
             success: function(response) {

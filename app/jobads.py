@@ -187,10 +187,9 @@ def applyjob():
     jobpostingid = request.form['job_posting_id']
     comments = request.form['comments']
     skills = request.form['skills']
-    message = request.form['message']
     userId = request.form['userId']
-    apply = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills)
-    db.session.add(apply)
+    apply_job = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills)
+    db.session.add(apply_job)
     db.session.commit()
 
     return "Applied!"
@@ -211,8 +210,8 @@ def setusersetting():
     # postId = request.form['postId']
     user_Available = request.form['userAvailable']
     # Do some DB operation
-    UserAvailable = UserAvailable(user_id = userId, user_av = user_Available)
-    db.session.add(UserAvailable)
+    available_user = UserAvailable(user_id = userId, user_av = user_Available)
+    db.session.add(available_user)
     db.session.commit()
     return user_Available
 
