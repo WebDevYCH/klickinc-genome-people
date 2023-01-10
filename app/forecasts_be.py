@@ -24,6 +24,7 @@ class ForecastAdminView(AdminBaseView):
             'linear': 'Linear Extrapolation Model',
             'linreg': 'linreg Extrapolation Model',
             'cilinear': 'CI + Linear Extrapolation Model',
+            'actuals': 'Actual Hours Billed',
             'gsheets': 'Google Sheets Forecasts Import',
             'lr_hours_day_ratio': 'Labor Role Hours/Day Ratio Import',
             'lr_forecast_sheet': 'Labor Role Forecast Sheet Map Replication',
@@ -41,6 +42,10 @@ class ForecastAdminView(AdminBaseView):
     @expose('/cilinear')
     def cilinear(self):
         return self.render('admin/job_log.html', loglines=model_cilinear())
+
+    @expose('/actuals')
+    def actuals(self):
+        return self.render('admin/job_log.html', loglines=model_actuals())
 
     @expose('/gsheets')
     def gsheets(self):
@@ -254,6 +259,74 @@ def model_cilinear():
                 loglines.append(f"  {pflr.laborroleid} {pflr.forecastedhours} hours")
 
         db.session.commit()
+
+    return loglines
+
+@app.cli.command('model_actuals')
+def model_actuals_cmd():
+    model_actuals()
+
+def model_actuals():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Historical Actuals")
+    loglines.append("")
+
+    sourcename = 'actuals'
+    startyear = datetime.date.today().year - 2
+
+    loglines.append("querying Genome BQ model")
+    # query the CI-selected portfolios view in BigQuery
+    # query returns AccountPortfolioID, LaborRoleID, Pct, CST, Client
+    client = bigquery.Client()
+    query_job = client.query(f"""
+    SELECT distinct 
+    p.AccountPortfolioID, fact.LaborRole, d.Year, d.Month, 
+    sum(fact.Hours) as Hours, sum(fact.ExternalValueDollars) as Dollars
+
+    FROM `genome-datalake-prod.GenomeDW.F_Actuals` fact
+    inner join `genome-datalake-prod.GenomeDW.Employee` e on fact.employee=e.employee
+    inner join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.portfolio=p.portfolio
+    inner join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+    inner join `genome-datalake-prod.GenomeDW.Project` pr on fact.project=pr.project
+    where year >= {startyear} and pr.Billable=true and fact.LaborRole != 'None'
+    group by
+    p.AccountPortfolioID, fact.LaborRole, d.Year, d.Month
+    """)
+    results = query_job.result()
+
+    rowcount = 0
+    for inrow in results:
+        outrow = db.session.query(PortfolioLRForecast).filter(
+            PortfolioLRForecast.portfolioid == inrow['AccountPortfolioID'],
+            PortfolioLRForecast.yearmonth == datetime.date(inrow['Year'], inrow['Month'], 1),
+            PortfolioLRForecast.laborroleid == inrow['LaborRole'],
+            PortfolioLRForecast.source == sourcename).first()
+        if outrow == None:
+            loglines.append(f"NEW portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
+            outrow = PortfolioLRForecast()
+            outrow.portfolioid = inrow['AccountPortfolioID']
+            outrow.yearmonth = datetime.date(inrow['Year'], inrow['Month'], 1)
+            outrow.laborroleid = inrow['LaborRole']
+            outrow.source = sourcename
+            outrow.forecastedhours = inrow['Hours']
+            outrow.forecasteddollars = inrow['Dollars']
+            outrow.updateddate = datetime.date.today()
+            db.session.add(outrow)
+        elif outrow.forecastedhours != inrow['Hours']:
+            loglines.append(f"UPD portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
+            outrow.forecastedhours = inrow['Hours']
+            outrow.forecasteddollars = inrow['Dollars']
+            outrow.updateddate = datetime.date.today()
+        #else:
+            #loglines.append(f"SKP portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
+
+        rowcount += 1
+        if rowcount % 100 == 0:
+            db.session.commit()
+
+    db.session.commit()
 
     return loglines
 

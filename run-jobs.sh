@@ -14,7 +14,7 @@ set -e
 jobs_core_often="replicate_userphotos replicate_portfolioforecasts"
 jobs_core_daily="replicate_users replicate_portfolios replicate_laborroles"
 jobs_skills="replicate_skills"
-jobs_forecast="model_linear model_cilinear model_linreg model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
+jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
 # forecast_gsheets not working yet
 
 
@@ -48,6 +48,9 @@ elif [ "$1" = "forecast" ]; then
     for function in `echo $jobs_forecast`; do
         python3 -m flask $function 2>&1 |tee -a $logfile
     done
+
+else
+    echo "Unknown parameter: $1"
 
 
 fi
