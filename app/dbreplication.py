@@ -227,9 +227,9 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
         uout.loginname = uin.LoginName
         uout.firstname = uin.FirstName
         uout.lastname = uin.LastName
-        if app.config['APP_ENV'] != 'live' and uout.loginname not in ['willer','agoldstein','dhockley','seasby','smalhan','thowe','kshah']:
-            uout.firstname = re.sub('^(.).*','\\1',uout.firstname)+'xxxxxxxx'
-            uout.lastname = re.sub('^(.).*','\\1',uout.lastname)+'xxxxxxxx'
+        #if app.config['APP_ENV'] != 'live' and uout.loginname not in ['willer','agoldstein','dhockley','seasby','smalhan','thowe','kshah']:
+        #    uout.firstname = re.sub('^(.).*','\\1',uout.firstname)+'xxxxxxxx'
+        #    uout.lastname = re.sub('^(.).*','\\1',uout.lastname)+'xxxxxxxx'
         uout.email = uin.Email
         uout.title = uin.Title
         uout.started = uin.Started

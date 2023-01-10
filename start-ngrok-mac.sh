@@ -1,6 +1,6 @@
 #!/bin/sh
 
-logfile=ngrok.log
+logfile=logs/ngrok.log
 
 # start ngrok proxy -- requires paid account if you want a fixed subdomain
 #subd=`grep ngrok-subdomain config.txt |awk '{print $3}'`

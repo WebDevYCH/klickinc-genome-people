@@ -38,6 +38,14 @@ admin.add_view(AdminModelView(LaborRoleHoursDayRatio, db.session, category='Fore
 ###################################################################
 ## UTILITIES
 
+# utility to add to a cell in a dataframe, even if it's null
+def addtocell(df, id, col, val):
+    loc = df.loc[df['id'] == id, col]
+    if pd.isnull(df.loc[df['id'] == id, col]).bool():
+        df.loc[df['id'] == id, col] = val
+    else:
+        df.loc[df['id'] == id, col] += val
+
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
         queryfilter = Portfolio.currcst.in_(csts.split(','))
@@ -160,11 +168,11 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     queryfilter = queryClientCst(clients, csts)
 
     hoursperfte = 1680
+    primarysource = 'linear'
 
     # create a pandas dataframe of the portfolio labor role forecasts
-    header = ['id','parent','name','detail',
-    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12',
-    'm1src','m2src','m3src','m4src','m5src','m6src','m7src','m8src','m9src','m10src','m11src','m12src']
+    header = ['id','parent','name','detail','source','altid',
+    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
     df = pd.DataFrame(columns=header)
 
     # get the portfolio labor role forecasts, querying by lrcat and optionally by client or cst
@@ -186,6 +194,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     # add the portfolio labor role forecasts to the dataframe
     for pflr in pflrs:
         # we want the hierarchy to be: labor role -> portfolio -> source
+        # but also labor role -> source sum
 
         # add a row for the labor role as a root node, if it isn't already there
         lrmainkey = f"{pflr.laborroleid}"
@@ -211,32 +220,44 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                 pd.DataFrame({ 'id': lrsourcekey,
                 'parent': lrportfoliokey,
                 'name': f"'{pflr.source}' Source (hrs)",
+                'altid': f"{pflr.laborroleid}-{pflr.source}",
+                'source': pflr.source,
                 'detail': 'source' }, index=[0])])
 
+        # add a row for the sum of the forecasted hours for the labor role by source
+        lrsourcesumkey = f"{pflr.laborroleid}-{pflr.source}"
+        if lrsourcesumkey not in df.id.values:
+            df = pd.concat([df,
+                pd.DataFrame({ 'id': lrsourcesumkey,
+                'parent': lrmainkey,
+                'name': f"'{pflr.source}' Source Sum (hrs)",
+                'source': pflr.source,
+                'detail': 'sourcesum' }, index=[0])])
+
         # fill in the month columns in the source row
+        mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
-            df.loc[df['id'] == lrsourcekey, f"m{pflr.yearmonth.month}src"] = pflr.source
+            df.loc[df['id'] == lrsourcekey, mkey] = pflr.forecastedhours
+            addtocell(df, lrsourcesumkey, mkey, pflr.forecastedhours)
 
-    # second pass in the dataframe: fill in portfolio totals with only gsheet source data
-    for prow in df[df['detail'] == 'portfolio'].itertuples():
-        # get the sum of the source rows for this portfolio, only for gsheet source
-        psum = df[(df['parent'] == prow.id) & (df['detail'] == 'source')].sum(axis=0, numeric_only=True)
-        # fill in the portfolio row with the sum of the source rows
-        df.loc[df['id'] == prow.id, 'm1':'m12'] = psum['m1':'m12']
-
-    # third pass in the dataframe: fill in labor role category totals with only gsheet source data
-    for lrow in df[df['detail'] == None].itertuples():
-        # get the sum of the portfolio rows for this labor role
-        lsum = df[(df['parent'] == lrow.id) & (df['detail'] == 'portfolio')].sum(axis=0, numeric_only=True)
-        # fill in the labor role row with the sum of the portfolio rows
-        df.loc[df['id'] == lrow.id, 'm1':'m12'] = lsum['m1':'m12']
+            # also add to the portfolio and labor role sum rows if this is the primary source
+            if pflr.source == primarysource:
+                addtocell(df, lrportfoliokey, mkey, pflr.forecastedhours)
+                addtocell(df, lrmainkey, mkey, pflr.forecastedhours / hoursperfte)
 
     # remove the portfolio and source rows if we don't want them
-    if not showportfolios:
-        df = df[df['detail'] != 'portfolio']
-    if not showsources:
+    if showportfolios and showsources:
+        pass
+    elif showportfolios and not showsources:
         df = df[df['detail'] != 'source']
+        df = df[df['detail'] != 'sourcesum']
+    elif not showportfolios and showsources:
+        df = df[df['detail'] != 'portfolio']
+        df = df[df['detail'] != 'source']
+    else:
+        df = df[df['detail'] != 'portfolio']
+        df = df[df['detail'] != 'source']
+        df = df[df['detail'] != 'sourcesum']
 
     # switch dataframe nulls to blank
     df = df.fillna('')

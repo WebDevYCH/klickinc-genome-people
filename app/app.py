@@ -15,7 +15,6 @@ import dbreplication
 import forecasts_fe
 import forecasts_be
 import jobads
-import model
 import profile
 import skills
 import survey

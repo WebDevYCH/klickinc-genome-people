@@ -109,8 +109,8 @@ const form = new dhx.Form("form", {
     width: "300px",
     height: "100%",
     rows: [
-        { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
         { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast; rendering will take a while" },
+        { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
     ]
 });
 form.events.on("change", lrcatcomboonchange);
