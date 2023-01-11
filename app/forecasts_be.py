@@ -85,45 +85,37 @@ def model_linear():
         loglines.append(f"portfolio {p.portfolioid}")
         # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
         json = retrieveGenomeReport(2145, [2434,2435,2436], [p.portfolioid,lookback,lookahead])
-        loglines.append(f"{json}")
 
         if 'Entries' in json:
             # for each Genome forecast
+            rowcount = 0
             for pfin in json['Entries']:
                 # {'AccountPortfolioID': 174, 'YearMonth': '/Date(1669870800000-0500)/', 'Forecast': 54000.0, 'LaborCategory': 'Analytics', 'LaborRoleID': 'ANLTCADR', 'LaborRoleName': 'Analytics, Associate Director', 'PredictedHour': 0.14, 'PredictedAmount': 17.2267}
                 pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                key = f"{pfin['AccountPortfolioID']} // {pfin['YearMonth']} // {pfin['LaborRoleID']} // {sourcename}"
+                if pfin['PredictedHour'] == None:
+                    pfin['PredictedHour'] = 0
+                if pfin['PredictedAmount'] == None:
+                    pfin['PredictedAmount'] = 0
 
-                if pfin['PredictedHour'] != None:
-                    pflr = db.session.query(PortfolioLRForecast).filter(
-                        PortfolioLRForecast.portfolioid == pfin['AccountPortfolioID'],
-                        PortfolioLRForecast.yearmonth == pfin['YearMonth'],
-                        PortfolioLRForecast.laborroleid == pfin['LaborRoleID'],
-                        PortfolioLRForecast.source == sourcename).first()
+                upsert(db.session, PortfolioLRForecast, {
+                    'portfolioid': pfin['AccountPortfolioID'],
+                    'yearmonth': pfin['YearMonth'],
+                    'laborroleid': pfin['LaborRoleID'],
+                    'source': sourcename,
+                }, {
+                    'forecastedhours': pfin['PredictedHour'],
+                    'forecasteddollars': pfin['PredictedAmount'],
+                })
 
-                    if pflr != None and pflr.forecastedhours == pfin['PredictedHour']:
-                        loglines.append(f"  SKIPPED {key}")
-                    else:
-                        if pflr != None:
-                            loglines.append(f"  UPDATING {key} because not: {pflr.forecastedhours} == {pfin['PredictedHour']} and {pflr.forecasteddollars} == {pfin['PredictedAmount']}")
-                        else:
-                            loglines.append(f"  NEW {key}")
-                            pflr = PortfolioLRForecast()
-                            db.session.add(pflr)
-
-                        # set the fields
-                        pflr.portfolioid = pfin['AccountPortfolioID']
-                        pflr.yearmonth = pfin['YearMonth']
-                        pflr.laborroleid = pfin['LaborRoleID']
-                        pflr.source = sourcename
-                        pflr.userid = None
-                        pflr.updateddate = datetime.date.today()
-                        pflr.forecasteddollars = pfin['PredictedAmount']
-                        pflr.forecastedhours = pfin['PredictedHour']
+                rowcount += 1
+                if rowcount % 100 == 0:
+                    loglines.append(f"  updated {rowcount} rows")
+                    db.session.commit()
+            loglines.append(f"  updated {rowcount} rows")
+            db.session.commit()
+            
         else:
             loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
-
-        db.session.commit()
 
     return loglines
 
@@ -159,41 +151,28 @@ def model_linreg():
 
         if 'Entries' in json:
             # for each Genome forecast
+            rowcount = 0
             for pfin in json['Entries']:
                 # {'AccountPortfolioID': 174, 'YearMonth': '/Date(1669870800000-0500)/', 'Forecast': 54000.0, 'LaborCategory': 'Analytics', 'LaborRoleID': 'ANLTCADR', 'LaborRoleName': 'Analytics, Associate Director', 'PredictedHour': 0.14, 'PredictedAmount': 17.2267}
                 pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                key = f"{pfin['AccountPortfolioID']} // {pfin['YearMonth']} // {pfin['LaborRoleID']} // {sourcename}"
+                upsert(db.session, PortfolioLRForecast, {
+                    'portfolioid': pfin['AccountPortfolioID'],
+                    'yearmonth': pfin['YearMonth'],
+                    'laborroleid': pfin['LaborRoleID'],
+                    'source': sourcename,
+                }, {
+                    'forecastedhours': pfin['PredictedHour'],
+                    'forecasteddollars': pfin['PredictedAmount'],
+                })
 
-                if pfin['PredictedHour'] != None:
-                    pflr = db.session.query(PortfolioLRForecast).filter(
-                        PortfolioLRForecast.portfolioid == pfin['AccountPortfolioID'],
-                        PortfolioLRForecast.yearmonth == pfin['YearMonth'],
-                        PortfolioLRForecast.laborroleid == pfin['LaborRoleID'],
-                        PortfolioLRForecast.source == sourcename).first()
-
-                    if pflr != None and pflr.forecastedhours == pfin['PredictedHour']:
-                        loglines.append(f"  SKIPPED {key}")
-                    else:
-                        if pflr != None:
-                            loglines.append(f"  UPDATING {key} because not: {pflr.forecastedhours} == {pfin['PredictedHour']} and {pflr.forecasteddollars} == {pfin['PredictedAmount']}")
-                        else:
-                            loglines.append(f"  NEW {key}")
-                            pflr = PortfolioLRForecast()
-                            db.session.add(pflr)
-
-                        # set the fields
-                        pflr.portfolioid = pfin['AccountPortfolioID']
-                        pflr.yearmonth = pfin['YearMonth']
-                        pflr.laborroleid = pfin['LaborRoleID']
-                        pflr.source = sourcename
-                        pflr.userid = None
-                        pflr.updateddate = datetime.date.today()
-                        pflr.forecasteddollars = pfin['PredictedAmount']
-                        pflr.forecastedhours = pfin['PredictedHour']
+                rowcount += 1
+                if rowcount % 100 == 0:
+                    loglines.append(f"  updated {rowcount} rows")
+                    db.session.commit()
+            loglines.append(f"  updated {rowcount} rows")
+            db.session.commit()
         else:
             loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
-
-        db.session.commit()
 
     return loglines
 
@@ -302,34 +281,22 @@ def model_actuals():
 
     rowcount = 0
     for inrow in results:
-        outrow = db.session.query(PortfolioLRForecast).filter(
-            PortfolioLRForecast.portfolioid == inrow['AccountPortfolioID'],
-            PortfolioLRForecast.yearmonth == datetime.date(inrow['Year'], inrow['Month'], 1),
-            PortfolioLRForecast.laborroleid == inrow['LaborRole'],
-            PortfolioLRForecast.source == sourcename).first()
-        if outrow == None:
-            loglines.append(f"NEW portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
-            outrow = PortfolioLRForecast()
-            outrow.portfolioid = inrow['AccountPortfolioID']
-            outrow.yearmonth = datetime.date(inrow['Year'], inrow['Month'], 1)
-            outrow.laborroleid = inrow['LaborRole']
-            outrow.source = sourcename
-            outrow.forecastedhours = inrow['Hours']
-            outrow.forecasteddollars = inrow['Dollars']
-            outrow.updateddate = datetime.date.today()
-            db.session.add(outrow)
-        elif outrow.forecastedhours != inrow['Hours']:
-            loglines.append(f"UPD portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
-            outrow.forecastedhours = inrow['Hours']
-            outrow.forecasteddollars = inrow['Dollars']
-            outrow.updateddate = datetime.date.today()
-        #else:
-            #loglines.append(f"SKP portfolio {inrow['AccountPortfolioID']} labor role {inrow['LaborRole']} {inrow['Hours']} hours in {inrow['Year']}-{inrow['Month']}")
+        upsert(db.session, PortfolioLRForecast, {
+            'portfolioid': inrow['AccountPortfolioID'],
+            'yearmonth': datetime.date(inrow['Year'], inrow['Month'], 1),
+            'laborroleid': inrow['LaborRole'],
+            'source': sourcename,
+        }, {
+            'actualhours': inrow['Hours'],
+            'actualdollars': inrow['Dollars'],
+        })
 
         rowcount += 1
         if rowcount % 100 == 0:
+            loglines.append(f"  {rowcount} rows")
             db.session.commit()
 
+    loglines.append(f"  {rowcount} rows")
     db.session.commit()
 
     return loglines
@@ -422,7 +389,7 @@ def replicate_portfolio_laborrole_forecast_sheet_cmd():
 
 def replicate_portfolio_laborrole_forecast_sheet():
     loglines = AdminLog()
-    loglines.append(f"REPLICATING PORTFOLIO LABOR ROLE FORECAST SHEET")
+    loglines.append(f"REPLICATING PORTFOLIO LABOR ROLE FORECAST SHEET FROM PORTFOLIO LIST")
     with app.app_context():
         Base.prepare(autoload_with=db.engine, reflect=True)
 
@@ -493,18 +460,12 @@ order by HoursPerDay desc
 
     # for each row in the results, update the database
     for row in results:
-        ratio = db.session.query(LaborRoleHoursDayRatio).filter(LaborRoleHoursDayRatio.laborroleid == row.LaborRoleID).first()
-        if ratio == None:
-            loglines.append(f"  adding {row.LaborRole}")
-            ratio = LaborRoleHoursDayRatio()
-            db.session.add(ratio)
-        else:
-            loglines.append(f"  updating {row.LaborRole}")
-
-        ratio.laborroleid = row.LaborRoleID
-        ratio.name = row.LaborRole
-        ratio.hoursperday = round(row.HoursPerDay,2)
-        ratio.headcount = round(row.HeadCount,2)
+        upsert(db.session, LaborRoleHoursDayRatio, {"laborroleid": row.LaborRoleID}, {
+            "laborroleid": row.LaborRoleID,
+            "name": row.LaborRole,
+            "hoursperday": round(row.HoursPerDay,2),
+            "headcount": round(row.HeadCount,2)
+        })
 
     loglines.append("  committing")
     db.session.commit()
