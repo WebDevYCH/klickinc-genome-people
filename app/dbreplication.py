@@ -86,47 +86,28 @@ def replicate_portfolioforecasts():
 
     loglines.append("PORTFOLIO FORECAST LIST")
     json = retrieveGenomeReport(1705)
+    rowcount = 0
     for pfin in json['Entries']:
         pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
 
-        newupdateskip = 'u'
-        pfout = db.session.query(PortfolioForecast).where(
-            PortfolioForecast.portfolioid == pfin['AccountPortfolioID'],
-            PortfolioForecast.yearmonth == pfin['YearMonth']
-            ).first()
-        if pfout == None:
-            pfout = PortfolioForecast()
-            newupdateskip = 'n'
+        upsert(db.session, PortfolioForecast, 
+            { 
+                'portfolioid': pfin['AccountPortfolioID'],
+                'yearmonth': pfin['YearMonth']
+            }, 
+            {
+                'target': pfin['TEARevenue'],
+                'forecast': pfin['FEARevenue'],
+                'actuals': pfin['AEARevenue'],
+                'lbeforecast': pfin['LEARevenue']
+            })
 
-        # do we even know this portfolio? (skip if not)
-        if db.session.query(Portfolio).where(Portfolio.id == pfin['AccountPortfolioID']).first() == None:
-            newupdateskip = 's'
-        # skip if they're the same
-        pfinsig = f"{pfin['TEARevenue']} {pfin['FEARevenue']} {pfin['AEARevenue']} {pfin['LEARevenue']}"
-        pfoutsig = f"{pfout.portfolioid} {pfout.yearmonth} {pfout.target} {pfout.forecast} {pfout.actuals} {pfout.lbeforecast}"
-        if pfinsig == pfoutsig:
-            newupdateskip = 's'
-        # skip if forecast is older than 2020
-        if pfin['YearMonth'] < datetime.datetime(2020,1,1):
-            newupdateskip = 's'
+        rowcount += 1
+        if rowcount % 100 == 0:
+            loglines.append(f"ROW {rowcount}")
+            db.session.commit()
 
-        if newupdateskip == 'u' or newupdateskip == 'n':
-            pfout.portfolioid = pfin['AccountPortfolioID']
-            pfout.yearmonth = pfin['YearMonth']
-            pfout.target = pfin['TEARevenue']
-            pfout.forecast = pfin['FEARevenue']
-            pfout.actuals = pfin['AEARevenue']
-            pfout.lbeforecast = pfin['LEARevenue']
-
-        if newupdateskip == 'n':
-            db.session.add(pfout)
-            loglines.append(f"NEW portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
-        elif newupdateskip == 's':
-            loglines.append(f"SKIP portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
-        else:
-            loglines.append(f"UPDATE portfolio forecast {pfout.portfolioid} {pfout.yearmonth}")
-        db.session.commit()
-
+    loglines.append("PROCESSED {rowcount} rows")
     loglines.append("")
     db.session.commit()
 
