@@ -29,11 +29,15 @@ yearcomboonchange = function(id) {
     if (year == "") return;
     cstcombo.data.removeAll();
     cstcombo.data.load('/forecasts/cst-list?year='+year);
+    cstcombo.setValue('');
     clientcombo.data.removeAll();
     clientcombo.data.load('/forecasts/client-list?year='+year);
+    clientcombo.setValue('');
     lrcatcombo.data.removeAll();
     lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
+    lrcatcombo.setValue('');
     treegrid.data.removeAll();
+    loadgrid();
 }
 yearcombo.events.on("change", yearcomboonchange);
 setTimeout(yearcomboonchange, 0);
@@ -44,11 +48,7 @@ cstcomboonchange = function(id) {
     var year = yearcombo.getValue();
     var csts = cstcombo.getValue();
     var lrcat = lrcatcombo.getValue();
-    if (csts != "") {
-        treegrid.data.removeAll();
-        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
-        loading();
-    }
+    loadgrid();
 }
 {% endblock %}
 
@@ -57,11 +57,7 @@ clientcomboonchange = function(id) {
     var year = yearcombo.getValue();
     var clients = clientcombo.getValue();
     var lrcat = lrcatcombo.getValue();
-    if (clients != "") {
-        treegrid.data.removeAll();
-        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients);
-        loading();
-    }
+    loadgrid();
 }
 {% endblock %}
 
@@ -115,6 +111,14 @@ const form = new dhx.Form("form", {
     ]
 });
 form.events.on("change", lrcatcomboonchange);
+
+loadgrid = function() {
+    if (csts != "") {
+        treegrid.data.removeAll();
+        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
+        loading();
+    }
+}
 {% endblock %}
 
 

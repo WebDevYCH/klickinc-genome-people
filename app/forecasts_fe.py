@@ -193,6 +193,9 @@ def queryClientCst(clients, csts):
         queryfilter = True
     return queryfilter
 
+def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst):
+    return hours / 1680 * 12
+
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
     queryfilter = queryClientCst(clients, csts)
@@ -305,7 +308,6 @@ def get_plrfs(year, clients, csts, showsources=True):
 def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
     queryfilter = queryClientCst(clients, csts)
 
-    hoursperfte = 1680
     primarysource = 'linear'
 
     # create a pandas dataframe of the portfolio labor role forecasts
@@ -375,13 +377,14 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            df.loc[df['id'] == lrsourcekey, mkey] = pflr.forecastedhours
-            addtocell(df, lrsourcesumkey, mkey, pflr.forecastedhours)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth.month, pflr.laborroleid, pflr.portfolio.currcst)
+            df.loc[df['id'] == lrsourcekey, mkey] = fte
+            addtocell(df, lrsourcesumkey, mkey, fte)
 
             # also add to the portfolio and labor role sum rows if this is the primary source
             if pflr.source == primarysource:
-                addtocell(df, lrportfoliokey, mkey, pflr.forecastedhours)
-                addtocell(df, lrmainkey, mkey, pflr.forecastedhours / hoursperfte)
+                addtocell(df, lrportfoliokey, mkey, fte)
+                addtocell(df, lrmainkey, mkey, fte)
 
     # add headcount rows
     if csts != None and csts != "":

@@ -70,52 +70,57 @@ def model_linear():
     loglines.append("Starting Same-Portfolio Linear Extrapolator")
     loglines.append("")
 
-    lookback = 4
-    lookahead = 6
     sourcename = 'linear'
-    startdate = datetime.date.today().replace(day=1)
+    lookbackmonths = 4
+    lookaheadmonths = 1
+    # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
+    today = datetime.date.today()
+    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
 
-    # for each portfolio with forecasts in the next lookahead months
-    loglines.append("grabbing portfolio list")
-    for p in db.session.query(PortfolioForecast).where(
-                PortfolioForecast.yearmonth >= startdate,
-                PortfolioForecast.forecast != None,
-                PortfolioForecast.forecast != "0.00"
-            ).distinct(PortfolioForecast.portfolioid).all():
-        loglines.append(f"portfolio {p.portfolioid}")
-        # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
-        json = retrieveGenomeReport(2145, [2434,2435,2436], [p.portfolioid,lookback,lookahead])
+    while startdate < today:
+        rowcount = 0
+        loglines.append(f"processing {startdate}")
 
-        if 'Entries' in json:
-            # for each Genome forecast
-            rowcount = 0
-            for pfin in json['Entries']:
-                # {'AccountPortfolioID': 174, 'YearMonth': '/Date(1669870800000-0500)/', 'Forecast': 54000.0, 'LaborCategory': 'Analytics', 'LaborRoleID': 'ANLTCADR', 'LaborRoleName': 'Analytics, Associate Director', 'PredictedHour': 0.14, 'PredictedAmount': 17.2267}
-                pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                if pfin['PredictedHour'] == None:
-                    pfin['PredictedHour'] = 0
-                if pfin['PredictedAmount'] == None:
-                    pfin['PredictedAmount'] = 0
+        # for each portfolio with forecasts in the next lookahead months
+        loglines.append("grabbing portfolio list")
+        for p in db.session.query(PortfolioForecast).where(
+                    PortfolioForecast.yearmonth >= startdate,
+                    PortfolioForecast.forecast != None,
+                    PortfolioForecast.forecast != "0.00"
+                ).distinct(PortfolioForecast.portfolioid).all():
+            loglines.append(f"portfolio {p.portfolioid}")
+            # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+            json = retrieveGenomeReport(2155, [2442,2443,2445,2444], 
+                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",lookaheadmonths])
+            #loglines.append(f"{json}")
 
-                upsert(db.session, PortfolioLRForecast, {
-                    'portfolioid': pfin['AccountPortfolioID'],
-                    'yearmonth': pfin['YearMonth'],
-                    'laborroleid': pfin['LaborRoleID'],
-                    'source': sourcename,
-                }, {
-                    'forecastedhours': pfin['PredictedHour'],
-                    'forecasteddollars': pfin['PredictedAmount'],
-                })
+            if 'Entries' in json:
+                # for each Genome forecast
+                for pfin in json['Entries']:
+                    # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
+                    upsert(db.session, PortfolioLRForecast, {
+                        'portfolioid': pfin['AccountPortfolioID'],
+                        'yearmonth': today.replace(year=pfin['Year'], month=pfin['Month'], day=1),
+                        'laborroleid': pfin['LaborRoleID'],
+                        'source': sourcename,
+                    }, {
+                        'forecastedhours': pfin['PredictedHour'],
+                        'forecasteddollars': pfin['PredictedAmount']
+                    })
 
-                rowcount += 1
-                if rowcount % 100 == 0:
-                    loglines.append(f"  updated {rowcount} rows")
-                    db.session.commit()
-            loglines.append(f"  updated {rowcount} rows")
-            db.session.commit()
-            
-        else:
-            loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                    rowcount += 1
+                    if rowcount % 100 == 0:
+                        loglines.append(f"  updated {rowcount} rows")
+                        db.session.commit()
+                loglines.append(f"    updated {rowcount} rows")
+                db.session.commit()
+            else:
+                loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+
+        loglines.append(f"  updated {rowcount} rows")
+        db.session.commit()
+        # add 1 month to startdate
+        startdate = startdate + relativedelta(months=1)
 
     return loglines
 
@@ -131,48 +136,57 @@ def model_linreg():
     loglines.append("")
 
     sourcename = 'linreg'
+    lookbackmonths = 8
+    lookaheadmonths = 1
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
-    startdate = datetime.date.today().replace(day=1, month=1) - datetime.timedelta(years=1)
+    today = datetime.date.today()
+    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
 
-    while startdate < datetime.date.today():
+    while startdate < today:
+        rowcount = 0
         loglines.append(f"processing {startdate}")
 
-    # for each portfolio with forecasts in the next lookahead months
-    loglines.append("grabbing portfolio list")
-    for p in db.session.query(PortfolioForecast).where(
-                PortfolioForecast.yearmonth >= startdate,
-                PortfolioForecast.forecast != None,
-                PortfolioForecast.forecast != "0.00"
-            ).distinct(PortfolioForecast.portfolioid).all():
-        loglines.append(f"portfolio {p.portfolioid}")
-        # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
-        json = retrieveGenomeReport(2161, [2434], [p.portfolioid])
-        loglines.append(f"{json}")
+        # for each portfolio with forecasts at this month or later
+        for p in db.session.query(PortfolioForecast).where(
+                    PortfolioForecast.yearmonth >= startdate,
+                    PortfolioForecast.forecast != None,
+                    PortfolioForecast.forecast != "0.00"
+                ).distinct(PortfolioForecast.portfolioid).all():
+            loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
+            # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+            json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
+                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",lookaheadmonths])
+            #loglines.append(f"{json}")
 
-        if 'Entries' in json:
-            # for each Genome forecast
-            rowcount = 0
-            for pfin in json['Entries']:
-                # {'AccountPortfolioID': 174, 'YearMonth': '/Date(1669870800000-0500)/', 'Forecast': 54000.0, 'LaborCategory': 'Analytics', 'LaborRoleID': 'ANLTCADR', 'LaborRoleName': 'Analytics, Associate Director', 'PredictedHour': 0.14, 'PredictedAmount': 17.2267}
-                pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                upsert(db.session, PortfolioLRForecast, {
-                    'portfolioid': pfin['AccountPortfolioID'],
-                    'yearmonth': pfin['YearMonth'],
-                    'laborroleid': pfin['LaborRoleID'],
-                    'source': sourcename,
-                }, {
-                    'forecastedhours': pfin['PredictedHour'],
-                    'forecasteddollars': pfin['PredictedAmount'],
-                })
+            if 'Entries' in json:
+                # for each Genome forecast
+                for pfin in json['Entries']:
+                    # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
+                    pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
+                    upsert(db.session, PortfolioLRForecast, {
+                        'portfolioid': pfin['AccountPortfolioID'],
+                        'yearmonth': pfin['YearMonth'],
+                        'laborroleid': pfin['LaborRoleID'],
+                        'source': sourcename,
+                    }, {
+                        'forecastedhours': pfin['PredictedHour'],
+                        'forecasteddollars': None
+                    })
 
-                rowcount += 1
-                if rowcount % 100 == 0:
-                    loglines.append(f"  updated {rowcount} rows")
-                    db.session.commit()
-            loglines.append(f"  updated {rowcount} rows")
-            db.session.commit()
-        else:
-            loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                    rowcount += 1
+                    if rowcount % 100 == 0:
+                        loglines.append(f"  updated {rowcount} rows")
+                        db.session.commit()
+                loglines.append(f"    updated {rowcount} rows")
+                db.session.commit()
+            else:
+                loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+
+        loglines.append(f"  updated {rowcount} rows")
+        db.session.commit()
+        # add 1 month to startdate
+        startdate = startdate + relativedelta(months=1)
+
 
     return loglines
 
