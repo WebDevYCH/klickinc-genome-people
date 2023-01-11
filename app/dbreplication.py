@@ -5,9 +5,6 @@ import hashlib
 from flask_admin import expose
 from sqlalchemy.ext.serializer import dumps
 
-
-from sqlalchemy.ext.serializer import dumps
-
 # from google.cloud import language_v1
 from google.cloud import bigquery
 
@@ -139,7 +136,8 @@ class BQReplicationView(AdminBaseView):
         pages = {
             'users': 'Replicate Users',
             'portfolios': 'Replicate Portfolios',
-            'laborroles': 'Replicate Labor Roles'
+            'laborroles': 'Replicate Labor Roles',
+            'laborrolehc': 'Replicate Labor Role Headcount'
         }
         return self.render('admin/bqrepl.html', title="BigQuery Replication", pages=pages)
 
@@ -154,6 +152,10 @@ class BQReplicationView(AdminBaseView):
     @expose('/laborroles')
     def laborroles(self):
         return self.render('admin/job_log.html', loglines=replicate_laborroles())
+
+    @expose('/laborrolehc')
+    def laborrolehc(self):
+        return self.render('admin/job_log.html', loglines=replicate_laborrolehc())
 
 
 @app.cli.command('replicate_users')
@@ -215,67 +217,58 @@ DepartmentBusinessUnitID,
 Department
 from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
     """
+    rowcount = 0
     for uin in bqclient.query(sql).result():
-        # upsert emulation
-        uout = User()
-        users = db.session.query(User).where(User.userid==uin.UserID).all()
-        if len(users) > 0:
-            uout = users[0]
-        uout_serialized = dumps(uout)
-        uout.userid = uin.UserID
-        uout.adpemployeeid = uin.ADPEmployeeID
-        uout.loginname = uin.LoginName
-        uout.firstname = uin.FirstName
-        uout.lastname = uin.LastName
-        #if app.config['APP_ENV'] != 'live' and uout.loginname not in ['willer','agoldstein','dhockley','seasby','smalhan','thowe','kshah']:
-        #    uout.firstname = re.sub('^(.).*','\\1',uout.firstname)+'xxxxxxxx'
-        #    uout.lastname = re.sub('^(.).*','\\1',uout.lastname)+'xxxxxxxx'
-        uout.email = uin.Email
-        uout.title = uin.Title
-        uout.started = uin.Started
-        uout.departed = uin.Departed
-        uout.departuretype = uin.DepartureType
-        uout.departurereason = uin.DepartureReason
-        uout.isboomerang = uin.IsBoomerang
-        uout.previoususerid = uin.PreviousUserID
-        uout.enabled = uin.Enabled
-        uout.office = uin.Office
-        uout.supervisoruserid = uin.SupervisorUserID
-        uout.scopel = uin.ScopeL
-        uout.scoper = uin.ScopeR
-        uout.employeetypeid = uin.EmployeeTypeID
-        uout.countryid = uin.CountryID
-        uout.isperson = uin.IsPerson
-        uout.laborroleid = uin.LaborRoleID
-        uout.laborrole = uin.LaborRole
-        uout.laborcategoryid = uin.LaborCategoryID
-        uout.laborcategory = uin.LaborCategory
-        uout.jobfunctionid = uin.JobFunctionID
-        uout.jobfunction = uin.JobFunction
-        uout.joblevelid = uin.JobLevelID
-        uout.joblevel = uin.JobLevel
-        uout.businessunitid = uin.BusinessUnitID
-        uout.costcenterbuid = uin.CostCenterBUID
-        uout.costcenter = uin.CostCenter
-        uout.costcentertoplevelbuid = uin.CostCenterTopLevelBUID
-        uout.costcenterdivisionid = uin.CostCenterDivisionID
-        uout.budivisionbuid = uin.BuDivisionBUID
-        uout.budivisiontoplevelbuid = uin.BuDivisionTopLevelBUID
-        uout.cst = uin.CST
-        uout.budivisiondivisionid = uin.BuDivisionDivisionID
-        uout.companybusinessunitid = uin.CompanyBusinessUnitID
-        uout.departmentbusinessunitid = uin.DepartmentBusinessUnitID
-        uout.department = uin.Department
+        upsert(db.session, User, {"userid": uin.UserID}, {
+            "userid": uin.UserID,
+            "adpemployeeid": uin.ADPEmployeeID,
+            "loginname": uin.LoginName,
+            "firstname": uin.FirstName,
+            "lastname": uin.LastName,
+            "email": uin.Email,
+            "title": uin.Title,
+            "started": uin.Started,
+            "departed": uin.Departed,
+            "departuretype": uin.DepartureType,
+            "departurereason": uin.DepartureReason,
+            "isboomerang": uin.IsBoomerang,
+            "previoususerid": uin.PreviousUserID,
+            "enabled": uin.Enabled,
+            "office": uin.Office,
+            "supervisoruserid": uin.SupervisorUserID,
+            "scopel": uin.ScopeL,
+            "scoper": uin.ScopeR,
+            "employeetypeid": uin.EmployeeTypeID,
+            "countryid": uin.CountryID,
+            "isperson": uin.IsPerson,
+            "laborroleid": uin.LaborRoleID,
+            "laborrole": uin.LaborRole,
+            "laborcategoryid": uin.LaborCategoryID,
+            "laborcategory": uin.LaborCategory,
+            "jobfunctionid": uin.JobFunctionID,
+            "jobfunction": uin.JobFunction,
+            "joblevelid": uin.JobLevelID,
+            "joblevel": uin.JobLevel,
+            "businessunitid": uin.BusinessUnitID,
+            "costcenterbuid": uin.CostCenterBUID,
+            "costcenter": uin.CostCenter,
+            "costcentertoplevelbuid": uin.CostCenterTopLevelBUID,
+            "costcenterdivisionid": uin.CostCenterDivisionID,
+            "budivisionbuid": uin.BuDivisionBUID,
+            "budivisiontoplevelbuid": uin.BuDivisionTopLevelBUID,
+            "cst": uin.CST,
+            "budivisiondivisionid": uin.BuDivisionDivisionID,
+            "companybusinessunitid": uin.CompanyBusinessUnitID,
+            "departmentbusinessunitid": uin.DepartmentBusinessUnitID,
+            "department": uin.Department
+        })
 
-        if len(users) == 0:
-            db.session.add(uout)
-            loglines.append(f"NEW user {uin.Email} {uin.FirstName} {uin.LastName}")
-        else:
-            if dumps(uout) != uout_serialized:
-                loglines.append(f"UPDATE user {uin.Email} {uin.FirstName} {uin.LastName}")
-            else:
-                loglines.append(f"SKIP user {uin.Email} {uin.FirstName} {uin.LastName}")
+        rowcount += 1
+        if rowcount % 100 == 0:
+            loglines.append(f"Processed {rowcount} rows")
+            db.session.commit()
 
+    loglines.append(f"Processed {rowcount} rows")
     db.session.commit()
 
     return loglines
@@ -300,52 +293,29 @@ name, clientname, currcst, currbusinessunit, currcostcenter,
 currgadname, currpdname, currstratname, currcdname, currtdname, currofficename
 from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
     """
+    rowcount = 0
     for pfin in bqclient.query(sql).result():
-        # upsert emulation
-        pfout = Portfolio()
-        newupdateskip = 'n'
-        portfolios = db.session.query(Portfolio).where(Portfolio.id==pfin.accountportfolioid).all()
-        if len(portfolios) > 0:
-            pfout = portfolios[0]
-            newupdateskip = 's'
+        upsert(db.session, Portfolio, {'accountportfolioid': pfin.accountportfolioid}, {
+            'name': pfin.name,
+            'clientname': pfin.clientname,
+            'currcst': pfin.currcst,
+            'currbusinessunit': pfin.currbusinessunit,
+            'currcostcenter': pfin.currcostcenter,
+            'currgadname': pfin.currgadname,
+            'currpdname': pfin.currpdname,
+            'currstratname': pfin.currstratname,
+            'currcdname': pfin.currcdname,
+            'currtdname': pfin.currtdname,
+            'currofficename': pfin.currofficename
+        })
 
-        pfinsig = f"{pfin.name} {pfin.clientname} {pfin.currcst} {pfin.currbusinessunit} {pfin.currcostcenter} {pfin.currgadname} {pfin.currpdname} {pfin.currstratname} {pfin.currcdname} {pfin.currtdname} {pfin.currofficename}"
-        pfoutsig = f"{pfout.name} {pfout.clientname} {pfout.currcst} {pfout.currbusinessunit} {pfout.currcostcenter} {pfout.currgadname} {pfout.currpdname} {pfout.currstratname} {pfout.currcdname} {pfout.currtdname} {pfout.currofficename}"
+        rowcount += 1
+        if rowcount % 100 == 0:
+            print(f"Processed {rowcount} rows")
 
-        if pfinsig != pfoutsig:
-            if newupdateskip == 's':
-                newupdateskip = 'u'
-            pfout.id = pfin.accountportfolioid
-            pfout.name = pfin.name
-            pfout.clientname = pfin.clientname
-
-            if pfin.clientname != None:
-                sha1 = hashlib.sha1()
-                sha1.update(pfin.clientname.encode('utf-8'))
-                pfout.clientid = sha1.hexdigest()
-
-            if pfin.currcst != None:
-                pfout.currcst = pfin.currcst.replace("/","")
-            pfout.currbusinessunit = pfin.currbusinessunit
-            pfout.currcostcenter = pfin.currcostcenter
-            pfout.currgadname = pfin.currgadname
-            pfout.currpdname = pfin.currpdname
-            pfout.currstratname = pfin.currstratname
-            pfout.currcdname = pfin.currcdname
-            pfout.currtdname = pfin.currtdname
-            pfout.currofficename = pfin.currofficename
-
-        if newupdateskip == 'n':
-            db.session.add(pfout)
-            loglines.append(f"NEW portfolio {pfout.name}")
-        elif newupdateskip == 's':
-            loglines.append(f"SKIP portfolio {pfout.name}")
-        else:
-            loglines.append(f"UPDATE portfolio {pfout.name}")
-            loglines.append(f"  [INBOUND : {pfinsig}]")
-            loglines.append(f"  [EXISTING: {pfoutsig}]")
-
+    loglines.append(f"Processed {rowcount} rows")
     db.session.commit()
+
     return loglines
 
 @app.cli.command('replicate_laborroles')
@@ -367,39 +337,66 @@ SELECT
 distinct laborroleid, defaultname as name, jobfunction, joblevel, categoryname
 from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
     """
+    rowcount = 0
     for lrin in bqclient.query(sql).result():
-        # upsert emulation
-        lrout = LaborRole()
-        newupdateskip = 'n'
-        laborroles = db.session.query(LaborRole).where(LaborRole.id==lrin.laborroleid).all()
-        if len(laborroles) > 0:
-            lrout = laborroles[0]
-            newupdateskip = 's'
+        upsert(db.session, LaborRole, { 'id': lrin.laborroleid }, {
+            'id': lrin.laborroleid,
+            'name': lrin.name,
+            'jobfunction': lrin.jobfunction,
+            'joblevel': lrin.joblevel,
+            'categoryname': lrin.categoryname
+        })
+        rowcount += 1
+        if rowcount % 100 == 0:
+            db.session.commit()
+            loglines.append(f"  {rowcount} rows")
 
-        lrinsig = f"{lrin.name} {lrin.jobfunction} {lrin.joblevel} {lrin.categoryname}"
-        lroutsig = f"{lrout.name} {lrout.jobfunction} {lrout.joblevel} {lrout.categoryname}"
-
-        if lrinsig != lroutsig:
-            if newupdateskip == 's':
-                newupdateskip = 'u'
-            lrout.id = lrin.laborroleid
-            lrout.name = lrin.name
-            lrout.jobfunction = lrin.jobfunction
-            lrout.joblevel = lrin.joblevel
-            lrout.categoryname = lrin.categoryname
-
-        if newupdateskip == 'n':
-            db.session.add(lrout)
-            loglines.append(f"NEW labor role {lrout.name}")
-        elif newupdateskip == 's':
-            loglines.append(f"SKIP labor role {lrout.name}")
-        else:
-            loglines.append(f"UPDATE labor role {lrout.name}")
-            loglines.append(f"  [INBOUND : {lrinsig}]")
-            loglines.append(f"  [EXISTING: {lroutsig}]")
-
+    loglines.append(f"Processed {rowcount} rows")
     db.session.commit()
     return loglines
+
+@app.cli.command('replicate_laborrolehc')
+def replicate_laborrolehc_cmd():
+    replicate_laborrolehc()
+
+def replicate_laborrolehc():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    bqclient = bigquery.Client()
+    loglines.append("Starting Genome DB Replication via BigQuery")
+    loglines.append("")
+
+    # users
+    loglines.append("LABORROLE HEADCOUNT TABLE")
+    sql = f"""
+select LAST_DAY(uwd.YearMonthDay) as YearMonth, CST, LaborRoleID, EmployeeTypeID, 
+count(*) as HeadCount
+from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUserWorkDay` uwd
+where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)
+and EmployeeTypeID in ('PM','CN')
+and uwd.YearMonthDay > date('2015-01-01')
+group by CST, LaborRoleID, EmployeeTypeID, YearMonth
+order by 1 desc
+    """
+    rowcount = 0
+    for lrhcin in bqclient.query(sql).result():
+        upsert(db.session, LaborRoleHeadcount, {
+            'yearmonth': lrhcin.YearMonth,
+            'cstname': lrhcin.CST,
+            'laborroleid': lrhcin.LaborRoleID,
+            'employeetypeid': lrhcin.EmployeeTypeID
+        }, { 'headcount_eom': lrhcin.HeadCount })
+        rowcount += 1
+        if rowcount % 100 == 0:
+            db.session.commit()
+            loglines.append(f"  {rowcount} rows")
+
+    loglines.append(f"Processed {rowcount} rows")
+    db.session.commit()
+    return loglines
+
+
 
 admin.add_view(DbReplicationView(name='Genome DB', category='DB Replication'))
 admin.add_view(BQReplicationView(name='Genome BQ', category='DB Replication'))

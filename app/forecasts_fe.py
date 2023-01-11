@@ -206,6 +206,7 @@ def portfolio_lr_forecast_save():
         db.session.commit()
     return "OK"
 
+
 ###################################################################
 ## UTILITIES
 

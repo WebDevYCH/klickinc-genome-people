@@ -129,3 +129,25 @@ def setGoogleSheetCellFormat(worksheet, cellpos, format):
             else:
                 raise e
 
+# upsert function (since it doesn't exist in sqlalchemy)
+def upsert(session, model, constraints, values):
+    """
+    Perform an upsert operation using SQLAlchemy.
+
+    :param session: A SQLAlchemy session object
+    :param model: The model representing the table to update
+    :param constraints: A dictionary representing the unique constraints
+    :param values: A dictionary representing the values to set
+    """
+    query = session.query(model).filter_by(**constraints)
+    obj = query.first()
+    if obj:
+        # Update existing object
+        for key, value in values.items():
+            if getattr(obj, key) != value:
+                setattr(obj, key, value)
+    else:
+        # Create new object
+        obj = model(**constraints, **values)
+        session.add(obj)
+

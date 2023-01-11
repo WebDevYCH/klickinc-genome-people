@@ -71,7 +71,7 @@ def model_linear():
     loglines.append("")
 
     lookback = 4
-    lookahead = 4
+    lookahead = 6
     sourcename = 'linear'
     startdate = datetime.date.today().replace(day=1)
 
@@ -139,7 +139,11 @@ def model_linreg():
     loglines.append("")
 
     sourcename = 'linreg'
-    startdate = datetime.date.today().replace(day=1)
+    # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
+    startdate = datetime.date.today().replace(day=1, month=1) - datetime.timedelta(years=1)
+
+    while startdate < datetime.date.today():
+        loglines.append(f"processing {startdate}")
 
     # for each portfolio with forecasts in the next lookahead months
     loglines.append("grabbing portfolio list")
@@ -150,7 +154,7 @@ def model_linreg():
             ).distinct(PortfolioForecast.portfolioid).all():
         loglines.append(f"portfolio {p.portfolioid}")
         # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
-        json = retrieveGenomeReport(2145, [2434], [p.portfolioid])
+        json = retrieveGenomeReport(2161, [2434], [p.portfolioid])
         loglines.append(f"{json}")
 
         if 'Entries' in json:

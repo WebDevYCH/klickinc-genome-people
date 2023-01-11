@@ -67,4 +67,4 @@ LaborRole = Base.classes.labor_role
 Base.classes.portfolio.__str__ = obj_name_portfolio
 Portfolio = Base.classes.portfolio
 
-
+LaborRoleHeadcount = Base.classes.labor_role_headcount
