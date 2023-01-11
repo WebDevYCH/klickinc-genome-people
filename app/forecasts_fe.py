@@ -383,6 +383,46 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                 addtocell(df, lrportfoliokey, mkey, pflr.forecastedhours)
                 addtocell(df, lrmainkey, mkey, pflr.forecastedhours / hoursperfte)
 
+    # add headcount rows
+    if csts != None and csts != "":
+        queryfilter = Portfolio.currcst.in_(csts.split(','))
+    else:
+        queryfilter = True
+
+    lrhcs = db.session.query(LaborRoleHeadcount).join(LaborRole).filter(
+            LaborRoleHeadcount.yearmonth >= datetime.date(year,1,1),
+            LaborRoleHeadcount.yearmonth < datetime.date(year+1,1,1),
+            LaborRole.categoryname == lrcat,
+            queryfilter
+        ).all()
+
+    for lrhc in lrhcs:
+        # we want the hierarchy to be: labor role -> portfolio -> source
+        # but also labor role -> source sum
+
+        # add a row for the labor role as a root node, if it isn't already there
+        lrmainkey = f"{lrhc.laborroleid}"
+        if lrmainkey not in df.id.values:
+            df = pd.concat([df, 
+                pd.DataFrame({ 'id': lrmainkey,
+                'parent': None,
+                'name': lrhc.labor_role.name }, index=[0])])
+        
+        # add a row for the headcount for the labor role by source
+        lrhckey = f"{lrhc.laborroleid}-hc"
+        if lrhckey not in df.id.values:
+            df = pd.concat([df,
+                pd.DataFrame({ 'id': lrhckey,
+                'parent': lrmainkey,
+                'name': f"!Headcount EOM",
+                'source': 'headcount',
+                'detail': 'headcount' }, index=[0])])
+
+        # fill in the month column in the headcount row
+        mkey = f"m{lrhc.yearmonth.month}"
+        addtocell(df, lrhckey, mkey, lrhc.headcount_eom)
+
+
     # remove the portfolio and source rows if we don't want them
     if showportfolios and showsources:
         pass

@@ -33,6 +33,7 @@ yearcomboonchange = function(id) {
     clientcombo.data.load('/forecasts/client-list?year='+year);
     lrcatcombo.data.removeAll();
     lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
+    treegrid.data.removeAll();
 }
 yearcombo.events.on("change", yearcomboonchange);
 setTimeout(yearcomboonchange, 0);

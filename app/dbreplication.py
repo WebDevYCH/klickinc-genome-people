@@ -368,6 +368,16 @@ order by 1 desc
             'laborroleid': lrhcin.LaborRoleID,
             'employeetypeid': lrhcin.EmployeeTypeID
         }, { 'headcount_eom': lrhcin.HeadCount })
+
+        # if this record is from last month, also save it as the headcount for this month
+        if lrhcin.YearMonth == datetime.date.today().replace(day=1) - datetime.timedelta(days=1):
+            upsert(db.session, LaborRoleHeadcount, {
+                'yearmonth': datetime.date.today().replace(day=1),
+                'cstname': lrhcin.CST,
+                'laborroleid': lrhcin.LaborRoleID,
+                'employeetypeid': lrhcin.EmployeeTypeID
+            }, { 'headcount_eom': lrhcin.HeadCount })
+
         rowcount += 1
         if rowcount % 100 == 0:
             db.session.commit()
