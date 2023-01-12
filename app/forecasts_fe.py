@@ -1,17 +1,14 @@
-import datetime, json, os, re
-from dateutil.relativedelta import relativedelta
+import calendar
+import datetime, re
 import pandas as pd
 
 from flask import render_template, request
 from flask_login import login_required
-from flask_admin import expose
 
 from core import *
 from model import *
 from forecasts_core import *
 
-from google.cloud import bigquery
-import openpyxl
 
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
@@ -109,9 +106,10 @@ def dept_lr_forecasts_data():
     showportfolios = request.args.get('showportfolios') == 'true'
     showsources = request.args.get('showsources') == 'true'
 
-    # cache the results for 5 minutes
+    # cache the results (sorting is slow)
     df = Cache.get(f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}")
     if df is None:
+        app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
         df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
@@ -194,7 +192,17 @@ def queryClientCst(clients, csts):
     return queryfilter
 
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst):
-    return hours / 1680 * 12
+    business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
+    business_hours_per_day = 7.26
+    # rough accounting for typical vacation and sick time
+    if yearmonth.month == 5: business_hours_per_day /= 1.09
+    elif yearmonth.month == 6: business_hours_per_day /= 1.12
+    elif yearmonth.month == 7: business_hours_per_day /= 1.23
+    elif yearmonth.month == 8: business_hours_per_day /= 1.16
+    elif yearmonth.month == 9: business_hours_per_day /= 1.10
+    else: business_hours_per_day /= 1.07
+
+    return hours / (business_days * business_hours_per_day)
 
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
@@ -253,6 +261,12 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
 
 # get the portfolio labor role forecasts (in hours), returns a dictionary
 def get_plrfs(year, clients, csts, showsources=True):
+    # return from cache if possible
+    cachekey = f"plrfs:{year}-{clients}-{csts}-{showsources}"
+    bypfid = Cache.get(cachekey)
+    if bypfid != None:
+        return bypfid
+
     queryfilter = queryClientCst(clients, csts)
 
     pflrs = db.session.query(PortfolioLRForecast).\
@@ -302,13 +316,23 @@ def get_plrfs(year, clients, csts, showsources=True):
                 pfout[f"m{pflr.yearmonth.month}"] = pflr.forecastedhours
             bypfid[fsourcekey] = pfout
 
+    Cache.set(cachekey, bypfid)
+
     return bypfid
 
-# get the department labor role forecasts (in hours), returns a dictionary
+# get the department labor role forecasts (in hours), returns a cached dataframe
+drlfs_cache = {}
 def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
+
+    # return from cache if possible
+    cachekey = f"dlrfs:{year}-{lrcat}-{clients}-{csts}-{showportfolios}-{showsources}"
+    dfarr = Cache.get(cachekey)
+    if dfarr:
+        return dfarr[0]
+
     queryfilter = queryClientCst(clients, csts)
 
-    primarysource = 'linear'
+    primarysource = 'gsheet'
 
     # create a pandas dataframe of the portfolio labor role forecasts
     header = ['id','parent','name','detail','source','altid',
@@ -350,7 +374,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df, 
                 pd.DataFrame({ 'id': lrportfoliokey,
                 'parent': lrmainkey,
-                'name': f"{pflr.portfolio.clientname} - {pflr.portfolio.name} (hrs)",
+                'name': f"{pflr.portfolio.clientname} - {pflr.portfolio.name}",
                 'detail': 'portfolio' }, index=[0])])
 
         # add a row for the sum of the forecasted hours for the labor role by portfolio and source
@@ -359,7 +383,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcekey,
                 'parent': lrportfoliokey,
-                'name': f"'{pflr.source}' Source (hrs)",
+                'name': f"'{pflr.source}' Source",
                 'altid': f"{pflr.laborroleid}-{pflr.source}",
                 'source': pflr.source,
                 'detail': 'source' }, index=[0])])
@@ -370,14 +394,14 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcesumkey,
                 'parent': lrmainkey,
-                'name': f"'{pflr.source}' Source Sum (hrs)",
+                'name': f"'{pflr.source}' Source Sum",
                 'source': pflr.source,
                 'detail': 'sourcesum' }, index=[0])])
 
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth.month, pflr.laborroleid, pflr.portfolio.currcst)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currcst)
             df.loc[df['id'] == lrsourcekey, mkey] = fte
             addtocell(df, lrsourcesumkey, mkey, fte)
 
@@ -417,14 +441,13 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrhckey,
                 'parent': lrmainkey,
-                'name': f"!Headcount EOM",
+                'name': f" Headcount EOM",
                 'source': 'headcount',
                 'detail': 'headcount' }, index=[0])])
 
         # fill in the month column in the headcount row
         mkey = f"m{lrhc.yearmonth.month}"
         addtocell(df, lrhckey, mkey, lrhc.headcount_eom)
-
 
     # remove the portfolio and source rows if we don't want them
     if showportfolios and showsources:
@@ -442,5 +465,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     # switch dataframe nulls to blank
     df = df.fillna('')
+
+    # save the pre-filtered dataframe to the cache
+    Cache.set(cachekey, [df])
 
     return df

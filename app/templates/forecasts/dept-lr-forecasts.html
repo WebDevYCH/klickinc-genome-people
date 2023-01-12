@@ -1,125 +1,182 @@
-{% extends "forecasts/portfolio-forecasts.html" %}
+{% extends "base.html" %}
 
-<script language="javascript">
-{% block layout %}
-const layout = new dhx.Layout("layout", {
-    rows: [
-        { id: "yearcombo", width: "300px" },
-        { id: "lrcatcombo", width: "300px" },
-        {
-            cols: [
-                { id: "cstcombo", width: "300px" },
-                { id: "or", html: "<i>or</i>", padding: "30px" },
-                { id: "clientcombo", width: "600px" },
-                { id: "blank", gravity: 100 },
-            ],
-            height: "content",
-            align: "left",
-        },
-        { id: "checkboxformcontainer", html: '<form id="form"></form>' },
-        { id: "note", html: "Forecasts in <i>italics</i> come at least partially from machine forecasts and <b>bold</b> are fully PM overrides</i>" },
-        { id: "treegrid" },
+{% block app_head %}
+<script src="/static/js/dhtmlxsuite.js"></script>
+<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
+{% endblock %}
+
+
+{% block app_content %}
+
+<div id="layout" style="height: 80%; width: 100%"></div>
+
+<script>
+    const layout = new dhx.Layout("layout", {
+        rows: [
+            { id: "yearcombo", width: "300px" },
+            { id: "lrcatcombo", width: "300px" },
+            {
+                cols: [
+                    { id: "cstcombo", width: "300px" },
+                    { id: "or", html: "<i>or</i>", padding: "30px" },
+                    { id: "clientcombo", width: "600px" },
+                    { id: "blank", gravity: 100 },
+                ],
+                height: "content",
+                align: "left",
+            },
+            { id: "checkboxformcontainer", html: '<form id="form"></form>' },
+            { id: "note", html: "Numbers are in FTE, based on typical vacation/sick for each month. Headcount includes full-time and contract, not freelance.</i>" },
+            { id: "treegrid" },
+        ]
+    });
+
+    const cstcombo = new dhx.Combobox(null, {
+        multiselection: true,
+        label: "CST",
+    });
+    cstcomboonchange = function(id) {
+        loadgrid();
+    }
+    cstcombo.events.on("change", cstcomboonchange);
+
+
+    const clientcombo = new dhx.Combobox(null, {
+        multiselection: true,
+        label: "Client",
+    });
+    clientcomboonchange = function(id) {
+        loadgrid();
+    }
+    clientcombo.events.on("change", clientcomboonchange);
+
+
+    const years = [
+        {% for y in range(startyear,endyear+1)  %}
+        { "id" : {{y}}, "value" : "{{y}}" },
+        {% endfor %}
     ]
-});
-{% endblock %}
-
-{% block yearcomboonchange %}
-yearcomboonchange = function(id) {
-    var year = yearcombo.getValue();
-    if (year == "") return;
-    cstcombo.data.removeAll();
-    cstcombo.data.load('/forecasts/cst-list?year='+year);
-    cstcombo.setValue('');
-    clientcombo.data.removeAll();
-    clientcombo.data.load('/forecasts/client-list?year='+year);
-    clientcombo.setValue('');
-    lrcatcombo.data.removeAll();
-    lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
-    lrcatcombo.setValue('');
-    treegrid.data.removeAll();
-    loadgrid();
-}
-yearcombo.events.on("change", yearcomboonchange);
-setTimeout(yearcomboonchange, 0);
-{% endblock %}
-
-{% block cstcomboonchange %}
-cstcomboonchange = function(id) {
-    var year = yearcombo.getValue();
-    var csts = cstcombo.getValue();
-    var lrcat = lrcatcombo.getValue();
-    loadgrid();
-}
-{% endblock %}
-
-{% block clientcomboonchange %}
-clientcomboonchange = function(id) {
-    var year = yearcombo.getValue();
-    var clients = clientcombo.getValue();
-    var lrcat = lrcatcombo.getValue();
-    loadgrid();
-}
-{% endblock %}
-
-{% block treegridcelltemplate %}
-treegridcelltemplate = function(text, row, col) {
-    if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] != 'MAIN') {
-        return "<i>"+text+"</i><span style='width:3px'></span>";
-    }
-    else if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] == 'MAIN') {
-        return "<b>"+text+"</b>";
-    }
-    else {
-        return text;
-    }
-}
-{% endblock %}
-
-{% block jsinit %}
-const lrcatcombo = new dhx.Combobox(null, {
-    multiselection: false,
-    readOnly: true,
-    label: "Labor Category (req'd)",
-});
-lrcatcomboonchange = function(id) {
-    var year = yearcombo.getValue();
-    var lrcat = lrcatcombo.getValue();
-    var csts = cstcombo.getValue();
-    var clients = clientcombo.getValue();
-    var showportfolios = form.getItem("showportfolios").getValue();
-    var showsources = form.getItem("showsources").getValue();
-    if (lrcat != "") {
+    const yearcombo = new dhx.Combobox(null, {
+        multiselection: false,
+        data: years,
+        label: "Year",
+        value: {{thisyear}},
+        readOnly: true,
+    });
+    yearcomboonchange = function(id) {
+        var year = yearcombo.getValue();
+        if (year == "") return;
+        cstcombo.data.removeAll();
+        cstcombo.data.load('/forecasts/cst-list?year='+year);
+        cstcombo.setValue('');
+        clientcombo.data.removeAll();
+        clientcombo.data.load('/forecasts/client-list?year='+year);
+        clientcombo.setValue('');
+        lrcatcombo.data.removeAll();
+        lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
+        lrcatcombo.setValue('');
         treegrid.data.removeAll();
-        loading();
-        if (csts != "")
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+'&showportfolios='+showportfolios+'&showsources='+showsources);
-        else if (clients != "")
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+'&showportfolios='+showportfolios+'&showsources='+showsources);
-        else
-            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&showportfolios='+showportfolios+'&showsources='+showsources);
+        loadgrid();
     }
-}
-lrcatcombo.events.on("change", lrcatcomboonchange);
-layout.getCell("lrcatcombo").attach(lrcatcombo);
+    yearcombo.events.on("change", yearcomboonchange);
+    setTimeout(yearcomboonchange, 0);
 
-const form = new dhx.Form("form", {
-    width: "300px",
-    height: "100%",
-    rows: [
-        { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast; rendering will take a while" },
-        { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
-    ]
-});
-form.events.on("change", lrcatcomboonchange);
-
-loadgrid = function() {
-    if (csts != "") {
-        treegrid.data.removeAll();
-        treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
-        loading();
+    treegridcelltemplate = function(text, row, col) {
+        if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] != 'MAIN') {
+            return "<i>"+text+"</i><span style='width:3px'></span>";
+        }
+        else if (text && row.id.endsWith("SUMMARY") && col.id.startsWith("m") && row[col.id + '-source'] == 'MAIN') {
+            return "<b>"+text+"</b>";
+        }
+        else {
+            return text;
+        }
     }
-}
-{% endblock %}
 
+    const emptydata = [];
+    const treegrid = new dhx.TreeGrid("grid", {
+        columns: [
+            { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] },
+            { id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] },
+            { id: "m2", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Feb" }] }, 
+            { id: "m3", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Mar" }] },
+            { id: "m4", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Apr" }] },
+            { id: "m5", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "May" }] },
+            { id: "m6", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jun" }] },
+            { id: "m7", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jul" }] },
+            { id: "m8", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Aug" }] },
+            { id: "m9", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Sep" }] },
+            { id: "m10", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Oct" }] },
+            { id: "m11", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Nov" }] },
+            { id: "m12", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Dec" }] },
+        ],
+        autoWidth: true,
+        autoHeight: true,
+        resizable: true,
+        selection: true,
+        headerRowHeight: 32,
+        rowHeight: 32,
+        label: "Forecasts and Targets",
+        {% block treegridinit %}
+        {% endblock %}
+    });
+    treegrid.data.events.on("load", function() {
+        unloading();
+        treegrid.collapseAll();
+    });
+    layout.getCell("yearcombo").attach(yearcombo);
+    layout.getCell("clientcombo").attach(clientcombo);
+    layout.getCell("cstcombo").attach(cstcombo);
+    layout.getCell("treegrid").attach(treegrid);
+
+    const lrcatcombo = new dhx.Combobox(null, {
+        multiselection: false,
+        readOnly: true,
+        label: "Labor Category (req'd)",
+    });
+    lrcatcomboonchange = function(id) {
+        var year = yearcombo.getValue();
+        var lrcat = lrcatcombo.getValue();
+        var csts = cstcombo.getValue();
+        var clients = clientcombo.getValue();
+        var showportfolios = form.getItem("showportfolios").getValue();
+        var showsources = form.getItem("showsources").getValue();
+        if (lrcat != "") {
+            treegrid.data.removeAll();
+            loading();
+            if (csts != "")
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+'&showportfolios='+showportfolios+'&showsources='+showsources);
+            else if (clients != "")
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+'&showportfolios='+showportfolios+'&showsources='+showsources);
+            else
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&showportfolios='+showportfolios+'&showsources='+showsources);
+        }
+    }
+    lrcatcombo.events.on("change", lrcatcomboonchange);
+    layout.getCell("lrcatcombo").attach(lrcatcombo);
+
+    const form = new dhx.Form("form", {
+        width: "300px",
+        height: "100%",
+        rows: [
+            { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast; rendering will take a while" },
+            { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
+        ]
+    });
+    form.events.on("change", lrcatcomboonchange);
+
+    loadgrid = function() {
+        var year = yearcombo.getValue();
+        var csts = cstcombo.getValue();
+        var lrcat = lrcatcombo.getValue();
+        if (csts != "") {
+            treegrid.data.removeAll();
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts);
+            loading();
+        }
+    }
 
 </script>
+
+{% endblock %}
+
