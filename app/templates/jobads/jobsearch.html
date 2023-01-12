@@ -88,7 +88,9 @@
             <div class="col-md-3">
                 <div class="clearfix">
                     <span class="float-end ms-5 text-muted">Today</span>
-                    <span class="text-success float-end">Applied</span>
+                    {% if job.apply == 1 %}
+                        <span class="text-success float-end">Applied</span>
+                    {% endif %}
                 </div>
                 <div class="clearfix">
                     <label class="float-end text-danger">Expires in 3 days</label>

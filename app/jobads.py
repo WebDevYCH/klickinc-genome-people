@@ -9,6 +9,7 @@ from core import *
 from model import *
 from core import app
 from skillutils import *
+from flask_login import current_user
 
 ###################################################################
 ## MODEL
@@ -118,7 +119,7 @@ def jobsearch():
         elif(category_id == 0 and title == 'Select job title'):
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         else:
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
 
         result = []   
         for job in jobs:
@@ -156,13 +157,18 @@ def jobsearch():
                 else:
                     continue
             for key, r in job_posting_skills:
-                # print(dir(r))
                 value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
                 result_posting_skill.append(value['name'])
-                # print(result_posting_skill)
+
             result_job['job_posting_skills'] = result_posting_skill
+            # print(job.id)
+            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+            if apply == None:
+                result_job['apply'] = 0
+            else:
+                result_job['apply'] = 1
             result.append(result_job)
-        
+            
     return render_template('jobads/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
 @app.route('/jobads/searchpeople', methods=['GET', 'POST'])
