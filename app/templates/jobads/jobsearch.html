@@ -2,6 +2,7 @@
 
 {% block app_head %}
 <link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
+<script src="https://momentjs.com/downloads/moment.js"></script>
 <style>
     .job-details {
         height: 70px;
@@ -457,7 +458,7 @@
                                 <div class="col-md-9">
                                     <div>
                                         <span class="card-title mb-0 text-primary fs-3" job-posting-id="`+job.id+`">`+job.title+`</span>
-                                        <span class="fs-6">(`+job.posted_date+` ~ <span class="card-expiry">`+job.expiry_date+`</span>, <span class="card-category" category-id="`+job.job_posting_category_id+`">`+job.job_posting_category_name+`</span>)</span>
+                                        <span class="fs-6">(`+moment(job.posted_date).format('YYYY-MM-D')+` ~ <span class="card-expiry">`+moment(job.expiry_date).format('YYYY-MM-D')+`</span>, <span class="card-category" category-id="`+job.job_posting_category_id+`">`+job.job_posting_category_name+`</span>)</span>
                                     </div>
                                     <div class="job-details">
                                         Description: <span class="card-description">`+job.description+`</span>
