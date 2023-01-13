@@ -743,6 +743,7 @@
                 job_posting_id: job_posting_id
             },
             success: function(response) {
+                console.log(response)
                 var html_str = "";
                 var applicants = JSON.parse(response);
                 applicants.forEach(applicant => {
@@ -751,7 +752,7 @@
                             <div class="col-12">
                                 <div>
                                     <span class="card-title mb-0 text-primary fs-4">`+applicant.firstname+` `+applicant.lastname+`</span>
-                                    <div class="float-end">Today</div>
+                                    <div class="float-end">`+applicant.applied_date+`</div>
                                 </div>
                                 <div>
                                     <span class="">

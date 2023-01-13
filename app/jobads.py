@@ -223,14 +223,17 @@ def getapplicants():
     # data = db.session.query(User).limit(5).all()
     data = db.session.query(ApplyJob, User).join(User, ApplyJob.user_id == User.userid).filter(ApplyJob.job_id == jobpostingid).all()
     applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
-    # apply_data = []
-    # for r, key in data:
-    #     dictA = json.loads(json.dumps({i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}))
-    #     dictB = json.loads(json.dumps({i:v for i, v in key.__dict__.items() if i in key.__table__.columns.keys()}))
-    #     # merged_dict = dict(dictA.items() + dictB.itmes())
-    #     # apply_data.append(merged_dict)
-    #     print('====aaa', r.__dict__.items())
-    return applicants
+    apply_data = []
+    for r, key in data:
+        dictA = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+        dictB = {i:v for i, v in key.__dict__.items() if i in key.__table__.columns.keys()}
+        dictB['applied_date'] = datetime.datetime.strftime(dictA['applied_date'], "%Y-%m-%d")
+        if datetime.datetime.strptime(str(date.today()), "%Y-%m-%d") == datetime.datetime.strptime(str(dictA['applied_date']), "%Y-%m-%d"):
+            dictB['applied_date'] = 'Today'
+        elif abs(datetime.datetime.strptime(str(date.today()), "%Y-%m-%d") - datetime.datetime.strptime(str(dictA['applied_date']), "%Y-%m-%d")).days == 1:
+            dictB['applied_date'] = 'Yesterday'
+        apply_data.append(dictB)
+    return json.dumps(apply_data)
 @app.route('/jobads/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():
