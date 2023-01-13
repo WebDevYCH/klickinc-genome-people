@@ -747,19 +747,20 @@
                 var applicants = JSON.parse(response);
                 applicants.forEach(applicant => {
                     html_str += `
-                        <div class="row applicant-card">
+                        <div class="row border-bottom applicant-card p-2">
                             <div class="col-12">
                                 <div>
                                     <span class="card-title mb-0 text-primary fs-4">`+applicant.firstname+` `+applicant.lastname+`</span>
+                                    <div class="float-end">Today</div>
                                 </div>
-                                <div class="other-info">
-                                    `+applicant.cst+` `+applicant.jobfunction+`
-                                </div>
-                                <div class="clearfix">
-                                    <a href="#" class="float-end text-decoration-underline">View profile</a>
-                                </div>
-                                <div class="clearfix">
-                                    <a href="#" class="float-end text-decoration-underline">Request approval</a>
+                                <div>
+                                    <span class="">
+                                        `+applicant.cst+` `+applicant.title+`
+                                    </span>
+                                    <div class = "clearfix float-end">
+                                        <a href="#" class="d-flex clearfix text-decoration-underline justify-content-end">View profile</a>
+                                        <a href="#" class="clearfix text-decoration-underline">Request approval</a>
+                                    </div>
                                 </div>
                             </div>
                         </div>

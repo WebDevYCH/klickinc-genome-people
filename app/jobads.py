@@ -209,7 +209,7 @@ def applyjob():
     comments = request.form['comments']
     skills = request.form['skills']
     userId = request.form['userId']
-    apply_job = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills)
+    apply_job = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills, applied_date = date.today())
     db.session.add(apply_job)
     db.session.commit()
 
@@ -220,10 +220,17 @@ def applyjob():
 def getapplicants():
     jobpostingid = request.form['job_posting_id']
     # To be fixed for the applicants schema:
-    data = db.session.query(User).limit(5).all()
-    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
+    # data = db.session.query(User).limit(5).all()
+    data = db.session.query(ApplyJob, User).join(User, ApplyJob.user_id == User.userid).filter(ApplyJob.job_id == jobpostingid).all()
+    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
+    # apply_data = []
+    # for r, key in data:
+    #     dictA = json.loads(json.dumps({i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}))
+    #     dictB = json.loads(json.dumps({i:v for i, v in key.__dict__.items() if i in key.__table__.columns.keys()}))
+    #     # merged_dict = dict(dictA.items() + dictB.itmes())
+    #     # apply_data.append(merged_dict)
+    #     print('====aaa', r.__dict__.items())
     return applicants
-
 @app.route('/jobads/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():
@@ -260,6 +267,6 @@ def cancelapplication():
         delete(ApplyJob).
         filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
     )
-    # db.session.delete(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
+
     db.session.commit()
     return redirect(url_for('jobsearch'))
