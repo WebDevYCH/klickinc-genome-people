@@ -140,10 +140,11 @@ def jobsearch():
             result_job['job_posting_skills'] = result_posting_skill
             
             apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
-            if apply == None:
-                result_job['apply'] = 0
-            else:
-                result_job['apply'] = 1
+            result_job['apply'] = 0
+            if apply != None:
+                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+                if apply_value['available'] == 1: 
+                    result_job['apply'] = 1
             result.append(result_job)
 
         return json.dumps(result)
@@ -169,10 +170,11 @@ def jobsearch():
             result_job['job_posting_skills'] = result_posting_skill
             # print(job.id)
             apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
-            if apply == None:
-                result_job['apply'] = 0
-            else:
-                result_job['apply'] = 1
+            result_job['apply'] = 0
+            if apply != None:
+                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+                if apply_value['available'] == 1: 
+                    result_job['apply'] = 1
             result.append(result_job)
             
     return render_template('jobads/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
@@ -246,10 +248,11 @@ def closepost():
 def cancelapplication():
     userId = request.form['userId']
     postId = request.form['postId']
-    db.session.execute(
-        update(ApplyJob).
-        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId).
-        values(available = '0')
-    )
     # Do some DB operation
-    return "Applied!"
+    db.session.execute(
+        delete(ApplyJob).
+        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
+    )
+    # db.session.delete(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
+    db.session.commit()
+    return redirect(url_for('jobsearch'))

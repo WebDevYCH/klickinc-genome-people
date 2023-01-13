@@ -111,9 +111,11 @@
                     <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                 </div>
                 {% endif %}
-                <div class="clearfix">
-                    <a href="#" id="cancel_application_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
-                </div>
+                {% if job.apply == 1 %}
+                    <div class="clearfix">
+                        <a href="#" id="cancel_application_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
+                    </div>
+                {% endif %}
             </div>
         </div>
         {% endfor %}
@@ -487,9 +489,11 @@
                                             <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                                         </div>
                                     `:'') + `
+                                    `+ (job.apply == 1 ? `
                                     <div class="clearfix">
                                         <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                                     </div>
+                                    `:'') + `
                                 </div>
                             </div>`;
                 });
@@ -718,11 +722,12 @@
             url: "{{ url_for('cancelapplication') }}",
             method: "POST",
             data: {
-                userId: "{{ current_user.userid }}",
+                userId: parseInt("{{ current_user.userid }}"),
                 postId: job_id
             },
             success: function(response) {
-                console.log('.... ' +response)
+                loading();
+                window.location.href = '/jobads/jobsearch';
             }
         })
     })
