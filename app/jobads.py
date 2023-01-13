@@ -138,6 +138,12 @@ def jobsearch():
                 result_posting_skill.append(value['name'])
                 # print(result_posting_skill)
             result_job['job_posting_skills'] = result_posting_skill
+            
+            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+            if apply == None:
+                result_job['apply'] = 0
+            else:
+                result_job['apply'] = 1
             result.append(result_job)
 
         return json.dumps(result)

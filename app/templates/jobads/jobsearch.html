@@ -106,9 +106,11 @@
                     <a href="#" id="close_post_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                 </div>
                 {% endif %}
+                {% if job.apply == 0 %}
                 <div class="clearfix">
                     <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
                 </div>
+                {% endif %}
                 <div class="clearfix">
                     <a href="#" id="cancel_application_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                 </div>
@@ -465,7 +467,7 @@
                                 <div class="col-md-3">
                                     <div>
                                         <span class="float-end ms-5 text-muted">Today</span>
-                                        <span class="text-success float-end">Applied</span>
+                                        `+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
                                     </div>
                                     <div class="clearfix">
                                         <label class="float-end text-danger">Expires in 3 days</label>
@@ -480,9 +482,11 @@
                                     <div class="clearfix">
                                         <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
                                     </div>` : '') + `
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline"  data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
-                                    </div>
+                                    `+ (job.apply == 0 ? `
+                                        <div class="clearfix">
+                                            <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
+                                        </div>
+                                    `:'') + `
                                     <div class="clearfix">
                                         <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
                                     </div>
