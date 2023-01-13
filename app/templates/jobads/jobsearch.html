@@ -94,7 +94,7 @@
                     {% endif %}
                 </div>
                 <div class="clearfix">
-                    <label class="float-end text-danger">Expires in 3 days</label>
+                    <label class="float-end text-danger">Expires in {{job.expiry_day}} days</label>
                 </div>
                 {% if current_user.userid == job.poster_user_id %}
                 <div class="clearfix">
@@ -473,7 +473,7 @@
                                         `+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
                                     </div>
                                     <div class="clearfix">
-                                        <label class="float-end text-danger">Expires in 3 days</label>
+                                        <label class="float-end text-danger">Expires in `+job.expiry_day+` days</label>
                                     </div>
                                     <div class="clearfix">
                                         <a href="#" class="float-end text-decoration-underline">View applicants</a>

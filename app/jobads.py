@@ -145,6 +145,9 @@ def jobsearch():
                 apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
                 if apply_value['available'] == 1: 
                     result_job['apply'] = 1
+            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+            result_job['expiry_day'] = abs((d2 - d1).days)
             result.append(result_job)
 
         return json.dumps(result)
@@ -175,6 +178,10 @@ def jobsearch():
                 apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
                 if apply_value['available'] == 1: 
                     result_job['apply'] = 1
+            
+            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+            result_job['expiry_day'] = abs((d2 - d1).days)
             result.append(result_job)
             
     return render_template('jobads/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
