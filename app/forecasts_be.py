@@ -1,17 +1,20 @@
-import datetime, json, os, re
+import datetime, os, re
+from datetime import datetime
+import autosklearn
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 
-from flask import render_template, request
-from flask_login import login_required
 from flask_admin import expose
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
 
 from core import *
 from model import *
 from forecasts_core import *
 
 from google.cloud import bigquery
-import openpyxl
+from supervised import AutoML
+import warnings
 
 
 ###################################################################
@@ -490,4 +493,110 @@ order by HoursPerDay desc
 admin.add_view(ForecastAdminView(name='Forecast Processing', category='Forecasts'))
 
 
+
+########################################################################################
+# Multivariate Regression Models with AutoML
+# training data is from 15 years of actuals, in BigQuery view GenomeDW.vActualsHoursByLRPortfolioMonthForPrediction
+# fields are Hours, YearMonth, PDName, GADName, AccountPortfolioID, ClientName, PortfolioName, Laborrole
+# Hours is the field I want to predict. the others are feature columns.
+
+
+# mljar AutoML training
+@app.cli.command('train_automl_model')
+def train_automl_model_cmd():
+    train_automl_model()
+
+explain_model_path = "../cache/automl_lrforecast_explain"
+perform_model_path = "../cache/automl_lrforecast_perform"
+compete_model_path = "../cache/automl_lrforecast_compete"
+optuna_model_path = "../cache/automl_lrforecast_optuna"
+bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.csv"
+
+def train_automl_model():
+    loglines = AdminLog()
+    loglines.append(f"TRAINING AUTOML MODEL")
+    warnings.filterwarnings("ignore", category=FutureWarning, module="supervised")
+    warnings.filterwarnings("ignore", category=UserWarning, module="xgboost.core")
+
+    # run query against Genome datalake in BQ, or load from a cache file
+    df = None
+    if os.path.exists(bq_csv_path):
+        loglines.append(f"  loading from cache")
+        df = pd.read_csv(bq_csv_path)
+    else:
+        loglines.append(f"  running query")
+        rows = bigquery.Client().query("""
+select sum(Hours) as Hours, date(concat(d.Year,"-",d.Month,"-01")) as YearMonth,
+(p.PDName) as PDName, (p.GADName) as GADName, p.AccountPortfolioID, 
+(p.ClientName) as ClientName, (p.Name) as PortfolioName,
+(lr.LaborRole) as LaborRole, p.OfficeName
+from `genome-datalake-prod.GenomeDW.F_Actuals` fact
+join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
+join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
+join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+where pr.Billable=true
+group by d.Year, d.Month,
+p.PDName, p.GADName, p.AccountPortfolioID, p.ClientName, p.Name,
+lr.LaborRole,  p.OfficeName
+""").result()
+        loglines.append(f"  results rows {rows.total_rows}")
+        df = rows.to_dataframe()
+        df.to_csv(bq_csv_path)
+
+    # split into train and test
+    loglines.append(f"  splitting into train and test")
+    X_train, X_test, y_train, y_test = train_test_split(
+        df.drop("Hours", axis=1),
+        df["Hours"],
+        test_size=0.2,
+        random_state=123,
+    )
+
+    # train models with Explain settings
+    automl = AutoML(mode="Explain", results_path=explain_model_path)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"Explain MSE: {mean_squared_error(y_test, predictions)}")
+
+    # train models with autosklearn
+    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=120, per_run_time_limit=30)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"AutoSKLearn120 MSE: {mean_squared_error(y_test, predictions)}")
+    
+    # train models with Perform settings
+    automl = AutoML(mode="Perform", results_path=perform_model_path)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"Perform MSE: {mean_squared_error(y_test, predictions)}")
+
+    # train models with autosklearn
+    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=120, per_run_time_limit=30)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"AutoSKLearn900 MSE: {mean_squared_error(y_test, predictions)}")
+    
+    # train models with Compete settings
+    automl = AutoML(mode="Compete", results_path=compete_model_path)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"Compete MSE: {mean_squared_error(y_test, predictions)}")
+
+    # train models with Optuna settings
+    automl = AutoML(mode="Optuna", results_path=optuna_model_path, optuna_time_budget=3600)
+    automl.fit(X_train, y_train)
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    loglines.append(f"Optuna MSE: {mean_squared_error(y_test, predictions)}")
+    
+    loglines.append("  done")
+    return loglines
+
+# mljar 
 
