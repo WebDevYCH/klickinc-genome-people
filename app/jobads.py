@@ -5,6 +5,7 @@ from core import *
 from model import *
 from core import app
 from skillutils import *
+from flask_login import current_user
 
 ###################################################################
 ## MODEL
@@ -108,11 +109,11 @@ def jobsearch():
         category_id = int(request.form['category_id'])
         title = request.form['title']
         if(category_id == 0 and title != 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.title==title).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.title==title).all()
         elif(category_id != 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id).all() 
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id).all() 
         elif(category_id == 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         else:
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
 
@@ -133,12 +134,22 @@ def jobsearch():
                 result_posting_skill.append(value['name'])
                 # print(result_posting_skill)
             result_job['job_posting_skills'] = result_posting_skill
+            
+            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+            result_job['apply'] = 0
+            if apply != None:
+                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+                if apply_value['available'] == 1: 
+                    result_job['apply'] = 1
+            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+            result_job['expiry_day'] = abs((d2 - d1).days)
             result.append(result_job)
 
         return json.dumps(result)
     else:
         delta = 7
-        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta).all()
+        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         
         result = []
         for job in jobs:
@@ -152,13 +163,23 @@ def jobsearch():
                 else:
                     continue
             for key, r in job_posting_skills:
-                # print(dir(r))
                 value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
                 result_posting_skill.append(value['name'])
-                # print(result_posting_skill)
+
             result_job['job_posting_skills'] = result_posting_skill
+            # print(job.id)
+            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+            result_job['apply'] = 0
+            if apply != None:
+                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+                if apply_value['available'] == 1: 
+                    result_job['apply'] = 1
+            
+            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+            result_job['expiry_day'] = abs((d2 - d1).days)
             result.append(result_job)
-        
+            
     return render_template('jobads/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
 @app.route('/jobads/searchpeople', methods=['GET', 'POST'])
@@ -183,10 +204,9 @@ def applyjob():
     jobpostingid = request.form['job_posting_id']
     comments = request.form['comments']
     skills = request.form['skills']
-    message = request.form['message']
     userId = request.form['userId']
-    apply = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills)
-    db.session.add(apply)
+    apply_job = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills, applied_date = date.today())
+    db.session.add(apply_job)
     db.session.commit()
 
     return "Applied!"
@@ -196,10 +216,20 @@ def applyjob():
 def getapplicants():
     jobpostingid = request.form['job_posting_id']
     # To be fixed for the applicants schema:
-    data = db.session.query(User).limit(5).all()
-    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
-    return applicants
-
+    # data = db.session.query(User).limit(5).all()
+    data = db.session.query(ApplyJob, User).join(User, ApplyJob.user_id == User.userid).filter(ApplyJob.job_id == jobpostingid).all()
+    applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
+    apply_data = []
+    for r, key in data:
+        dictA = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+        dictB = {i:v for i, v in key.__dict__.items() if i in key.__table__.columns.keys()}
+        dictB['applied_date'] = datetime.datetime.strftime(dictA['applied_date'], "%Y-%m-%d")
+        if datetime.datetime.strptime(str(date.today()), "%Y-%m-%d") == datetime.datetime.strptime(str(dictA['applied_date']), "%Y-%m-%d"):
+            dictB['applied_date'] = 'Today'
+        elif abs(datetime.datetime.strptime(str(date.today()), "%Y-%m-%d") - datetime.datetime.strptime(str(dictA['applied_date']), "%Y-%m-%d")).days == 1:
+            dictB['applied_date'] = 'Yesterday'
+        apply_data.append(dictB)
+    return json.dumps(apply_data)
 @app.route('/jobads/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():
@@ -207,8 +237,8 @@ def setusersetting():
     # postId = request.form['postId']
     user_Available = request.form['userAvailable']
     # Do some DB operation
-    UserAvailable = UserAvailable(user_id = userId, user_av = user_Available)
-    db.session.add(UserAvailable)
+    available_user = UserAvailable(user_id = userId, user_av = user_Available)
+    db.session.add(available_user)
     db.session.commit()
     return user_Available
 
@@ -231,10 +261,11 @@ def closepost():
 def cancelapplication():
     userId = request.form['userId']
     postId = request.form['postId']
-    db.session.execute(
-        update(ApplyJob).
-        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId).
-        values(available = '0')
-    )
     # Do some DB operation
-    return "Applied!"
+    db.session.execute(
+        delete(ApplyJob).
+        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
+    )
+
+    db.session.commit()
+    return redirect(url_for('jobsearch'))
