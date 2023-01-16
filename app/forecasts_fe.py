@@ -171,6 +171,7 @@ def pf_lrcat_list():
     return [{"id":c.categoryname, "value":c.categoryname } for c in lrcats]
 
 
+
 ###################################################################
 ## UTILITIES
 
