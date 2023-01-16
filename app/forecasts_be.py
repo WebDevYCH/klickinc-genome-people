@@ -6,8 +6,7 @@ import pandas as pd
 from flask_admin import expose
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-#import autosklearn.regression
-import autoPyTorch as ap
+
 
 from core import *
 from model import *
@@ -16,6 +15,11 @@ from forecasts_core import *
 from google.cloud import bigquery
 from supervised import AutoML
 import warnings
+
+#import autosklearn.regression
+#from autoPyTorch.api.tabular_classification import TabularClassificationTask
+#from autoPyTorch.api.tabular_regression import TabularRegressionTask
+#import autoPyTorch.api
 
 
 ###################################################################
@@ -141,14 +145,20 @@ def model_linreg():
 
     sourcename = 'linreg'
     lookbackmonths = 8
-    lookaheadmonths = 1
+    lookaheadmonths = 4
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
     startdate = today.replace(day=1, month=1) - relativedelta(years=1)
 
-    while startdate < today:
+    while startdate < today + relativedelta(months=1):
         rowcount = 0
         loglines.append(f"processing {startdate}")
+
+        # for each portfolio with forecasts from start month to one month after now
+        # the one after now will predict lookaheadmonths from now
+        thislookahead = 1
+        if startdate >= today:
+            thislookahead = lookaheadmonths
 
         # for each portfolio with forecasts at this month or later
         for p in db.session.query(PortfolioForecast).where(
@@ -159,7 +169,7 @@ def model_linreg():
             loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
             # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
             json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
-                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",lookaheadmonths])
+                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
             #loglines.append(f"{json}")
 
             if 'Entries' in json:
@@ -515,6 +525,9 @@ bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime(
 bq_pickle_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.pkl"
 
 def train_automl_model():
+    while app.logger.handlers:
+        print("FOUND A LOGGER")
+        app.logger.handlers.pop()
     loglines = AdminLog()
     loglines.append(f"TRAINING AUTOML MODEL")
     warnings.filterwarnings("ignore", category=FutureWarning, module="supervised")
@@ -587,28 +600,27 @@ lr.LaborRole,  p.OfficeName
 #    msescore = mean_squared_error(y_test, predictions)
 #    r2score = r2_score(y_test, predictions)
 #    loglines.append(f"AutoSKLearn300 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-#    print(f"AutoSKLearn300 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
     
-    # train models with autopytorch
-    starttime = time.time()
-    automl = ap.api.tabular_classification.TabularClassificationTask()
-    automl.search(
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test.copy(),
-        y_test=y_test.copy(),
-        optimize_metric='r2',
-        total_walltime_limit=300,
-        func_eval_time_limit_secs=50,
-        dataset_name="actuals_lrpf"
-    )
-    # compute the MSE on test data
-    predictions = automl.predict(X_test)
-    score = automl.score(predictions, y_test)
-    msescore = mean_squared_error(y_test, predictions)
-    r2score = r2_score(y_test, predictions)
-    loglines.append(f"AutoPyTorch300 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
-    
+#    # train models with autopytorch
+#    starttime = time.time()
+#    automl = TabularClassificationTask()
+#    automl.search(
+#        X_train=X_train,
+#        y_train=y_train,
+#        X_test=X_test.copy(),
+#        y_test=y_test.copy(),
+#        optimize_metric='r2',
+#        total_walltime_limit=300,
+#        func_eval_time_limit_secs=50,
+#        dataset_name="actuals_lrpf"
+#    )
+#    # compute the MSE on test data
+#    predictions = automl.predict(X_test)
+#    score = automl.score(predictions, y_test)
+#    msescore = mean_squared_error(y_test, predictions)
+#    r2score = r2_score(y_test, predictions)
+#    loglines.append(f"AutoPyTorch300 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
+
     # train models with Perform settings
     starttime = time.time()
     automl = AutoML(mode="Perform", results_path=perform_model_path)
@@ -661,24 +673,24 @@ lr.LaborRole,  p.OfficeName
 #    r2score = r2_score(y_test, predictions)
 #    loglines.append(f"AutoSKLearn3600 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
     
-    # train models with autopytorch
-    starttime = time.time()
-    automl = ap.api.tabular_classification.TabularClassificationTask()
-    automl.search(
-        X_train=X_train,
-        y_train=y_train,
-        X_test=X_test.copy(),
-        y_test=y_test.copy(),
-        optimize_metric='r2',
-        total_walltime_limit=3600,
-        dataset_name="actuals_lrpf"
-    )
-    # compute the MSE on test data
-    predictions = automl.predict(X_test)
-    score = automl.score(predictions, y_test)
-    msescore = mean_squared_error(y_test, predictions)
-    r2score = r2_score(y_test, predictions)
-    loglines.append(f"AutoPyTorch3600 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
+#    # train models with autopytorch
+#    starttime = time.time()
+#    automl = ap.api.tabular_classification.TabularClassificationTask()
+#    automl.search(
+#        X_train=X_train,
+#        y_train=y_train,
+#        X_test=X_test.copy(),
+#        y_test=y_test.copy(),
+#        optimize_metric='r2',
+#        total_walltime_limit=3600,
+#        dataset_name="actuals_lrpf"
+#    )
+#    # compute the MSE on test data
+#    predictions = automl.predict(X_test)
+#    score = automl.score(predictions, y_test)
+#    msescore = mean_squared_error(y_test, predictions)
+#    r2score = r2_score(y_test, predictions)
+#    loglines.append(f"AutoPyTorch3600 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
     
     loglines.append("  done")
     return loglines

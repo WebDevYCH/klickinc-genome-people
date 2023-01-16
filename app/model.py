@@ -31,7 +31,7 @@ def obj_name_joined(obj):
 
 # Connect directly to database to make the schema, outside of the Flask context so we can
 # initialize before the first web request
-print("Initializing database model ")
+app.logger.info("Initializing database model ")
 dbengine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 Session = sessionmaker(bind=dbengine)
 dbsession = Session()
@@ -39,7 +39,7 @@ dbsession = Session()
 metadatacachefile = "../cache/dbmetadata.cache"
 cached_metadata = None
 if os.path.exists(metadatacachefile):
-    print("Loading cached metadata")
+    app.logger.info("Loading cached metadata")
     try:
         with open(metadatacachefile, 'rb') as cache_file:
             cached_metadata = pickle.load(file=cache_file)
@@ -57,14 +57,14 @@ else:
     Base.prepare()
     # save the metadata for future runs
     try:
-        print("Saving metadata cache")
+        app.logger.info("Saving metadata cache")
         # make sure to open in binary mode - we're writing bytes, not str
         with open(metadatacachefile, 'wb') as cache_file:
             pickle.dump(Base.metadata, cache_file)
     except:
         # couldn't write the file for some reason
         pass
-print("<-- Done initializing database model ")
+app.logger.info("<-- Done initializing database model ")
 
 Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user

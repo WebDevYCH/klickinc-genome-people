@@ -16,11 +16,13 @@ import gspread
 ## INITIALIZATION
 
 # Create application reference
-print("Initializing app")
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
 Bootstrap(app)
 crontab = Crontab(app)
+while app.logger.handlers:
+    print("APP FOUND A LOGGER")
+    app.logger.handlers.pop()
 
 # login manager
 login_manager = LoginManager()
@@ -28,7 +30,7 @@ login_manager.init_app(app)
 login_manager.session_protection = 'strong'
 
 # Create db reference
-print("Initializing database")
+app.logger.info("Initializing database")
 db = SQLAlchemy(app)
 db.init_app(app)
 
