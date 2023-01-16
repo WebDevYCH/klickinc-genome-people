@@ -1,10 +1,11 @@
 *.swp
-*.log
 *.pyc
 config.py
 .DS_Store
 __pycache__
 venv/
+*.icloud
 node_modules/
 keys/*
-*.icloud
+logs/*
+cache/*

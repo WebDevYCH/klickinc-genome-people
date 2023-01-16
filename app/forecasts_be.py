@@ -1,12 +1,13 @@
 import datetime, os, re
 from datetime import datetime
-import autosklearn
 from dateutil.relativedelta import relativedelta
 import pandas as pd
 
 from flask_admin import expose
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
+#import autosklearn.regression
+import autoPyTorch as ap
 
 from core import *
 from model import *
@@ -511,6 +512,7 @@ perform_model_path = "../cache/automl_lrforecast_perform"
 compete_model_path = "../cache/automl_lrforecast_compete"
 optuna_model_path = "../cache/automl_lrforecast_optuna"
 bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.csv"
+bq_pickle_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.pkl"
 
 def train_automl_model():
     loglines = AdminLog()
@@ -520,21 +522,31 @@ def train_automl_model():
 
     # run query against Genome datalake in BQ, or load from a cache file
     df = None
-    if os.path.exists(bq_csv_path):
+    if os.path.exists(bq_pickle_path):
         loglines.append(f"  loading from cache")
-        df = pd.read_csv(bq_csv_path)
+        df = pd.read_pickle(bq_pickle_path)
     else:
         loglines.append(f"  running query")
         rows = bigquery.Client().query("""
-select sum(Hours) as Hours, date(concat(d.Year,"-",d.Month,"-01")) as YearMonth,
+select sum(Hours) as Hours, 
+d.Year*100+d.Month as YearMonth,
 (p.PDName) as PDName, (p.GADName) as GADName, p.AccountPortfolioID, 
 (p.ClientName) as ClientName, (p.Name) as PortfolioName,
-(lr.LaborRole) as LaborRole, p.OfficeName
+(lr.LaborRole) as LaborRole, p.OfficeName,
+string_agg(distinct cic.Name, " // ") as CIChannel,
+string_agg(distinct cil.Name, " // ") as CILifecycle,
+string_agg(distinct cid.Name, " // ") as CIDeliverable,
 from `genome-datalake-prod.GenomeDW.F_Actuals` fact
 join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
 join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
 join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
 join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+left outer join `genome-datalake-prod.GenomeDW.CIChannelMapping` cicmap on cicmap.ProjectID=pr.ProjectID and date(cicmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CIChannel` cic on cicmap.InsightID=cic.ID
+left outer join `genome-datalake-prod.GenomeDW.CILifecycleMapping` cilmap on cilmap.ProjectID=pr.ProjectID and date(cilmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CILifecycle` cil on cilmap.InsightID=cil.ID
+left outer join `genome-datalake-prod.GenomeDW.CIDeliverableMapping` cidmap on cidmap.ProjectID=pr.ProjectID and date(cidmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CIDeliverable` cid on cidmap.InsightID=cid.ID
 where pr.Billable=true
 group by d.Year, d.Month,
 p.PDName, p.GADName, p.AccountPortfolioID, p.ClientName, p.Name,
@@ -543,6 +555,7 @@ lr.LaborRole,  p.OfficeName
         loglines.append(f"  results rows {rows.total_rows}")
         df = rows.to_dataframe()
         df.to_csv(bq_csv_path)
+        df.to_pickle(bq_pickle_path)
 
     # split into train and test
     loglines.append(f"  splitting into train and test")
@@ -552,51 +565,121 @@ lr.LaborRole,  p.OfficeName
         test_size=0.2,
         random_state=123,
     )
+    loglines.append(f"  training with rows {X_train.shape[0]} test rows {X_test.shape[0]}")
 
     # train models with Explain settings
+    starttime = time.time()
     automl = AutoML(mode="Explain", results_path=explain_model_path)
     automl.fit(X_train, y_train)
     # compute the MSE on test data
     predictions = automl.predict(X_test)
-    loglines.append(f"Explain MSE: {mean_squared_error(y_test, predictions)}")
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"Explain scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
 
-    # train models with autosklearn
-    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=120, per_run_time_limit=30)
-    automl.fit(X_train, y_train)
+#    # train models with autosklearn
+#    starttime = time.time()
+#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=300)
+#    automl.fit(X_train, y_train)
+#    loglines.append(f"AutoSKLearn300 leaderboard: {automl.leaderboard()}")
+#    # compute the MSE on test data
+#    predictions = automl.predict(X_test)
+#    msescore = mean_squared_error(y_test, predictions)
+#    r2score = r2_score(y_test, predictions)
+#    loglines.append(f"AutoSKLearn300 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
+#    print(f"AutoSKLearn300 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
+    
+    # train models with autopytorch
+    starttime = time.time()
+    automl = ap.api.tabular_classification.TabularClassificationTask()
+    automl.search(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test.copy(),
+        y_test=y_test.copy(),
+        optimize_metric='r2',
+        total_walltime_limit=300,
+        func_eval_time_limit_secs=50,
+        dataset_name="actuals_lrpf"
+    )
     # compute the MSE on test data
     predictions = automl.predict(X_test)
-    loglines.append(f"AutoSKLearn120 MSE: {mean_squared_error(y_test, predictions)}")
+    score = automl.score(predictions, y_test)
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"AutoPyTorch300 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
     
     # train models with Perform settings
+    starttime = time.time()
     automl = AutoML(mode="Perform", results_path=perform_model_path)
     automl.fit(X_train, y_train)
     # compute the MSE on test data
     predictions = automl.predict(X_test)
-    loglines.append(f"Perform MSE: {mean_squared_error(y_test, predictions)}")
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"Perform scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
 
-    # train models with autosklearn
-    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=120, per_run_time_limit=30)
-    automl.fit(X_train, y_train)
-    # compute the MSE on test data
-    predictions = automl.predict(X_test)
-    loglines.append(f"AutoSKLearn900 MSE: {mean_squared_error(y_test, predictions)}")
+#    # train models with autosklearn
+#    starttime = time.time()
+#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=900)
+#    automl.fit(X_train, y_train)
+#    loglines.append(f"AutoSKLearn900 leaderboard: {automl.leaderboard()}")
+#    # compute the MSE on test data
+#    predictions = automl.predict(X_test)
+#    msescore = mean_squared_error(y_test, predictions)
+#    r2score = r2_score(y_test, predictions)
+#    loglines.append(f"AutoSKLearn900 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
     
     # train models with Compete settings
+    starttime = time.time()
     automl = AutoML(mode="Compete", results_path=compete_model_path)
     automl.fit(X_train, y_train)
     # compute the MSE on test data
     predictions = automl.predict(X_test)
-    loglines.append(f"Compete MSE: {mean_squared_error(y_test, predictions)}")
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"Compete scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
 
     # train models with Optuna settings
+    starttime = time.time()
     automl = AutoML(mode="Optuna", results_path=optuna_model_path, optuna_time_budget=3600)
     automl.fit(X_train, y_train)
     # compute the MSE on test data
     predictions = automl.predict(X_test)
-    loglines.append(f"Optuna MSE: {mean_squared_error(y_test, predictions)}")
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"Optuna scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
+    
+#    # train models with autosklearn
+#    starttime = time.time()
+#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=3600)
+#    automl.fit(X_train, y_train)
+#    loglines.append(f"AutoSKLearn3600 leaderboard: {automl.leaderboard()}")
+#    # compute the MSE on test data
+#    predictions = automl.predict(X_test)
+#    msescore = mean_squared_error(y_test, predictions)
+#    r2score = r2_score(y_test, predictions)
+#    loglines.append(f"AutoSKLearn3600 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
+    
+    # train models with autopytorch
+    starttime = time.time()
+    automl = ap.api.tabular_classification.TabularClassificationTask()
+    automl.search(
+        X_train=X_train,
+        y_train=y_train,
+        X_test=X_test.copy(),
+        y_test=y_test.copy(),
+        optimize_metric='r2',
+        total_walltime_limit=3600,
+        dataset_name="actuals_lrpf"
+    )
+    # compute the MSE on test data
+    predictions = automl.predict(X_test)
+    score = automl.score(predictions, y_test)
+    msescore = mean_squared_error(y_test, predictions)
+    r2score = r2_score(y_test, predictions)
+    loglines.append(f"AutoPyTorch3600 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
     
     loglines.append("  done")
     return loglines
-
-# mljar 
 

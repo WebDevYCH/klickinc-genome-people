@@ -5,6 +5,7 @@ Flask-Bootstrap
 Flask-Login
 Flask-WTF
 Flask-Session
+Flask-Crontab
 psycopg2-binary
 requests
 google
@@ -14,6 +15,10 @@ gspread
 oauthlib
 oauth2client
 pyOpenSSL
-sklearn
+swig
 openpyxl
 pandas
+mljar-supervised
+autopytorch
+db-dtypes
+ipython
