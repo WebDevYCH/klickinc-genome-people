@@ -6,7 +6,7 @@ import pandas as pd
 from flask_admin import expose
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
-
+import numpy as np
 
 from core import *
 from model import *
@@ -21,6 +21,13 @@ import warnings
 #from autoPyTorch.api.tabular_regression import TabularRegressionTask
 #import autoPyTorch.api
 
+explain_model_path = "../cache/automl_lrforecast_explain"
+perform_model_path = "../cache/automl_lrforecast_perform"
+compete_model_path = "../cache/automl_lrforecast_compete"
+optuna_model_path = "../cache/automl_lrforecast_optuna"
+bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.csv"
+bq_pickle_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.pkl"
+
 
 ###################################################################
 ## ADMIN PAGES AND FORECASTING ALGORITHMS
@@ -34,6 +41,7 @@ class ForecastAdminView(AdminBaseView):
             'cilinear': 'CI + Linear Extrapolation Model',
             'actuals': 'Actual Hours Billed',
             'gsheets': 'Google Sheets Forecasts Import',
+            'mljar': 'MLJAR Forecasts Import',
             'lr_hours_day_ratio': 'Labor Role Hours/Day Ratio Import',
             'lr_forecast_sheet': 'Labor Role Forecast Sheet Map Replication',
         }
@@ -58,6 +66,10 @@ class ForecastAdminView(AdminBaseView):
     @expose('/gsheets')
     def gsheets(self):
         return self.render('admin/job_log.html', loglines=model_gsheets())
+
+    @expose('/mljar')
+    def mljar(self):
+        return self.render('admin/job_log.html', loglines=model_mljar())
 
     @expose('/lr_hours_day_ratio')
     def lr_hours_day_ratio(self):
@@ -408,6 +420,89 @@ def model_gsheets():
 
     return loglines
 
+@app.cli.command('model_mljar')
+def model_mljar_cmd():
+    model_mljar()
+
+def model_mljar():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting MLJAR Forecast Importer")
+    loglines.append("")
+
+    source = 'mljar'
+
+    warnings.simplefilter(action='ignore', category=FutureWarning)
+
+    automl = AutoML(mode="Compete", results_path=compete_model_path)
+
+    # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
+    today = datetime.date.today()
+    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
+    lookaheadmonths = 3
+
+    laborroles = db.session.query(LaborRole).all()
+
+    while startdate < today + relativedelta(months=1):
+        loglines.append(f"processing {startdate}")
+
+        # for each portfolio with forecasts from start month to lookaheadmonths from now
+        for pf in db.session.query(PortfolioForecast).filter(
+            PortfolioForecast.yearmonth >= startdate,
+            PortfolioForecast.yearmonth < startdate + relativedelta(months=lookaheadmonths)
+        ).all():
+            loglines.append(f"  for portfolio {pf.portfolioid}, processing {pf.yearmonth}")
+            starttime = datetime.datetime.now()
+            # build a dataframe to predict the hours for this portfolio and month
+            # model was trained on feature set:
+            #   YearMonth, PDName, GADName, AccountPortfolioID, ClientName, PortfolioName, LaborRole, OfficeName, CIChannel, CILifecycle, CIDeliverable
+            #   (CIChannel, CILifecycle, CIDeliverable are string_agg'd together with " // " as the delimiter)
+            #   (YearMonth is the year*100+month)
+            Xdf = pd.DataFrame(columns=['ID','YearMonth','PDName','GADName','AccountPortfolioID','ClientName','PortfolioName','LaborRole','OfficeName','CIChannel','CILifecycle','CIDeliverable'])
+            # for each labor role
+            for lr in laborroles:
+                # add a row to the dataframe with the portfolio's feature values and the labor role
+                Xdf = Xdf.append({
+                    'ID': f"{pf.portfolioid}-{lr.id}-{pf.yearmonth.year*100 + pf.yearmonth.month}",
+                    'YearMonth': pf.yearmonth.year*100 + pf.yearmonth.month,
+                    'PDName': pf.portfolio.currpdname,
+                    'GADName': pf.portfolio.currgadname,
+                    'AccountPortfolioID': pf.portfolio.id,
+                    'ClientName': pf.portfolio.clientname,
+                    'PortfolioName': pf.portfolio.name,
+                    'LaborRole': lr.id,
+                    'OfficeName': pf.portfolio.currofficename,
+                    'CIChannel': None,
+                    'CILifecycle': None,
+                    'CIDeliverable': None,
+                }, ignore_index=True)
+
+            # load the model and predict the dataset (returns a numpy.ndarray)
+            predictstarttime = datetime.datetime.now()
+            predictions = automl.predict(Xdf)
+            predictendtime = datetime.datetime.now()
+
+            # for each row in the predictions, create a record in the portfolio labor role forecast table
+            rowcount = 0
+            for index, row in np.ndenumerate(predictions):
+                if row != None and row > 0:
+                    upsert(db.session, PortfolioLRForecast, {
+                        'portfolioid': pf.portfolioid,
+                        'yearmonth': pf.yearmonth,
+                        'laborroleid': Xdf.loc[index,'LaborRole'],
+                        'source': source,
+                    }, {
+                        'forecastedhours': row,
+                        'forecasteddollars': None,
+                        'updateddate': datetime.date.today()
+                    })
+                    rowcount += 1
+
+            db.session.commit()
+            loglines.append(f"    processed {rowcount} rows, took {datetime.datetime.now() - starttime} seconds, predictions took {predictendtime - predictstarttime} seconds")
+
+
 
 
 # replicate portfolio list to gsheet mapping table (i.e. create empty records for each portfolio)
@@ -516,13 +611,6 @@ admin.add_view(ForecastAdminView(name='Forecast Processing', category='Forecasts
 @app.cli.command('train_automl_model')
 def train_automl_model_cmd():
     train_automl_model()
-
-explain_model_path = "../cache/automl_lrforecast_explain"
-perform_model_path = "../cache/automl_lrforecast_perform"
-compete_model_path = "../cache/automl_lrforecast_compete"
-optuna_model_path = "../cache/automl_lrforecast_optuna"
-bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.csv"
-bq_pickle_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.pkl"
 
 def train_automl_model():
     while app.logger.handlers:
