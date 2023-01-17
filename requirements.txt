@@ -22,3 +22,4 @@ mljar-supervised
 autopytorch
 db-dtypes
 ipython
+polars
