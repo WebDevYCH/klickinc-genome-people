@@ -1,27 +1,27 @@
-import datetime
 import os
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_bootstrap import Bootstrap
-from flask_login import LoginManager, current_user, login_required, login_user, logout_user
-from flask_admin.menu import MenuCategory, MenuView, MenuLink, SubMenuCategory
-import flask_admin
+from flask import render_template, redirect, json, url_for, request, session
+from flask_login import current_user, login_required, login_user, logout_user
+from flask_admin.menu import MenuLink
 
 import sqlalchemy
-from sqlalchemy import delete, insert, update, or_, and_
 
 from core import *
 from model import *
 
-from oauthlib.oauth2 import WebApplicationClient
-import survey
-import profile
+# don't trim out these imports -- they carry the routes
 import compmgr
-import requests
 import dbreplication
-import forecasts
+import forecasts_fe
+import forecasts_be
 import jobads
+import myprofile
 import skills
+import survey
+
+
+from oauthlib.oauth2 import WebApplicationClient
+import requests
 
 ###################################################################
 ## HOME PAGE

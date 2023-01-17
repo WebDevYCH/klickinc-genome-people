@@ -1,15 +1,12 @@
-from sqlite3 import Row
 from flask_login import login_required
 from datetime import date
 import json
-import requests
-from sqlalchemy.orm import joinedload
-from sqlalchemy.ext.declarative import DeclarativeMeta
 from core import *
 from model import *
 from core import app
 from skillutils import *
 from flask_login import current_user
+from flask import render_template, request
 
 ###################################################################
 ## MODEL
@@ -60,7 +57,7 @@ def postjob():
         skill_name = data['skill']['name']
 
         db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
-        if(db_skill):
+        if db_skill:
             createSkill = JobPostingSkill(job_posting_id = createJob.id, skill_id = db_skill.id)
             db.session.add(createSkill)
             db.session.commit()
@@ -88,11 +85,7 @@ def editjob():
             db.session.add(createSkill)
             db.session.commit()
 
-    db.session.execute(
-        update(JobPosting).
-        filter(JobPosting.id == id).
-        values(job_posting_category_id=category_id, posted_date=posted_date, expiry_date=expiry_date,title=title, description=description)
-    )
+    upsert(JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'posted_date': posted_date, 'expiry_date': expiry_date, 'title': title, 'description': description})
     db.session.commit()
     return redirect(url_for('jobsearch'))
 
@@ -240,7 +233,6 @@ def setusersetting():
     userId = request.form['userId']
     # postId = request.form['postId']
     user_Available = request.form['userAvailable']
-    # Do some DB operation
     available_user = UserAvailable(user_id = userId, user_av = user_Available)
     db.session.add(available_user)
     db.session.commit()
@@ -251,12 +243,7 @@ def setusersetting():
 def closepost():
     userId = request.form['userId']
     postId = request.form['postId']
-    # Do some DB operation
-    db.session.execute(
-        update(JobPosting).
-        filter(JobPosting.id == postId).
-        values(removed_date=date.today())
-    )
+    upsert(JobPosting, {'id': postId}, {'removed_date': date.today()})
     db.session.commit()
     return userId
 
@@ -265,11 +252,7 @@ def closepost():
 def cancelapplication():
     userId = request.form['userId']
     postId = request.form['postId']
-    # Do some DB operation
-    db.session.execute(
-        delete(ApplyJob).
-        filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId)
-    )
+    db.session.execute(ApplyJob).filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId).delete()
 
     db.session.commit()
     return redirect(url_for('jobsearch'))

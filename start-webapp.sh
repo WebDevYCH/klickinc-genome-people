@@ -1,6 +1,6 @@
 #!/bin/sh
 
-logfile=$0.log
+logfile=../logs/webapp-mac.log
 
 # start webapp/webhook-receiver (move to port 6000 to get away from Mac airplay issues)
 export FLASK_APP=app

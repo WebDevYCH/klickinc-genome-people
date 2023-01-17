@@ -1,0 +1,12 @@
+{% extends 'admin/master.html' %}
+
+{% block body %}
+
+	<h1>{{ title }}</h1>
+
+	<ul>
+		{% for page in pages %}
+		<li><a href="{{ page }}">{{ pages[page] }}</a></li>
+		{% endfor %}
+	</ul>
+{% endblock %}

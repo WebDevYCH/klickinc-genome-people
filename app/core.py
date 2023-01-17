@@ -1,15 +1,16 @@
 import datetime
-import os
-import os.path as op
+import os, time
 import requests
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request, session
+from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
+from flask_crontab import Crontab
 import config
+import gspread
 
 ###################################################################
 ## INITIALIZATION
@@ -18,6 +19,10 @@ import config
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
 Bootstrap(app)
+crontab = Crontab(app)
+while app.logger.handlers:
+    print("APP FOUND A LOGGER")
+    app.logger.handlers.pop()
 
 # login manager
 login_manager = LoginManager()
@@ -25,8 +30,17 @@ login_manager.init_app(app)
 login_manager.session_protection = 'strong'
 
 # Create db reference
+app.logger.info("Initializing database")
 db = SQLAlchemy(app)
 db.init_app(app)
+
+# filter out some sqlalchemy warnings
+import warnings
+from sqlalchemy import exc as sa_exc
+warnings.filterwarnings("ignore", category=sa_exc.SAWarning)
+
+###################################################################
+## ADMIN CLASSES
 
 # Flask-Admin interfaces
 class MyAdminIndexView(flask_admin.AdminIndexView):
@@ -56,11 +70,30 @@ class AdminBaseView(flask_admin.BaseView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
+###################################################################
+## UTILITY CLASSES AND FUNCTIONS
+
 # overridden array that saves in the array and also logs to the webapp logfile
 class AdminLog(list):
     def append(self, item):
         app.logger.info(item)
         super().append(item)
+
+# class to do basic in-memory caching of data
+cache_cache = {}
+class Cache:
+    def __init__(self):
+        cache_cache = {}
+    def get(key):
+        if key in cache_cache:
+            if cache_cache[key]['timeout'] == 0 or cache_cache[key]['time'] + cache_cache[key]['timeout'] > time.time():
+                return cache_cache[key]['value']
+            else:
+                del cache_cache[key]
+        return None
+    def set(key, value, timeout=0):
+        cache_cache[key] = {'value': value, 'timeout': timeout, 'time': time.time()}
+
 
 # function used in a bunch of places to pick up data from Genome
 def retrieveGenomeReport(queryid, tokenids=[], tokenvalues=[]):
@@ -80,5 +113,45 @@ def parseGenomeDate(weirdstring):
     # date comes back in the format '/Date(1262322000000-0500)/', ie milliseconds since 1970-01-01
     return datetime.datetime.fromtimestamp(int(weirdstring[6:16]))
 
+def getGoogleSheet(url):
+    #scope = ['https://spreadsheets.google.com/feeds']
+    #credentials = ServiceAccountCredentials.from_json_keyfile_name(app.config['GOOGLE_CREDENTIALS'], scope)
+    #gc = gspread.authorize(credentials)
+    #return gc.open_by_url(url)
+    gc = gspread.service_account(filename = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
+    return gc.open_by_url(url)
 
+# set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit
+def setGoogleSheetCellFormat(worksheet, cellpos, format):
+    for i in range(0, 60):
+        try:
+            worksheet.format(cellpos, format)
+            return
+        except gspread.exceptions.APIError as e:
+            if e.response.status_code == 429:
+                time.sleep(1)
+            else:
+                raise e
+
+# upsert function (since it doesn't exist in sqlalchemy)
+def upsert(session, model, constraints, values):
+    """
+    Perform an upsert operation using SQLAlchemy.
+
+    :param session: A SQLAlchemy session object
+    :param model: The model representing the table to update
+    :param constraints: A dictionary representing the unique constraints
+    :param values: A dictionary representing the values to set
+    """
+    query = session.query(model).filter_by(**constraints)
+    obj = query.first()
+    if obj:
+        # Update existing object
+        for key, value in values.items():
+            if getattr(obj, key) != value:
+                setattr(obj, key, value)
+    else:
+        # Create new object
+        obj = model(**constraints, **values)
+        session.add(obj)
 

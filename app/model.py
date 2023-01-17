@@ -1,24 +1,17 @@
-import datetime
-import os
-import os.path as op
-import requests
 # from sqlalchemy_serializer import SerializerMixin
 
-from flask import Flask, render_template, flash, redirect, jsonify, json, url_for, request
-from flask_sqlalchemy import SQLAlchemy
-from flask_bootstrap import Bootstrap
-from flask_login import LoginManager,UserMixin
-import flask_admin
 
+import os
+import pickle
 from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import Session
-from sqlalchemy import delete, insert, update, or_, and_, select
 
 from sqlalchemy import MetaData, create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.automap import automap_base
 
-from core import app, db, login_manager
+from core import app, db
 
 ###################################################################
 ## MODEL
@@ -31,23 +24,47 @@ def obj_name_withid(obj):
     return f"{obj.name} [{obj.id}]"
 def obj_name_user(obj):
     return f"{obj.firstname} {obj.lastname}"
-def obj_name_survey_question(obj):
-    return f"{obj.survey.name} - {obj.name}"
-def obj_name_survey_answer(obj):
-    return f"{obj.survey_question.name} - {obj.answer}"
+def obj_name_portfolio(obj):
+    return f"{obj.clientname} - {obj.name}"
 def obj_name_joined(obj):
     return ['id', 'job_or_availadble', 'job_posting_category_id', 'poster_user_id', 'posted_date', 'expiry_date', 'removed_date', 'title', 'description', 'contact_user_id', 'name']
 
 # Connect directly to database to make the schema, outside of the Flask context so we can
 # initialize before the first web request
+app.logger.info("Initializing database model ")
 dbengine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 Session = sessionmaker(bind=dbengine)
 dbsession = Session()
 
-dbmetadata = MetaData()
-dbmetadata.reflect(dbengine)
-Base = automap_base(metadata=dbmetadata)
-Base.prepare()
+metadatacachefile = "../cache/dbmetadata.cache"
+cached_metadata = None
+if os.path.exists(metadatacachefile):
+    app.logger.info("Loading cached metadata")
+    try:
+        with open(metadatacachefile, 'rb') as cache_file:
+            cached_metadata = pickle.load(file=cache_file)
+    except IOError:
+        # cache file not found - no problem, reflect as usual
+        pass
+
+if cached_metadata:
+    Base = automap_base(bind=dbengine, metadata=cached_metadata)
+    Base.prepare()
+else:
+    dbmetadata = MetaData()
+    dbmetadata.reflect(dbengine)
+    Base = automap_base(metadata=dbmetadata)
+    Base.prepare()
+    # save the metadata for future runs
+    try:
+        app.logger.info("Saving metadata cache")
+        # make sure to open in binary mode - we're writing bytes, not str
+        with open(metadatacachefile, 'wb') as cache_file:
+            pickle.dump(Base.metadata, cache_file)
+    except:
+        # couldn't write the file for some reason
+        pass
+app.logger.info("<-- Done initializing database model ")
 
 Base.classes.user.__str__ = obj_name_user
 ModelUser = Base.classes.user
@@ -69,11 +86,14 @@ class User(ModelUser):
     def get_id(self):
         return str(self.userid)
 
-# profile
+# some core Model concepts
+
 UserProfile = Base.classes.user_profile
 
 Base.classes.labor_role.__str__ = obj_name
 LaborRole = Base.classes.labor_role
 
+Base.classes.portfolio.__str__ = obj_name_portfolio
+Portfolio = Base.classes.portfolio
 
-
+LaborRoleHeadcount = Base.classes.labor_role_headcount
