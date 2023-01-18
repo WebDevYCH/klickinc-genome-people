@@ -642,6 +642,7 @@ d.Year*100+d.Month as YearMonth,
 (p.PDName) as PDName, (p.GADName) as GADName, p.AccountPortfolioID, 
 (p.ClientName) as ClientName, (p.Name) as PortfolioName,
 (lr.LaborRole) as LaborRole, p.OfficeName,
+pf.FEARevenue as RevenueForecastForPortfolioMonth,
 string_agg(distinct cic.Name, " // ") as CIChannel,
 string_agg(distinct cil.Name, " // ") as CILifecycle,
 string_agg(distinct cid.Name, " // ") as CIDeliverable,
@@ -650,6 +651,7 @@ join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
 join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
 join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
 join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+left outer join `genome-datalake-prod.GenomeReports.Finance_vMAPEEARevenue` pf on p.AccountPortfolioID=pf.AccountPortfolioID and date(pf.YearMonth)=date(d.Year,d.Month,1)
 left outer join `genome-datalake-prod.GenomeDW.CIChannelMapping` cicmap on cicmap.ProjectID=pr.ProjectID and date(cicmap.YearMonthDay)=d.Date
 left outer join `genome-datalake-prod.GenomeDW.CIChannel` cic on cicmap.InsightID=cic.ID
 left outer join `genome-datalake-prod.GenomeDW.CILifecycleMapping` cilmap on cilmap.ProjectID=pr.ProjectID and date(cilmap.YearMonthDay)=d.Date
@@ -659,7 +661,7 @@ left outer join `genome-datalake-prod.GenomeDW.CIDeliverable` cid on cidmap.Insi
 where pr.Billable=true
 group by d.Year, d.Month,
 p.PDName, p.GADName, p.AccountPortfolioID, p.ClientName, p.Name,
-lr.LaborRole,  p.OfficeName
+lr.LaborRole, p.OfficeName, pf.FEARevenue
 """).result()
         loglines.append(f"  results rows {rows.total_rows}")
         df = rows.to_dataframe()
