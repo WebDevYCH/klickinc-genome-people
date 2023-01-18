@@ -134,7 +134,7 @@ def setGoogleSheetCellFormat(worksheet, cellpos, format):
                 raise e
 
 # upsert function (since it doesn't exist in sqlalchemy)
-def upsert(session, model, constraints, values):
+def upsert(session, model, constraints, values, usecache=False):
     """
     Perform an upsert operation using SQLAlchemy.
 
@@ -143,8 +143,31 @@ def upsert(session, model, constraints, values):
     :param constraints: A dictionary representing the unique constraints
     :param values: A dictionary representing the values to set
     """
-    query = session.query(model).filter_by(**constraints)
-    obj = query.first()
+    obj = None
+    # first see if we have a cache of this object and constraints to avoid queries, otherwise do a query
+    if usecache:
+        constraintkeys = list(constraints.keys())
+        constraintkeys.sort()
+        outercachekey = f"upsert-cache-{model.__name__}-{','.join(constraintkeys)}"
+        cache = Cache.get(outercachekey)
+        if not cache:
+            cache = {}
+            app.logger.info(f"** CACHE MISS, creating new full table cache for {outercachekey}")
+            for cobj in session.query(model).all():
+                innercachekey = ','.join([f"{k}:{getattr(cobj, k)}" for k in constraintkeys])
+                cache[innercachekey] = cobj
+            Cache.set(outercachekey, cache)
+
+        # inner cache key should be a string of the key-value pairs in the constraints
+        innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
+        obj = cache.get(innercachekey)
+
+    if not obj:
+        app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
+        query = session.query(model).filter_by(**constraints)
+        obj = query.first()
+        cache[innercachekey] = obj
+
     if obj:
         # Update existing object
         for key, value in values.items():
@@ -154,4 +177,5 @@ def upsert(session, model, constraints, values):
         # Create new object
         obj = model(**constraints, **values)
         session.add(obj)
+        cache[innercachekey] = obj
 

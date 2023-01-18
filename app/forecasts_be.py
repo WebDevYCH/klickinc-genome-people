@@ -37,7 +37,7 @@ class ForecastAdminView(AdminBaseView):
     def index(self):
         pages = {
             'linear': 'Linear Extrapolation Model',
-            'linreg': 'linreg Extrapolation Model',
+            'linreg': 'Linear Regression Extrapolation Model',
             'cilinear': 'CI + Linear Extrapolation Model',
             'actuals': 'Actual Hours Billed',
             'gsheets': 'Google Sheets Forecasts Import',
@@ -434,8 +434,11 @@ def model_mljar():
     source = 'mljar'
 
     warnings.simplefilter(action='ignore', category=FutureWarning)
+    warnings.filterwarnings("ignore", category=UserWarning, module="lightgbm",
+            message="'verbose_eval' argument is deprecated and will be removed in a future release of LightGBM. Pass 'log_evaluation()' callback via 'callbacks' argument instead.")
 
     automl = AutoML(mode="Compete", results_path=compete_model_path)
+    #automl = AutoML(mode="Optuna", results_path=optuna_model_path)
 
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
@@ -444,7 +447,7 @@ def model_mljar():
 
     laborroles = db.session.query(LaborRole).all()
 
-    rowcount = 0
+    commitrowcount = 0
     loglines.append(f"processing {startdate}")
 
     # for each portfolio with forecasts from start month to lookaheadmonths from now
@@ -496,11 +499,16 @@ def model_mljar():
                     'forecastedhours': row,
                     'forecasteddollars': None,
                     'updateddate': datetime.date.today()
-                })
+                }, usecache=True)
                 rowcount += 1
+                commitrowcount += 1
 
-        db.session.commit()
+        if commitrowcount > 1000:
+            db.session.commit()
+            commitrowcount = 0
         loglines.append(f"    processed {rowcount} rows, took {datetime.datetime.now() - starttime} seconds, predictions took {predictendtime - predictstarttime} seconds")
+    
+    db.session.commit()
 
 
 
@@ -669,116 +677,56 @@ lr.LaborRole,  p.OfficeName
     loglines.append(f"  training with rows {X_train.shape[0]} test rows {X_test.shape[0]}")
 
     # train models with Explain settings
-    starttime = time.time()
+    trainloadstart = time.time()
     automl = AutoML(mode="Explain", results_path=explain_model_path)
     automl.fit(X_train, y_train)
+    trainloadend = time.time()
     # compute the MSE on test data
+    starttime = time.time()
     predictions = automl.predict(X_test)
-    msescore = mean_squared_error(y_test, predictions)
+    rmsescore = mean_squared_error(y_test, predictions, squared=False)
     r2score = r2_score(y_test, predictions)
-    loglines.append(f"Explain scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-
-#    # train models with autosklearn
-#    starttime = time.time()
-#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=300)
-#    automl.fit(X_train, y_train)
-#    loglines.append(f"AutoSKLearn300 leaderboard: {automl.leaderboard()}")
-#    # compute the MSE on test data
-#    predictions = automl.predict(X_test)
-#    msescore = mean_squared_error(y_test, predictions)
-#    r2score = r2_score(y_test, predictions)
-#    loglines.append(f"AutoSKLearn300 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-    
-#    # train models with autopytorch
-#    starttime = time.time()
-#    automl = TabularClassificationTask()
-#    automl.search(
-#        X_train=X_train,
-#        y_train=y_train,
-#        X_test=X_test.copy(),
-#        y_test=y_test.copy(),
-#        optimize_metric='r2',
-#        total_walltime_limit=300,
-#        func_eval_time_limit_secs=50,
-#        dataset_name="actuals_lrpf"
-#    )
-#    # compute the MSE on test data
-#    predictions = automl.predict(X_test)
-#    score = automl.score(predictions, y_test)
-#    msescore = mean_squared_error(y_test, predictions)
-#    r2score = r2_score(y_test, predictions)
-#    loglines.append(f"AutoPyTorch300 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
+    stddev = np.std(y_test)
+    loglines.append(f"Explain scores: RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score} time={time.time()-starttime} trainloadtime={trainloadend-trainloadstart}")
 
     # train models with Perform settings
-    starttime = time.time()
+    trainloadstart = time.time()
     automl = AutoML(mode="Perform", results_path=perform_model_path)
     automl.fit(X_train, y_train)
-    # compute the MSE on test data
-    predictions = automl.predict(X_test)
-    msescore = mean_squared_error(y_test, predictions)
-    r2score = r2_score(y_test, predictions)
-    loglines.append(f"Perform scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-
-#    # train models with autosklearn
-#    starttime = time.time()
-#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=900)
-#    automl.fit(X_train, y_train)
-#    loglines.append(f"AutoSKLearn900 leaderboard: {automl.leaderboard()}")
-#    # compute the MSE on test data
-#    predictions = automl.predict(X_test)
-#    msescore = mean_squared_error(y_test, predictions)
-#    r2score = r2_score(y_test, predictions)
-#    loglines.append(f"AutoSKLearn900 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-    
-    # train models with Compete settings
+    trainloadend = time.time()
+    # compute the RMSE on test data
     starttime = time.time()
+    predictions = automl.predict(X_test)
+    rmsescore = mean_squared_error(y_test, predictions, squared=False)
+    r2score = r2_score(y_test, predictions)
+    stddev = np.std(y_test)
+    loglines.append(f"Perform scores: RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score} time={time.time()-starttime} trainloadtime={trainloadend-trainloadstart}")
+
+    # train models with Compete settings
+    trainloadstart = time.time()
     automl = AutoML(mode="Compete", results_path=compete_model_path)
     automl.fit(X_train, y_train)
-    # compute the MSE on test data
+    trainloadend = time.time()
+    # compute the RMSE on test data
+    starttime = time.time()
     predictions = automl.predict(X_test)
-    msescore = mean_squared_error(y_test, predictions)
+    rmsescore = mean_squared_error(y_test, predictions, squared=False)
     r2score = r2_score(y_test, predictions)
-    loglines.append(f"Compete scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
+    stddev = np.std(y_test)
+    loglines.append(f"Compete scores: RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score} time={time.time()-starttime} trainloadtime={trainloadend-trainloadstart}")
 
     # train models with Optuna settings
-    starttime = time.time()
+    trainloadstart = time.time()
     automl = AutoML(mode="Optuna", results_path=optuna_model_path, optuna_time_budget=3600)
     automl.fit(X_train, y_train)
-    # compute the MSE on test data
+    trainloadend = time.time()
+    # compute the RMSE on test data
+    starttime = time.time()
     predictions = automl.predict(X_test)
-    msescore = mean_squared_error(y_test, predictions)
+    rmsescore = mean_squared_error(y_test, predictions, squared=False)
     r2score = r2_score(y_test, predictions)
-    loglines.append(f"Optuna scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-    
-#    # train models with autosklearn
-#    starttime = time.time()
-#    automl = autosklearn.regression.AutoSklearnRegressor(time_left_for_this_task=3600)
-#    automl.fit(X_train, y_train)
-#    loglines.append(f"AutoSKLearn3600 leaderboard: {automl.leaderboard()}")
-#    # compute the MSE on test data
-#    predictions = automl.predict(X_test)
-#    msescore = mean_squared_error(y_test, predictions)
-#    r2score = r2_score(y_test, predictions)
-#    loglines.append(f"AutoSKLearn3600 scores: MSE={msescore} R2={r2score} time={time.time()-starttime}")
-    
-#    # train models with autopytorch
-#    starttime = time.time()
-#    automl = ap.api.tabular_classification.TabularClassificationTask()
-#    automl.search(
-#        X_train=X_train,
-#        y_train=y_train,
-#        X_test=X_test.copy(),
-#        y_test=y_test.copy(),
-#        optimize_metric='r2',
-#        total_walltime_limit=3600,
-#        dataset_name="actuals_lrpf"
-#    )
-#    # compute the MSE on test data
-#    predictions = automl.predict(X_test)
-#    score = automl.score(predictions, y_test)
-#    msescore = mean_squared_error(y_test, predictions)
-#    r2score = r2_score(y_test, predictions)
-#    loglines.append(f"AutoPyTorch3600 scores: MSE={msescore} R2={r2score} localr2={score} time={time.time()-starttime}")
+    stddev = np.std(y_test)
+    loglines.append(f"Optuna scores: RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score} time={time.time()-starttime} trainloadtime={trainloadend-trainloadstart}")
     
     loglines.append("  done")
     return loglines

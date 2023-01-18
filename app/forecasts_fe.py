@@ -182,6 +182,13 @@ def addtocell(df, id, col, val):
         df.loc[df['id'] == id, col] = val
     else:
         df.loc[df['id'] == id, col] += val
+#    try:
+#        if pd.isnull(df.at[id, col]).bool():
+#            df.at[id, col] = val
+#        else:
+#            df.at[id, col] += val
+#    except:
+#        pass
 
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
@@ -407,12 +414,16 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
             fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currcst)
             df.loc[df['id'] == lrsourcekey, mkey] = fte
+            #df.at[lrsourcekey, mkey] = fte
             addtocell(df, lrsourcesumkey, mkey, fte)
 
             # also add to the portfolio and labor role sum rows if this is the primary source
             if pflr.source == primarysource:
                 addtocell(df, lrportfoliokey, mkey, fte)
                 addtocell(df, lrmainkey, mkey, fte)
+
+    # calculate the RMSE and R2 for each source
+    # TODO
 
     app.logger.info(f"  df processing done")
 
