@@ -11,8 +11,8 @@ cd app
 
 set -e
 
-jobs_core_often="replicate_userphotos replicate_portfolioforecasts"
-jobs_core_daily="replicate_users replicate_portfolios replicate_laborroles replicate_laborrolehc"
+jobs_core_often="replicate_users replicate_userphotos replicate_portfolios replicate_portfolioforecasts"
+jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 jobs_skills="replicate_skills"
 jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet train_automl_model"
 # forecast_gsheets not working yet
