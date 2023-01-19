@@ -23,5 +23,5 @@ Copy app/config-template.py to app/config.py and add your database credentials::
 
 Run the application::
 
-    ./start-webapp-mac.sh
+    ./start-webapp.sh
 
