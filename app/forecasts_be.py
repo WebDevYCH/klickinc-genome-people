@@ -16,11 +16,6 @@ from google.cloud import bigquery
 from supervised import AutoML
 import warnings
 
-#import autosklearn.regression
-#from autoPyTorch.api.tabular_classification import TabularClassificationTask
-#from autoPyTorch.api.tabular_regression import TabularRegressionTask
-#import autoPyTorch.api
-
 explain_model_path = "../cache/automl_lrforecast_explain"
 perform_model_path = "../cache/automl_lrforecast_perform"
 compete_model_path = "../cache/automl_lrforecast_compete"

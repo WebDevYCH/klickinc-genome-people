@@ -89,6 +89,10 @@ def replicate_portfolioforecasts():
     for pfin in json['Entries']:
         pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
 
+        if pfin['AccountPortfolioID'] in [496,587,855]:
+            #skip this one
+            continue
+
         if upsert(db.session, PortfolioForecast, 
             { 
                 'portfolioid': pfin['AccountPortfolioID'],
@@ -99,8 +103,9 @@ def replicate_portfolioforecasts():
                 'forecast': pfin['FEARevenue'],
                 'actuals': pfin['AEARevenue'],
                 'lbeforecast': pfin['LEARevenue']
-            }, usecache=True):
-            loglines.append(f"Inserted/updated portfolio forecast {pfin['AccountPortfolioID']} {pfin['YearMonth']}")
+            }, usecache=False):
+            #loglines.append(f"Inserted/updated portfolio forecast {pfin['AccountPortfolioID']} {pfin['YearMonth']}")
+            pass
 
         rowcount += 1
         if rowcount % 100 == 0:
