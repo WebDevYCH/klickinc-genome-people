@@ -441,7 +441,7 @@
 
     function search_jobs(data) {
         $.ajax({
-            url: "/jobads/jobsearch",
+            url: "/tmkt/jobsearch",
             method: "POST",
             data: data,
             success: function(res) {
@@ -549,7 +549,7 @@
                 },
                 success: function() {
                     loading();
-                    window.location.href = '/jobads/jobsearch';
+                    window.location.href = '/tmkt/jobsearch';
                 }
             });
             unloading();
@@ -677,7 +677,7 @@
                 message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
             },
             success: function(response) {
-                window.location.href = '/jobads/jobsearch';
+                window.location.href = '/tmkt/jobsearch';
             }
         });
     });
@@ -728,7 +728,7 @@
             },
             success: function(response) {
                 loading();
-                window.location.href = '/jobads/jobsearch';
+                window.location.href = '/tmkt/jobsearch';
             }
         })
     })

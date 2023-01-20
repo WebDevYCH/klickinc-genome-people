@@ -21,6 +21,7 @@ pandas
 mljar-supervised
 db-dtypes
 ipython
-polars
 timer
-
+gpt_index
+pypdf2
+docx2txt

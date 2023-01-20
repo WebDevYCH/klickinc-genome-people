@@ -362,8 +362,11 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")
     rowdict = {}
 
+    sources = {}
+
     # add the portfolio labor role forecasts to the dataframe
     for pflr in pflrs:
+        sources[pflr.source] = True
         # we want the hierarchy to be: labor role -> portfolio -> source
         # but also labor role -> source sum
 
@@ -423,7 +426,17 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                 addtocell(df, lrmainkey, mkey, fte)
 
     # calculate the RMSE and R2 for each source
-    # TODO
+    for source in sources.keys():
+        # for each filled-in month with this source, if there are actuals for that month as well, then insert them both into their arrays
+        # TODO
+        thissource = []
+        actuals = []
+        for m in range(1,13):
+            mkey = f"m{m}"
+            if df.loc[df['source'] == source, mkey].count() > 0:
+                thissource.append(df.loc[df['source'] == source, mkey].sum())
+                actuals.append(df.loc[df['detail'] == 'actual', mkey].sum())
+
 
     app.logger.info(f"  df processing done")
 

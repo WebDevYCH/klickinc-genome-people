@@ -14,7 +14,8 @@ import compmgr
 import dbreplication
 import forecasts_fe
 import forecasts_be
-import jobads
+import tmkt_fe
+import tmkt_be
 import myprofile
 import skills
 import survey
