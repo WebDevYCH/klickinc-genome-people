@@ -56,7 +56,6 @@ def replicate_userphotos():
     json = retrieveGenomeReport(1873)
     usersdb = {}
 
-
     for u in db.session.query(User).all(): 
         usersdb[u.userid] = u
 
@@ -90,7 +89,11 @@ def replicate_portfolioforecasts():
     for pfin in json['Entries']:
         pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
 
-        upsert(db.session, PortfolioForecast, 
+        if pfin['AccountPortfolioID'] in [496,587,855]:
+            #skip this one
+            continue
+
+        if upsert(db.session, PortfolioForecast, 
             { 
                 'portfolioid': pfin['AccountPortfolioID'],
                 'yearmonth': pfin['YearMonth']
@@ -100,7 +103,9 @@ def replicate_portfolioforecasts():
                 'forecast': pfin['FEARevenue'],
                 'actuals': pfin['AEARevenue'],
                 'lbeforecast': pfin['LEARevenue']
-            })
+            }, usecache=False):
+            #loglines.append(f"Inserted/updated portfolio forecast {pfin['AccountPortfolioID']} {pfin['YearMonth']}")
+            pass
 
         rowcount += 1
         if rowcount % 100 == 0:
@@ -200,8 +205,7 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
     """
     rowcount = 0
     for uin in bqclient.query(sql).result():
-        upsert(db.session, User, {"userid": uin.UserID}, {
-            "userid": uin.UserID,
+        if upsert(db.session, User, {"userid": uin.UserID}, {
             "adpemployeeid": uin.ADPEmployeeID,
             "loginname": uin.LoginName,
             "firstname": uin.FirstName,
@@ -242,7 +246,8 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUser`
             "companybusinessunitid": uin.CompanyBusinessUnitID,
             "departmentbusinessunitid": uin.DepartmentBusinessUnitID,
             "department": uin.Department
-        })
+        }, usecache=True):
+            loglines.append(f"Inserted/updated user {uin.UserID} {uin.FirstName} {uin.LastName}")
 
         rowcount += 1
         if rowcount % 100 == 0:
@@ -276,7 +281,7 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
     """
     rowcount = 0
     for pfin in bqclient.query(sql).result():
-        upsert(db.session, Portfolio, {'accountportfolioid': pfin.accountportfolioid}, {
+        if upsert(db.session, Portfolio, {'id': pfin.accountportfolioid}, {
             'name': pfin.name,
             'clientname': pfin.clientname,
             'currcst': pfin.currcst,
@@ -288,7 +293,8 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.Portfolio`
             'currcdname': pfin.currcdname,
             'currtdname': pfin.currtdname,
             'currofficename': pfin.currofficename
-        })
+        }, usecache=True):
+            loglines.append(f"Inserted/updated portfolio {pfin.accountportfolioid} {pfin.clientname} - {pfin.name}")
 
         rowcount += 1
         if rowcount % 100 == 0:
@@ -320,13 +326,14 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
     """
     rowcount = 0
     for lrin in bqclient.query(sql).result():
-        upsert(db.session, LaborRole, { 'id': lrin.laborroleid }, {
+        if upsert(db.session, LaborRole, { 'id': lrin.laborroleid }, {
             'id': lrin.laborroleid,
             'name': lrin.name,
             'jobfunction': lrin.jobfunction,
             'joblevel': lrin.joblevel,
             'categoryname': lrin.categoryname
-        })
+        }, usecache=True):
+            loglines.append(f"Inserted/updated laborrole {lrin.laborroleid} {lrin.name}")
         rowcount += 1
         if rowcount % 100 == 0:
             db.session.commit()
@@ -362,21 +369,23 @@ order by 1 desc
     """
     rowcount = 0
     for lrhcin in bqclient.query(sql).result():
-        upsert(db.session, LaborRoleHeadcount, {
+        if upsert(db.session, LaborRoleHeadcount, {
             'yearmonth': lrhcin.YearMonth,
             'cstname': lrhcin.CST,
             'laborroleid': lrhcin.LaborRoleID,
             'employeetypeid': lrhcin.EmployeeTypeID
-        }, { 'headcount_eom': lrhcin.HeadCount })
+        }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+            loglines.append(f"Inserted/updated laborrole headcount {lrhcin.YearMonth} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         # if this record is from last month, also save it as the headcount for this month
         if lrhcin.YearMonth == datetime.date.today().replace(day=1) - datetime.timedelta(days=1):
-            upsert(db.session, LaborRoleHeadcount, {
+            if upsert(db.session, LaborRoleHeadcount, {
                 'yearmonth': datetime.date.today().replace(day=1),
                 'cstname': lrhcin.CST,
                 'laborroleid': lrhcin.LaborRoleID,
                 'employeetypeid': lrhcin.EmployeeTypeID
-            }, { 'headcount_eom': lrhcin.HeadCount })
+            }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+                loglines.append(f"Inserted/updated laborrole headcount {datetime.date.today().replace(day=1)} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         rowcount += 1
         if rowcount % 100 == 0:

@@ -11,11 +11,12 @@ cd app
 
 set -e
 
-jobs_core_often="replicate_userphotos replicate_portfolioforecasts"
-jobs_core_daily="replicate_users replicate_portfolios replicate_laborroles replicate_laborrolehc"
+jobs_core_often="replicate_users replicate_userphotos replicate_portfolios replicate_portfolioforecasts"
+jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 jobs_skills="replicate_skills"
-jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet train_automl_model"
-# forecast_gsheets not working yet
+jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
+jobs_tmkt="tmkt_people_test"
+jobs_train="tmkt_people_index tmkt_people_interactivetrain_automl_model"
 
 
 if [ "$1" = "" ]; then
@@ -25,6 +26,8 @@ if [ "$1" = "" ]; then
     echo " core daily jobs: $jobs_core_daily"
     echo " skills jobs:     $jobs_skills"
     echo " forecast jobs:   $jobs_forecast"
+    echo " talent mkt jobs: $jobs_tmkt"
+    echo " train jobs:      $jobs_train"
 
 elif [ "$1" = "job" ]; then
     python3 -m flask $2 2>&1 |tee -a $logfile
@@ -46,6 +49,16 @@ elif [ "$1" = "skills" ]; then
 
 elif [ "$1" = "forecast" ]; then
     for function in `echo $jobs_forecast`; do
+        python3 -m flask $function 2>&1 |tee -a $logfile
+    done
+
+elif [ "$1" = "tmkt" ]; then
+    for function in `echo $jobs_tmkt`; do
+        python3 -m flask $function 2>&1 |tee -a $logfile
+    done
+
+elif [ "$1" = "train" ]; then
+    for function in `echo $jobs_train`; do
         python3 -m flask $function 2>&1 |tee -a $logfile
     done
 

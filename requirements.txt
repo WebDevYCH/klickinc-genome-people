@@ -19,6 +19,9 @@ swig
 openpyxl
 pandas
 mljar-supervised
-autopytorch
 db-dtypes
 ipython
+timer
+gpt_index
+pypdf2
+docx2txt

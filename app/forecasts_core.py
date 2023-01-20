@@ -28,6 +28,7 @@ class PortfolioLRForecastSheetView(AdminModelView):
         return current_user.is_authenticated and current_user.has_roles('admin')
     column_searchable_list = ['portfolio.name','gsheet_url','tabname']
     column_sortable_list = ['gsheet_url','tabname']
+    column_editable_list = ['gsheet_url','tabname']
     #column_filters = ['survey','survey_question_category']
     #can_export = True
     #export_types = ['csv', 'xlsx']

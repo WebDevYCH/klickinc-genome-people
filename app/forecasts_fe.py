@@ -182,6 +182,13 @@ def addtocell(df, id, col, val):
         df.loc[df['id'] == id, col] = val
     else:
         df.loc[df['id'] == id, col] += val
+#    try:
+#        if pd.isnull(df.at[id, col]).bool():
+#            df.at[id, col] = val
+#        else:
+#            df.at[id, col] += val
+#    except:
+#        pass
 
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
@@ -322,7 +329,6 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-drlfs_cache = {}
 def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
 
     # return from cache if possible
@@ -335,18 +341,15 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     primarysource = 'gsheet'
 
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {primarysource} cache miss")
+
+    cachekey = f"dlrfs:{year}-{lrcat}-{clients}-{csts}"
+    df = Cache.get(cachekey)
+
     # create a pandas dataframe of the portfolio labor role forecasts
     header = ['id','parent','name','detail','source','altid',
     'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
     df = pd.DataFrame(columns=header)
-
-    # get the portfolio labor role forecasts, querying by lrcat and optionally by client or cst
-    if csts != None and csts != "":
-        queryfilter = Portfolio.currcst.in_(csts.split(','))
-    elif clients != None and clients != "":
-        queryfilter = Portfolio.clientid.in_(clients.split(','))
-    else:
-        queryfilter = True
 
     # query the labor role forecasts
     pflrs = db.session.query(PortfolioLRForecast).join(Portfolio).join(LaborRole).filter(
@@ -356,60 +359,86 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             queryfilter
         ).all()
 
+    app.logger.info(f"  query done, rowcount: {len(pflrs)}")
+    rowdict = {}
+
+    sources = {}
+
     # add the portfolio labor role forecasts to the dataframe
     for pflr in pflrs:
+        sources[pflr.source] = True
         # we want the hierarchy to be: labor role -> portfolio -> source
         # but also labor role -> source sum
 
         # add a row for the labor role as a root node, if it isn't already there
         lrmainkey = f"{pflr.laborroleid}"
-        if lrmainkey not in df.id.values:
+        if lrmainkey not in rowdict:
             df = pd.concat([df, 
                 pd.DataFrame({ 'id': lrmainkey,
                 'parent': None,
-                'name': pflr.labor_role.name }, index=[0])])
+                'name': pflr.labor_role.name }, index=[0])], ignore_index=True)
+            rowdict[lrmainkey] = True
         
         # add a row for the sum of the forecasted hours for the labor role by portfolio
         lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
-        if lrportfoliokey not in df.id.values:
+        if lrportfoliokey not in rowdict:
             df = pd.concat([df, 
                 pd.DataFrame({ 'id': lrportfoliokey,
                 'parent': lrmainkey,
                 'name': f"{pflr.portfolio.clientname} - {pflr.portfolio.name}",
-                'detail': 'portfolio' }, index=[0])])
+                'detail': 'portfolio' }, index=[0])], ignore_index=True)
+            rowdict[lrportfoliokey] = True
 
         # add a row for the sum of the forecasted hours for the labor role by portfolio and source
         lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
-        if lrsourcekey not in df.id.values:
+        if lrsourcekey not in rowdict:
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcekey,
                 'parent': lrportfoliokey,
                 'name': f"'{pflr.source}' Source",
                 'altid': f"{pflr.laborroleid}-{pflr.source}",
                 'source': pflr.source,
-                'detail': 'source' }, index=[0])])
+                'detail': 'source' }, index=[0])], ignore_index=True)
+            rowdict[lrsourcekey] = True
 
         # add a row for the sum of the forecasted hours for the labor role by source
         lrsourcesumkey = f"{pflr.laborroleid}-{pflr.source}"
-        if lrsourcesumkey not in df.id.values:
+        if lrsourcesumkey not in rowdict:
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcesumkey,
                 'parent': lrmainkey,
                 'name': f"'{pflr.source}' Source Sum",
                 'source': pflr.source,
-                'detail': 'sourcesum' }, index=[0])])
+                'detail': 'sourcesum' }, index=[0])], ignore_index=True)
+            rowdict[lrsourcesumkey] = True
 
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
             fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currcst)
             df.loc[df['id'] == lrsourcekey, mkey] = fte
+            #df.at[lrsourcekey, mkey] = fte
             addtocell(df, lrsourcesumkey, mkey, fte)
 
             # also add to the portfolio and labor role sum rows if this is the primary source
             if pflr.source == primarysource:
                 addtocell(df, lrportfoliokey, mkey, fte)
                 addtocell(df, lrmainkey, mkey, fte)
+
+    # calculate the RMSE and R2 for each source
+    for source in sources.keys():
+        # for each filled-in month with this source, if there are actuals for that month as well, then insert them both into their arrays
+        # TODO
+        thissource = []
+        actuals = []
+        for m in range(1,13):
+            mkey = f"m{m}"
+            if df.loc[df['source'] == source, mkey].count() > 0:
+                thissource.append(df.loc[df['source'] == source, mkey].sum())
+                actuals.append(df.loc[df['detail'] == 'actual', mkey].sum())
+
+
+    app.logger.info(f"  df processing done")
 
     # add headcount rows
     if csts != None and csts != "":
@@ -450,6 +479,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         mkey = f"m{lrhc.yearmonth.month}"
         addtocell(df, lrhckey, mkey, lrhc.headcount_eom)
 
+    app.logger.info(f"  headcount processing done")
+
     # remove the portfolio and source rows if we don't want them
     if showportfolios and showsources:
         pass
@@ -466,6 +497,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     # switch dataframe nulls to blank
     df = df.fillna('')
+
+    app.logger.info(f"  post-filter processing done")
 
     # save the pre-filtered dataframe to the cache
     Cache.set(cachekey, [df])

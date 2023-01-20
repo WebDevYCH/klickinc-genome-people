@@ -134,7 +134,7 @@ def setGoogleSheetCellFormat(worksheet, cellpos, format):
                 raise e
 
 # upsert function (since it doesn't exist in sqlalchemy)
-def upsert(session, model, constraints, values):
+def upsert(session, model, constraints, values, usecache=False):
     """
     Perform an upsert operation using SQLAlchemy.
 
@@ -142,16 +142,59 @@ def upsert(session, model, constraints, values):
     :param model: The model representing the table to update
     :param constraints: A dictionary representing the unique constraints
     :param values: A dictionary representing the values to set
+    :return: bool, True if the row was inserted or updated
     """
-    query = session.query(model).filter_by(**constraints)
-    obj = query.first()
+    retval = False
+    # first see if we have a cache of this object and constraints to avoid queries, otherwise do a query
+    if usecache:
+        constraintkeys = list(constraints.keys())
+        constraintkeys.sort()
+        outercachekey = f"upsert-cache-{model.__name__}-{','.join(constraintkeys)}"
+        cache = Cache.get(outercachekey)
+        if not cache:
+            cache = {}
+            app.logger.info(f"** CACHE MISS, creating new full table cache for {outercachekey}")
+            for cobj in session.query(model).all():
+                innercachekey = ','.join([f"{k}:{getattr(cobj, k)}" for k in constraintkeys])
+                #app.logger.info(f"** adding object to cache for cachekey {innercachekey}")
+                cache[innercachekey] = cobj
+            Cache.set(outercachekey, cache)
+
+
+    # now get the object if we don't have it
+    obj = None
+    if usecache:
+        # inner cache key should be a string of the key-value pairs in the constraints
+        innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
+        obj = cache.get(innercachekey)
+        innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
+        if not obj:
+            app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
+            query = session.query(model).filter_by(**constraints)
+            obj = query.first()
+            cache[innercachekey] = obj
+    else:
+        query = session.query(model).filter_by(**constraints)
+        obj = query.first()
+
     if obj:
         # Update existing object
         for key, value in values.items():
-            if getattr(obj, key) != value:
+            if getattr(obj, key) == value:
+                pass
+            else:
+                # TODO: figure out why it keeps updating fields that haven't changed
                 setattr(obj, key, value)
+                #app.logger.info(f"** updating {model.__name__}.{key}: {getattr(obj,key)} != {value}; the types are {type(getattr(obj,key))} and {type(value)}")
+                retval = True
     else:
         # Create new object
         obj = model(**constraints, **values)
         session.add(obj)
+        retval = True
+        if usecache:
+            innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
+            cache[innercachekey] = obj
+
+    return retval
 
