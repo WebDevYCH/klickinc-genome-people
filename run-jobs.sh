@@ -16,7 +16,7 @@ jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 jobs_skills="replicate_skills"
 jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
 jobs_tmkt="tmkt_people_test"
-jobs_train="tmkt_people_index tmkt_people_interactivetrain_automl_model"
+jobs_train="tmkt_people_index tmkt_people_interactivetrain_automl_model tmkt_people_finetune_create"
 
 
 if [ "$1" = "" ]; then
