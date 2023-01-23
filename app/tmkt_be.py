@@ -14,6 +14,7 @@ from sklearn.model_selection import train_test_split
 from core import *
 from model import *
 from tmkt_core import *
+from chat_core import *
 
 people_resume_index_dir = "../data/resumes"
 people_index_file = "../cache/people_index.json"
@@ -31,9 +32,6 @@ admin.add_view(AdminModelView(JobPosting, db.session, category='Job Ads'))
 
 # search indexing
 @app.cli.command('tmkt_people_index')
-def tmkt_people_index_cmd():
-    tmkt_people_index()
-
 def tmkt_people_index():
     loglines = AdminLog()
     loglines.append(f"TRAINING PEOPLE INDEX")
@@ -55,9 +53,6 @@ def tmkt_people_index():
 
 # search index test
 @app.cli.command('tmkt_people_test')
-def tmkt_people_test_cmd():
-    tmkt_people_test()
-
 def tmkt_people_test():
     loglines = AdminLog()
     loglines.append(f"  Testing index")
@@ -80,9 +75,6 @@ def tmkt_people_test():
 
 # search index interactively
 @app.cli.command('tmkt_people_interactive')
-def tmkt_people_interactive_cmd():
-    tmkt_people_interactive()
-
 def tmkt_people_interactive():
     loglines = AdminLog()
     loglines.append(f"  Testing index")
@@ -101,9 +93,6 @@ def tmkt_people_interactive():
 
 # search indexing
 @app.cli.command('tmkt_people_finetune_create')
-def tmkt_people_finetune_create_cmd():
-    tmkt_people_finetune_create()
-
 def tmkt_people_finetune_create():
     loglines = AdminLog()
     with app.app_context():
@@ -167,9 +156,6 @@ def tmkt_people_finetune_create():
 
 # search index test
 @app.cli.command('tmkt_people_finetune_interactive')
-def tmkt_people_finetune_interactive_cmd():
-    tmkt_people_finetune_interactive()
-
 def tmkt_people_finetune_interactive():
     loglines = AdminLog()
 
@@ -183,5 +169,50 @@ def tmkt_people_finetune_interactive():
             results = gpt3_completion(f"Please respond in bulleted form:\n\n{prompt}", engine=engine)
             print(f"Results: {results}")
             print(f"")
+
+    return loglines
+
+# chatbot training (test using cmd chat_test, so your questions don't taint the people database)
+@app.cli.command('tmkt_chatdb_train')
+def tmkt_chatdb_train():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append(f"CREATING FINETUNE DATA FOR PEOPLE INDEX")
+
+    loglines.append(f"  Loading people resumes from {people_resume_index_dir}")
+
+    chat = Chat("people")
+
+    # for each file in the folder
+    peoplecount = 0
+    for filename in os.listdir(people_resume_index_dir):
+        peoplecount += 1
+        fullpath = os.path.join(people_resume_index_dir, filename)
+        if os.path.isfile(fullpath) and filename.endswith(".pdf"):
+            # convert the PDF to text and craft a prompt for training
+            prompt = ""
+            email = re.sub(".com-.*", ".com", filename)
+            loglines.append(f"  Processing {filename}, email {email}, person {peoplecount}")
+            user = db.session.query(User).where(User.email==email).first()
+            if user:
+                loglines.append(f"    Found user {user.firstname} {user.lastname}")
+                prompt += f"Resume for {user.firstname} {user.lastname}, current title {user.title}, who started at Klick in {user.started.year}.\n"
+                if user.enabled:
+                    prompt += f"{user.firstname} works in the {user.department} department.\n"
+                else:
+                    prompt += f"{user.firstname} is no longer employed here.\n"
+                prompt += f"Klick is a marketing agency.\n\n"
+            try:
+                reader = PyPDF2.PdfReader(open(fullpath, 'rb'))
+                for page in reader.pages:
+                    prompt += page.extract_text().replace("\\n", "\n")
+            except Exception as e:
+                loglines.append(f"    ERROR: Could not read {fullpath}: {e}")
+                continue
+            prompt += f"\nHow would you summarize this person?\n\n"
+
+            completion = chat.chat(prompt)
+            #loglines.append(f"    Prompt for {email}: {prompt}\n========================\n    Completion: {completion}\n========================\n")
 
     return loglines

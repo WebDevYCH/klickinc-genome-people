@@ -16,7 +16,8 @@ jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 jobs_skills="replicate_skills"
 jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
 jobs_tmkt="tmkt_people_test"
-jobs_train="tmkt_people_index tmkt_people_interactivetrain_automl_model tmkt_people_finetune_create"
+jobs_train="tmkt_people_index tmkt_people_interactivetrain_automl_model tmkt_people_finetune_create tmkt_chatdb_train"
+jobs_chat="chat_test chat_core"
 
 
 if [ "$1" = "" ]; then
@@ -28,6 +29,7 @@ if [ "$1" = "" ]; then
     echo " forecast jobs:   $jobs_forecast"
     echo " talent mkt jobs: $jobs_tmkt"
     echo " train jobs:      $jobs_train"
+    echo " chat jobs:       $jobs_chat"
 
 elif [ "$1" = "job" ]; then
     python3 -m flask $2 2>&1 |tee -a $logfile
