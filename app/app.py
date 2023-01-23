@@ -19,6 +19,7 @@ import tmkt_be
 import myprofile
 import skills
 import survey
+import chat
 
 
 from oauthlib.oauth2 import WebApplicationClient
