@@ -1,3 +1,4 @@
+import asyncio
 import datetime, os, re
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -358,36 +359,45 @@ def model_gsheets():
     #rates = get_clrrates()
     #laborroles = db.session.query(LaborRole).all()
 
-    # for each Google Sheet forecast
-    for gs in db.session.query(PortfolioLRForecastSheet).filter(
+    pfforecastsheets = db.session.query(PortfolioLRForecastSheet).filter(
         PortfolioLRForecastSheet.year >= thisyear,
         PortfolioLRForecastSheet.gsheet_url != None,
         PortfolioLRForecastSheet.gsheet_url != '',
+        PortfolioLRForecastSheet.gsheet_url != 'a url',
         PortfolioLRForecastSheet.tabname != None,
         PortfolioLRForecastSheet.tabname != ''
-    ).order_by(PortfolioLRForecastSheet.gsheet_url,PortfolioLRForecastSheet.tabname).all():
+    ).order_by(PortfolioLRForecastSheet.gsheet_url,PortfolioLRForecastSheet.tabname).all()
 
-        # get the sheet with gspread
-        loglines.append(f"for portfolio {gs.portfolioid}, getting sheet {gs.gsheet_url}")
-        sheet = getGoogleSheet(gs.gsheet_url)
+    # for check each mapping to make sure we can reference the sheet+tab
+    for pfforecastsheet in pfforecastsheets:
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, getting sheet {pfforecastsheet.gsheet_url}")
+        sheet = getGoogleSheet(pfforecastsheet.gsheet_url)
+        loglines.append(f"  getting worksheet {pfforecastsheet.tabname}")
+        worksheet = sheet.worksheet(pfforecastsheet.tabname)
+        asyncio.sleep(1)
 
-        # get the worksheet and convert to a dataframe for speed
-        loglines.append(f"for portfolio {gs.portfolioid}, getting worksheet {gs.tabname}")
-        worksheet = sheet.worksheet(gs.tabname)
+    # for each Google Sheet forecast
+    for pfforecastsheet in pfforecastsheets:
+
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, getting sheet {pfforecastsheet.gsheet_url}")
+        sheet = getGoogleSheet(pfforecastsheet.gsheet_url)
+        loglines.append(f"  getting worksheet {pfforecastsheet.tabname}")
+        worksheet = sheet.worksheet(pfforecastsheet.tabname)
+
         df = pd.DataFrame(worksheet.get_all_values())
 
         # delete any existing plr forecasts for this portfolio in this record's year
-        loglines.append(f"for portfolio {gs.portfolioid}, deleting existing forecasts")
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, deleting existing forecasts")
         db.session.query(PortfolioLRForecast).filter(
-            PortfolioLRForecast.portfolioid == gs.portfolioid,
-            PortfolioLRForecast.yearmonth >= datetime.date(gs.year, 1, 1),
-            PortfolioLRForecast.yearmonth < datetime.date(gs.year+1, 1, 1),
+            PortfolioLRForecast.portfolioid == pfforecastsheet.portfolioid,
+            PortfolioLRForecast.yearmonth >= datetime.date(pfforecastsheet.year, 1, 1),
+            PortfolioLRForecast.yearmonth < datetime.date(pfforecastsheet.year+1, 1, 1),
             PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
         # the sheet has plr forecasts starting in row 15, with laborroleid in col 0
         # forecasted hours are in columns for each month based on the weeks in them: 8=Jan, 13=Feb, 18=Mar, 
         # for each row in the sheet starting at row 15
-        loglines.append(f"for portfolio {gs.portfolioid}, processing rows")
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, processing rows")
         monthcols = {1:8,2:13,3:18,4:24,5:29,6:35,7:40,8:45,9:51,10:56,11:61,12:67}
         for index, row in df.iterrows():
             # if the row is >=14 and has a labor role ID
@@ -399,8 +409,8 @@ def model_gsheets():
                     if row[monthcol] != None and row[monthcol] != '' and row[monthcol] != '0':
                         # create a record with the forecasted hours and dollars
                         pflr = PortfolioLRForecast()
-                        pflr.portfolioid = gs.portfolioid
-                        pflr.yearmonth = datetime.date(gs.year, month, 1)
+                        pflr.portfolioid = pfforecastsheet.portfolioid
+                        pflr.yearmonth = datetime.date(pfforecastsheet.year, month, 1)
                         pflr.laborroleid = row[0]
                         pflr.forecastedhours = row[monthcol]
                         pflr.forecasteddollars = re.sub(r'[^0-9.]', '', row[monthcol+2])
@@ -412,6 +422,7 @@ def model_gsheets():
                             db.session.commit()
 
         db.session.commit()
+        asyncio.sleep(1)
 
     return loglines
 
