@@ -206,7 +206,7 @@ NOTES:
 
             #### generate response, vectorize, save, etc
             app.logger.info("-- generate completion, vectorize, save --")
-            output = gpt3_completion(prompt, stop=['USER:','Genome:'])
+            output = gpt3_completion(prompt, stop=['USER:','Genome:'], temp=0.5)
             if "GPT3 error" in output:
                 # yikes, too long? try summarizing, deleting the previous saved memory, and try again
                 app.logger.info("-- have to summarize and try again --")

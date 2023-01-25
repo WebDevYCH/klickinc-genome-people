@@ -323,8 +323,8 @@ def model_actuals():
             'laborroleid': inrow['LaborRole'],
             'source': sourcename,
         }, {
-            'actualhours': inrow['Hours'],
-            'actualdollars': inrow['Dollars'],
+            'forecastedhours': inrow['Hours'],
+            'forecasteddollars': inrow['Dollars'],
         })
 
         rowcount += 1
