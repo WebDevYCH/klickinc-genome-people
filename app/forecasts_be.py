@@ -339,9 +339,9 @@ def model_actuals():
 
 @app.cli.command('model_gsheets')
 def model_gsheets_cmd():
-    model_gsheets()
+    asyncio.run(model_gsheets())
 
-def model_gsheets():
+async def model_gsheets():
     loglines = AdminLog()
     with app.app_context():
         Base.prepare(autoload_with=db.engine, reflect=True)
@@ -354,11 +354,14 @@ def model_gsheets():
 
     source = 'gsheet'
 
-    # gather some lookup data
-    loglines.append("gathering lookup data")
-    #rates = get_clrrates()
-    #laborroles = db.session.query(LaborRole).all()
+    # delete existing gsheet records, in case a portfolio got disconnected
+    loglines.append(f"deleting existing forecasts")
+    db.session.query(PortfolioLRForecast).filter(
+        PortfolioLRForecast.yearmonth >= datetime.date(thisyear, 1, 1),
+        PortfolioLRForecast.yearmonth < datetime.date(thisyear+1, 1, 1),
+        PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
+    loglines.append("gathering labor role forecasts")
     pfforecastsheets = db.session.query(PortfolioLRForecastSheet).filter(
         PortfolioLRForecastSheet.year >= thisyear,
         PortfolioLRForecastSheet.gsheet_url != None,
@@ -374,7 +377,7 @@ def model_gsheets():
         sheet = getGoogleSheet(pfforecastsheet.gsheet_url)
         loglines.append(f"  getting worksheet {pfforecastsheet.tabname}")
         worksheet = sheet.worksheet(pfforecastsheet.tabname)
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
 
     # for each Google Sheet forecast
     for pfforecastsheet in pfforecastsheets:
@@ -385,14 +388,6 @@ def model_gsheets():
         worksheet = sheet.worksheet(pfforecastsheet.tabname)
 
         df = pd.DataFrame(worksheet.get_all_values())
-
-        # delete any existing plr forecasts for this portfolio in this record's year
-        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, deleting existing forecasts")
-        db.session.query(PortfolioLRForecast).filter(
-            PortfolioLRForecast.portfolioid == pfforecastsheet.portfolioid,
-            PortfolioLRForecast.yearmonth >= datetime.date(pfforecastsheet.year, 1, 1),
-            PortfolioLRForecast.yearmonth < datetime.date(pfforecastsheet.year+1, 1, 1),
-            PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
         # the sheet has plr forecasts starting in row 15, with laborroleid in col 0
         # forecasted hours are in columns for each month based on the weeks in them: 8=Jan, 13=Feb, 18=Mar, 
@@ -412,7 +407,7 @@ def model_gsheets():
                         pflr.portfolioid = pfforecastsheet.portfolioid
                         pflr.yearmonth = datetime.date(pfforecastsheet.year, month, 1)
                         pflr.laborroleid = row[0]
-                        pflr.forecastedhours = row[monthcol]
+                        pflr.forecastedhours = re.sub(r'[^0-9.]', '', row[monthcol])
                         pflr.forecasteddollars = re.sub(r'[^0-9.]', '', row[monthcol+2])
                         pflr.source = source
                         pflr.updateddate = datetime.date.today()
@@ -422,7 +417,7 @@ def model_gsheets():
                             db.session.commit()
 
         db.session.commit()
-        asyncio.sleep(1)
+        await asyncio.sleep(1)
 
     return loglines
 

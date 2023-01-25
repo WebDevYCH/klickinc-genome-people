@@ -327,7 +327,6 @@ from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DLaborRole`
     rowcount = 0
     for lrin in bqclient.query(sql).result():
         if upsert(db.session, LaborRole, { 'id': lrin.laborroleid }, {
-            'id': lrin.laborroleid,
             'name': lrin.name,
             'jobfunction': lrin.jobfunction,
             'joblevel': lrin.joblevel,
