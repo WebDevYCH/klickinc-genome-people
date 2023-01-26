@@ -90,12 +90,15 @@ class AdminLog(list):
 class Cache:
     cache_cache = {}
     redisconn = None
+    keyprefix = "1234" # change this to force a refresh of redis cache
+
     def get(key, redis=False):
         if redis:
             if not Cache.redisconn: 
                 Cache.redisconn = redislib.Redis(host='localhost', port=6379, db=0)
-            obj = Cache.redisconn.get(key)
+            obj = Cache.redisconn.get(Cache.keyprefix+key)
             if obj:
+
                 return pickle.loads(obj)
             else:
                 return None
@@ -107,13 +110,12 @@ class Cache:
                 else:
                     del Cache.cache_cache[key]
             return None
+
     def set(key, value, timeout_seconds=3600*12, redis=False):
         if redis:
             if not Cache.redisconn: 
                 Cache.redisconn = redis.Redis(host='localhost', port=6379, db=0)
-            # convert value to pickle
-            Cache.redisconn.set(pickle.dumps(value), value)
-            Cache.redisconn.expire(key, timeout_seconds)
+            Cache.redisconn.set(Cache.keyprefix+key, pickle.dumps(value), ex=timeout_seconds)
         else:
             Cache.cache_cache[key] = {'value': value, 'timeout': timeout_seconds, 'time': time.time()}
 

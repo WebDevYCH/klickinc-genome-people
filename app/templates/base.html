@@ -29,6 +29,8 @@
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
     <link href="/static/css/custom.css" rel="stylesheet">
+
+
 </head>
 <!--
   HOW TO USE: 
@@ -89,6 +91,7 @@
 
                 <ul class="sidebar-nav">
 
+                    {% if current_user.email == 'willer2@klick.com' %}
                     <li class="sidebar-header">
                         Survey
                     </li>
@@ -97,6 +100,7 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     <li class="sidebar-header">
                         Portfolio and Labor Forecasts
@@ -117,6 +121,7 @@
                         </a>
                     </li>
 
+                    {% if current_user.email == 'willer2@klick.com' %}
                     <li class="sidebar-header">
                         Job Board
                     </li>
@@ -125,6 +130,7 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
@@ -138,6 +144,7 @@
                     {% endif %}
                 </ul>
 
+                {% if current_user.email == 'willer2@klick.com' %}
                 <div class="sidebar-cta">
                     <div class="sidebar-cta-content">
                         <strong class="d-inline-block mb-2">Weekly Sales Report</strong>
@@ -150,6 +157,7 @@
                         </div>
                     </div>
                 </div>
+                {% endif %}
             </div>
         </nav>
 
@@ -448,12 +456,11 @@
         </div>
     </div>
 
+    <div class="loading"></div>
+    {% block script %}{% endblock %}
     <script src="/static/js/app.js"></script>
     <script src="/static/js/jquery-3.6.1.min.js"></script>
     <script src="/static/js/custom.js"></script>
-
-    <div class="loading"></div>
-    {% block script %}{% endblock %}
 </body>
 
 </html>

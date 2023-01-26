@@ -35,20 +35,25 @@
         multiselection: true,
         label: "CST",
     });
-    cstcomboonchange = function(id) {
+    cstcombo.events.on("change", function(id) {
         loadgrid();
-    }
-    cstcombo.events.on("change", cstcomboonchange);
+    });
+    cstcombo.data.events.on("load", function() {
+        cstcombo.enable();
+    });
+
 
 
     const clientcombo = new dhx.Combobox(null, {
         multiselection: true,
-        label: "Client",
+        label: "Division",
     });
-    clientcomboonchange = function(id) {
+    clientcombo.events.on("change", function(id) {
         loadgrid();
-    }
-    clientcombo.events.on("change", clientcomboonchange);
+    });
+    clientcombo.data.events.on("load", function() {
+        clientcombo.enable();
+    });
 
 
     const years = [
@@ -68,12 +73,15 @@
         if (year == "") return;
         cstcombo.data.removeAll();
         cstcombo.data.load('/forecasts/cst-list?year='+year);
+        cstcombo.disable();
         cstcombo.setValue('');
         clientcombo.data.removeAll();
         clientcombo.data.load('/forecasts/client-list?year='+year);
+        clientcombo.disable();
         clientcombo.setValue('');
         lrcatcombo.data.removeAll();
         lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
+        lrcatcombo.disable();
         lrcatcombo.setValue('');
         treegrid.data.removeAll();
         loadgrid();
@@ -95,21 +103,6 @@
 
     const emptydata = [];
     const treegrid = new dhx.TreeGrid("grid", {
-        columns: [
-            { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] },
-            { id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] },
-            { id: "m2", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Feb" }] }, 
-            { id: "m3", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Mar" }] },
-            { id: "m4", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Apr" }] },
-            { id: "m5", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "May" }] },
-            { id: "m6", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jun" }] },
-            { id: "m7", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jul" }] },
-            { id: "m8", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Aug" }] },
-            { id: "m9", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Sep" }] },
-            { id: "m10", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Oct" }] },
-            { id: "m11", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Nov" }] },
-            { id: "m12", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Dec" }] },
-        ],
         autoWidth: true,
         autoHeight: true,
         resizable: true,
@@ -117,11 +110,45 @@
         headerRowHeight: 32,
         rowHeight: 32,
         label: "Forecasts and Targets",
-        {% block treegridinit %}
-        {% endblock %}
     });
     treegrid.data.events.on("load", function() {
         unloading();
+        year = yearcombo.getValue();
+        thisyear = "{{thisyear}}";
+        // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
+        columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
+        if (year == thisyear)
+            columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
+
+        datarow = treegrid.data.getItem('lcat')
+
+        if ("m1" in datarow)
+            columns.push({ id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] });
+        if ("m2" in datarow)
+            columns.push({ id: "m2", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Feb" }] });
+        if ("m3" in datarow)
+            columns.push({ id: "m3", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Mar" }] });
+        if ("m4" in datarow)
+            columns.push({ id: "m4", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Apr" }] });
+        if ("m5" in datarow)
+            columns.push({ id: "m5", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "May" }] });
+        if ("m6" in datarow)
+            columns.push({ id: "m6", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jun" }] });
+        if ("m7" in datarow)
+            columns.push({ id: "m7", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jul" }] });
+        if ("m8" in datarow)
+            columns.push({ id: "m8", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Aug" }] });
+        if ("m9" in datarow)
+            columns.push({ id: "m9", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Sep" }] });
+        if ("m10" in datarow)
+            columns.push({ id: "m10", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Oct" }] });
+        if ("m11" in datarow)
+            columns.push({ id: "m11", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Nov" }] });
+        if ("m12" in datarow)
+            columns.push({ id: "m12", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Dec" }] });
+
+        treegrid.setColumns(columns);
+
         treegrid.collapseAll();
     });
     layout.getCell("yearcombo").attach(yearcombo);
@@ -134,25 +161,12 @@
         readOnly: true,
         label: "Labor Category (req'd)",
     });
-    lrcatcomboonchange = function(id) {
-        var year = yearcombo.getValue();
-        var lrcat = lrcatcombo.getValue();
-        var csts = cstcombo.getValue();
-        var clients = clientcombo.getValue();
-        var showportfolios = form.getItem("showportfolios").getValue();
-        var showsources = form.getItem("showsources").getValue();
-        if (lrcat != "") {
-            treegrid.data.removeAll();
-            loading();
-            if (csts != "")
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+'&showportfolios='+showportfolios+'&showsources='+showsources);
-            else if (clients != "")
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+'&showportfolios='+showportfolios+'&showsources='+showsources);
-            else
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&showportfolios='+showportfolios+'&showsources='+showsources);
-        }
-    }
-    lrcatcombo.events.on("change", lrcatcomboonchange);
+    lrcatcombo.events.on("change", function(id) {
+        loadgrid();
+    });
+    lrcatcombo.data.events.on("load", function() {
+        lrcatcombo.enable();
+    });
     layout.getCell("lrcatcombo").attach(lrcatcombo);
 
     const form = new dhx.Form("form", {
@@ -161,10 +175,33 @@
         rows: [
             { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast; rendering will take a while" },
             { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
+            { id: "showyear", type: "checkbox", label: "Show Full Year", labelWidth: "150px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the full year" },
         ]
     });
-    form.events.on("change", lrcatcomboonchange);
+    form.events.on("change", function(id) {
+        loadgrid();
+    });
 
+    loadgrid = function(id) {
+        var year = yearcombo.getValue();
+        var lrcat = lrcatcombo.getValue();
+        var csts = cstcombo.getValue();
+        var clients = clientcombo.getValue();
+        var showportfolios = form.getItem("showportfolios").getValue();
+        var showsources = form.getItem("showsources").getValue();
+        var showyear = form.getItem("showyear").getValue();
+        if (lrcat != "") {
+            treegrid.data.removeAll();
+            if (csts != "")
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+'&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear);
+            else if (clients != "")
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+'&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear);
+            else
+                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear);
+            loading();
+        }
+    }
+    /*
     loadgrid = function() {
         var year = yearcombo.getValue();
         var csts = cstcombo.getValue();
@@ -175,6 +212,7 @@
             loading();
         }
     }
+    */
 
 </script>
 
