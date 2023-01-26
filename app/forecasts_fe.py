@@ -369,6 +369,17 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         sources[pflr.source] = True
         # we want the hierarchy to be: labor role -> portfolio -> source
         # but also labor role -> source sum
+        sourcename = f"'{pflr.source}' Source",
+        if pflr.source == 'actuals':
+            sourcename = 'Actuals'
+        elif pflr.source == 'linear':
+            sourcename = 'Linear Forecast'
+        elif pflr.source == 'linreg':
+            sourcename = 'Linear Regression Forecast'
+        elif pflr.source == 'gsheet':
+            sourcename = 'PM Line of Sight Forecast'
+        elif pflr.source == 'mljar':
+            sourcename = 'AutoML Forecast'
 
         # add a row for the labor role as a root node, if it isn't already there
         lrmainkey = f"{pflr.laborroleid}"
@@ -395,7 +406,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcekey,
                 'parent': lrportfoliokey,
-                'name': f"'{pflr.source}' Source",
+                'name': sourcename,
                 'altid': f"{pflr.laborroleid}-{pflr.source}",
                 'source': pflr.source,
                 'detail': 'source' }, index=[0])], ignore_index=True)
@@ -407,7 +418,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             df = pd.concat([df,
                 pd.DataFrame({ 'id': lrsourcesumkey,
                 'parent': lrmainkey,
-                'name': f"'{pflr.source}' Source Sum",
+                'name': sourcename,
                 'source': pflr.source,
                 'detail': 'sourcesum' }, index=[0])], ignore_index=True)
             rowdict[lrsourcesumkey] = True

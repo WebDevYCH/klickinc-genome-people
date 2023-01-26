@@ -1,8 +1,10 @@
 from asyncio import sleep
 import datetime
 import os, time
+import pickle
 import re
 import requests
+import redis as redislib
 
 from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -85,19 +87,35 @@ class AdminLog(list):
         super().append(item)
 
 # class to do basic in-memory caching of data
-cache_cache = {}
 class Cache:
-    def __init__(self):
-        cache_cache = {}
-    def get(key):
-        if key in cache_cache:
-            if cache_cache[key]['timeout'] == 0 or cache_cache[key]['time'] + cache_cache[key]['timeout'] > time.time():
-                return cache_cache[key]['value']
+    cache_cache = {}
+    redisconn = None
+    def get(key, redis=False):
+        if redis:
+            if not Cache.redisconn: 
+                Cache.redisconn = redislib.Redis(host='localhost', port=6379, db=0)
+            obj = Cache.redisconn.get(key)
+            if obj:
+                return pickle.loads(obj)
             else:
-                del cache_cache[key]
-        return None
-    def set(key, value, timeout=0):
-        cache_cache[key] = {'value': value, 'timeout': timeout, 'time': time.time()}
+                return None
+        else:
+            if key in Cache.cache_cache:
+                centry = Cache.cache_cache[key]
+                if centry['timeout'] == 0 or centry['time'] + centry['timeout'] > time.time():
+                    return Cache.cache_cache[key]['value']
+                else:
+                    del Cache.cache_cache[key]
+            return None
+    def set(key, value, timeout_seconds=3600*12, redis=False):
+        if redis:
+            if not Cache.redisconn: 
+                Cache.redisconn = redis.Redis(host='localhost', port=6379, db=0)
+            # convert value to pickle
+            Cache.redisconn.set(pickle.dumps(value), value)
+            Cache.redisconn.expire(key, timeout_seconds)
+        else:
+            Cache.cache_cache[key] = {'value': value, 'timeout': timeout_seconds, 'time': time.time()}
 
 
 # function used in a bunch of places to pick up data from Genome
@@ -174,7 +192,7 @@ def upsert(session, model, constraints, values, usecache=False):
         obj = cache.get(innercachekey)
         innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
         if not obj:
-            app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
+            #app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
             query = session.query(model).filter_by(**constraints)
             obj = query.first()
             cache[innercachekey] = obj
