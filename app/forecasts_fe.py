@@ -440,7 +440,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['id'] = lcatmainkey
             newrow['parent'] = None
             newrow['name'] = f" {lrcat} Labor Category"
-            newrow['detail'] = 'lrcat'
+            newrow['detail'] = 'lcat'
             rowdict[lcatmainkey] = newrow
 
         # C: sum of the forecasted hours for the labor cat by portfolio
@@ -468,7 +468,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         lcatsourcesumkey = f"lcat-{pflr.source}"
         if lcatsourcesumkey not in rowdict:
             newrow = rowtemplate.copy()
-            newrow['id'] = lrsourcesumkey
+            newrow['id'] = lcatsourcesumkey
             newrow['parent'] = lrmainkey
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
@@ -580,7 +580,6 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     dictarray = df.to_dict('records')
     filtdictarray = clean_dictarray(dictarray)
     filtdictarray = clean_dictarray(filtdictarray)
-
     app.logger.info(f"  {len(dictarray) - len(filtdictarray)} rows removed")
     df = pd.DataFrame(filtdictarray, columns=columns)
 

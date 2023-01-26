@@ -121,6 +121,7 @@
             columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
 
         datarow = treegrid.data.getItem('lcat')
+        if (!datarow) return;
 
         if ("m1" in datarow)
             columns.push({ id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] });
