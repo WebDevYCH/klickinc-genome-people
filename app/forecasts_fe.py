@@ -1,5 +1,6 @@
 import calendar
 import datetime, re
+from statistics import mean
 import pandas as pd
 
 from flask import render_template, request
@@ -106,13 +107,14 @@ def dept_lr_forecasts_data():
     showportfolios = request.args.get('showportfolios') == 'true'
     showsources = request.args.get('showsources') == 'true'
     showfullyear = request.args.get('showyear') == 'true'
+    showhours = request.args.get('showhours') == 'true'
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
@@ -197,20 +199,30 @@ def queryClientCst(clients, csts):
     return queryfilter
 
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst):
-    #business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
-    business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
-    business_hours_per_day = 7.26
-    # rough accounting for typical vacation and sick time
-    #if yearmonth.month == 5: business_hours_per_day /= 1.09
-    #elif yearmonth.month == 6: business_hours_per_day /= 1.12
-    #elif yearmonth.month == 7: business_hours_per_day /= 1.23
-    #elif yearmonth.month == 8: business_hours_per_day /= 1.16
-    #elif yearmonth.month == 9: business_hours_per_day /= 1.10
-    #else: business_hours_per_day /= 1.07
     # add rough 4% for autobilling
+    # TODO: account for per-laborrole autobilling
     hours *= 1.04
 
-    return hours / (business_days * business_hours_per_day)
+    # calculate FTEs based on monthly hours, but do it twice and take the average
+    # first time is based on the actual number of business days in the month, calibrated against typical vacation+sick time
+    business_days1 = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
+    business_hours_per_day1 = 7.26
+    # rough accounting for typical vacation and sick time
+    if yearmonth.month == 5: business_hours_per_day1 /= 1.09
+    elif yearmonth.month == 6: business_hours_per_day1 /= 1.12
+    elif yearmonth.month == 7: business_hours_per_day1 /= 1.23
+    elif yearmonth.month == 8: business_hours_per_day1 /= 1.16
+    elif yearmonth.month == 9: business_hours_per_day1 /= 1.10
+    else: business_hours_per_day1 /= 1.07
+    fte1 = hours / (business_days1 * business_hours_per_day1)
+
+    # second method is a simplistic model
+    business_days2 = 249/12 # PM's are not accounting for shorter months in their forecasts
+    business_hours_per_day2 = 7.26
+    fte2 = hours / (business_days2 * business_hours_per_day2)
+
+    return mean([fte1, fte2])
+
 
 def clean_dictarray(dictarray):
     parentlookup = {}
@@ -339,7 +351,7 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False):
 
     queryfilter = queryClientCst(clients, csts)
 
@@ -347,7 +359,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     thisyear = datetime.date.today().year
     thismonth = datetime.date.today().month
 
-    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear}")
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours}")
 
     # working with a dictionary of dictionaries
     columns = ['id','parent','name','detail','source','hc',
@@ -464,12 +476,12 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['detail'] = 'source'
             rowdict[lcatsourcekey] = newrow
 
-        # D: sum of the forecasted hours for the labor role by source
+        # D: sum of the forecasted hours for the labor cat by source
         lcatsourcesumkey = f"lcat-{pflr.source}"
         if lcatsourcesumkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lcatsourcesumkey
-            newrow['parent'] = lrmainkey
+            newrow['parent'] = lcatmainkey
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
             newrow['detail'] = 'sourcesum'
@@ -479,6 +491,11 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
             fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit)
+
+            # possible override to hours
+            if showhours:
+                fte = pflr.forecastedhours
+
             rowdict[lrsourcekey][mkey] = fte
             addtocell(rowdict, lrsourcesumkey, mkey, fte)
             addtocell(rowdict, lcatsourcesumkey, mkey, fte)
