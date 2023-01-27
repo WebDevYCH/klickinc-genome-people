@@ -26,7 +26,7 @@ LaborRoleHoursDayRatio = Base.classes.labor_role_hours_day_ratio
 class PortfolioLRForecastSheetView(AdminModelView):
     def is_accessible(self):
         return current_user.is_authenticated and current_user.has_roles('admin')
-    column_searchable_list = ['portfolio.name','gsheet_url','tabname']
+    column_searchable_list = ['portfolio.name','portfolio.clientname','gsheet_url','tabname']
     column_sortable_list = ['gsheet_url','tabname']
     column_editable_list = ['gsheet_url','tabname']
     #column_filters = ['survey','survey_question_category']
