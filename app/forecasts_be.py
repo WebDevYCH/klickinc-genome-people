@@ -493,7 +493,7 @@ def model_mljar():
     for pf in db.session.query(PortfolioForecast).filter(
         PortfolioForecast.yearmonth >= startdate,
         PortfolioForecast.yearmonth < startdate + relativedelta(months=lookaheadmonths)
-    ).all():
+    ).order_by(PortfolioForecast.yearmonth).all():
         loglines.append(f"  for portfolio {pf.portfolioid}, processing {pf.yearmonth}")
         starttime = datetime.datetime.now()
         pfinfo = None

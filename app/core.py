@@ -178,23 +178,28 @@ def upsert(session, model, constraints, values, usecache=False):
         cache = Cache.get(outercachekey)
         if not cache:
             cache = {}
-            app.logger.info(f"** CACHE MISS, creating new full table cache for {outercachekey}")
+            app.logger.info(f"** OUTER CACHE MISS, creating new full table cache for {outercachekey}")
             for cobj in session.query(model).all():
                 innercachekey = ','.join([f"{k}:{getattr(cobj, k)}" for k in constraintkeys])
-                #app.logger.info(f"** adding object to cache for cachekey {innercachekey}")
+                #app.logger.info(f"** adding object to cache for cachekey {innercachekey}; key type is {type(innercachekey)}")
                 cache[innercachekey] = cobj
             Cache.set(outercachekey, cache)
-
 
     # now get the object if we don't have it
     obj = None
     if usecache:
+        cache = Cache.get(outercachekey)
+        if not cache:
+            cache = {}
+            app.logger.info(f"** OUTER CACHE MISS ON LOOKUP (this should not happen)")
+            Cache.set(outercachekey, cache)
         # inner cache key should be a string of the key-value pairs in the constraints
         innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
-        obj = cache.get(innercachekey)
-        innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
-        if not obj:
-            #app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
+        if innercachekey in cache:
+            #app.logger.info(f"** cache hit for cachekey {innercachekey}; key count is {len(cache)}")
+            obj = cache[innercachekey]
+        else:
+            #app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}; key type is {type(innercachekey)}")
             query = session.query(model).filter_by(**constraints)
             obj = query.first()
             cache[innercachekey] = obj

@@ -108,13 +108,14 @@ def dept_lr_forecasts_data():
     showsources = request.args.get('showsources') == 'true'
     showfullyear = request.args.get('showyear') == 'true'
     showhours = request.args.get('showhours') == 'true'
+    mult = float(request.args.get('mult'))
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{mult}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, mult)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
@@ -198,30 +199,41 @@ def queryClientCst(clients, csts):
         queryfilter = True
     return queryfilter
 
-def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst):
-    # add rough 4% for autobilling
-    # TODO: account for per-laborrole autobilling
-    hours *= 1.04
+def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source, mult=1.22):
 
-    # calculate FTEs based on monthly hours, but do it twice and take the average
-    # first time is based on the actual number of business days in the month, calibrated against typical vacation+sick time
-    business_days1 = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
-    business_hours_per_day1 = 7.26
-    # rough accounting for typical vacation and sick time
-    if yearmonth.month == 5: business_hours_per_day1 /= 1.09
-    elif yearmonth.month == 6: business_hours_per_day1 /= 1.12
-    elif yearmonth.month == 7: business_hours_per_day1 /= 1.23
-    elif yearmonth.month == 8: business_hours_per_day1 /= 1.16
-    elif yearmonth.month == 9: business_hours_per_day1 /= 1.10
-    else: business_hours_per_day1 /= 1.07
-    fte1 = hours / (business_days1 * business_hours_per_day1)
+    if source == 'gsheet':
+        # add rough 4% for autobilling
+        # TODO: account for per-laborrole autobilling
+        hours *= 1.04
 
-    # second method is a simplistic model
-    business_days2 = 249/12 # PM's are not accounting for shorter months in their forecasts
-    business_hours_per_day2 = 7.26
-    fte2 = hours / (business_days2 * business_hours_per_day2)
+        # add rough 20% for project overages, as reflected in RC/EAHR
+        # TODO: make this more dynamic somehow
+        # 1.14 as target based on 2020 experience
+        # 1.22 or so for PM
+        # 1.32 for medical strategist
+        hours *= mult
 
-    return mean([fte1, fte2])
+        # simplistic model, as PM forecasts are simplistic
+        business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
+        business_hours_per_day = 7.26
+        fte = hours / (business_days * business_hours_per_day)
+
+        return fte
+    else:
+        # calculate FTEs based on monthly hours, but do it twice and take the average
+        # first time is based on the actual number of business days in the month, calibrated against typical vacation+sick time
+        business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
+        business_hours_per_day = 7.26
+        # rough accounting for typical vacation and sick time
+        if yearmonth.month == 5: business_hours_per_day /= 1.09
+        elif yearmonth.month == 6: business_hours_per_day /= 1.12
+        elif yearmonth.month == 7: business_hours_per_day /= 1.23
+        elif yearmonth.month == 8: business_hours_per_day /= 1.16
+        elif yearmonth.month == 9: business_hours_per_day /= 1.10
+        else: business_hours_per_day /= 1.07
+        fte = hours / (business_days * business_hours_per_day)
+
+        return fte
 
 
 def clean_dictarray(dictarray):
@@ -351,7 +363,7 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, mult=1.22):
 
     queryfilter = queryClientCst(clients, csts)
 
@@ -490,7 +502,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source, mult)
 
             # possible override to hours
             if showhours:
