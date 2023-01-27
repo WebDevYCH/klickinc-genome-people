@@ -30,7 +30,7 @@ The following are notes from earlier conversations with USER:
 
 
 
-The following are the most recent messages in the conversation:
+The following are the most recent messages in the conversation, but only the last message may be relevant at this time:
 <<CONVERSATION>>
 
 
@@ -55,6 +55,8 @@ NOTES:
     chatlogs_dir = "chatlogs"
     gpt3logs_dir = "gpt3logs"
     notes_dir = "notes"
+    memory_match_min = 0.8  # minimum similarity score to consider a memory match
+    conversation_lookback = 3 # number of messages to look back in the conversation within the prompt
 
     core_memories = ["core", "people", "projects", "pitches"]
     current_memory = []
@@ -105,8 +107,8 @@ NOTES:
                 data = self._load_json(f"{chatlogs_fulldir}/{file}")
                 data['filename'] = file
                 result.append(data)
-            #ordered = sorted(result, key=lambda d: d['time'], reverse=False)  # sort them all chronologically
-        return result
+        ordered = sorted(result, key=lambda d: d['time'], reverse=False)  # sort them all chronologically
+        return ordered
 
     def _fetch_memories(self, vector, logs, count):
         scores = list()
@@ -116,8 +118,8 @@ NOTES:
                 continue
             score = cosine_similarity(i['vector'], vector)
             i['score'] = score
-            #app.logger.info(f"match score {score} for {i['filename']}")
-            scores.append(i)
+            if score >= self.memory_match_min:
+                scores.append(i)
         ordered = sorted(scores, key=lambda d: d['score'], reverse=True)
         # TODO - pick more memories temporally nearby the top most relevant memories
         try:
@@ -199,7 +201,7 @@ NOTES:
             # TODO - fetch declarative memories (facts, wikis, KB, company data, internet, etc)
             notes = self._summarize_memories(memories)
             # TODO - search existing notes first
-            recent = self._get_last_messages(conversation, 4)
+            recent = self._get_last_messages(conversation, self.conversation_lookback)
             prompt = self.prompt_response.replace('<<NOTES>>', notes).replace('<<CONVERSATION>>', recent)
 
             #### generate response, vectorize, save, etc

@@ -207,17 +207,29 @@ def upsert(session, model, constraints, values, usecache=False):
 ## OPENAI FUNCTIONS
 
 def gpt3_embedding(content, engine='text-embedding-ada-002'):
+    max_retry = 10
+    retry = 0
     content = content.encode(encoding='ASCII',errors='ignore').decode()
-    response = openai.Embedding.create(input=content,engine=engine)
-    vector = response['data'][0]['embedding']  # this is a normal list
-    return vector
+    while True:
+        try:
+            response = openai.Embedding.create(input=content,engine=engine)
+            vector = response['data'][0]['embedding']  # this is a normal list
+            return vector
+        except Exception as oops:
+            retry += 1
+            app.logger.error('Error communicating with OpenAI: %s', oops)
+            if retry >= max_retry:
+                if "This model's maximum context length is" in str(oops):
+                    return "GPT3 error: %s" % oops
+                else:
+                    raise
 
 def cosine_similarity(v1, v2):
     # based upon https://stackoverflow.com/questions/18424228/cosine-similarity-between-2-number-lists
     return np.dot(v1, v2)/(norm(v1)*norm(v2))  # return cosine similarity
 
 def gpt3_completion(prompt, engine='text-davinci-003', temp=0.1, top_p=1.0, tokens=400, freq_pen=0.0, pres_pen=0.0, stop=None):
-    max_retry = 5
+    max_retry = 10
     retry = 0
     prompt = prompt.encode(encoding='ASCII',errors='ignore').decode()
     while True:
@@ -237,8 +249,10 @@ def gpt3_completion(prompt, engine='text-davinci-003', temp=0.1, top_p=1.0, toke
             return text
         except Exception as oops:
             retry += 1
-            if retry >= max_retry:
-                return "GPT3 error: %s" % oops
             app.logger.error('Error communicating with OpenAI: %s', oops)
+            if "This model's maximum context length is" in str(oops):
+                return "GPT3 error: %s" % oops
+            elif retry >= max_retry:
+                raise
 
 
