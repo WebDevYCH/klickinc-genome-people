@@ -13,7 +13,6 @@ import flask_admin
 from flask_admin.contrib.sqla import ModelView
 from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
-from flask_crontab import Crontab
 import config
 import gspread
 import openai
@@ -27,7 +26,6 @@ from numpy.linalg import norm
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
 Bootstrap(app)
-crontab = Crontab(app)
 while app.logger.handlers:
     # something is adding an extra handler, which causes duplicate log messages
     app.logger.handlers.pop()
