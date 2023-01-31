@@ -91,7 +91,6 @@
 
                 <ul class="sidebar-nav">
 
-                    {% if current_user.email == 'willer2@klick.com' %}
                     <li class="sidebar-header">
                         Survey
                     </li>
@@ -100,7 +99,6 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
                         </a>
                     </li>
-                    {% endif %}
 
                     <li class="sidebar-header">
                         Portfolio and Labor Forecasts
@@ -121,7 +119,6 @@
                         </a>
                     </li>
 
-                    {% if current_user.email == 'willer2@klick.com' %}
                     <li class="sidebar-header">
                         Job Board
                     </li>
@@ -130,7 +127,6 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
-                    {% endif %}
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
@@ -144,7 +140,6 @@
                     {% endif %}
                 </ul>
 
-                {% if current_user.email == 'willer2@klick.com' %}
                 <div class="sidebar-cta">
                     <div class="sidebar-cta-content">
                         <strong class="d-inline-block mb-2">Weekly Sales Report</strong>
@@ -157,7 +152,6 @@
                         </div>
                     </div>
                 </div>
-                {% endif %}
             </div>
         </nav>
 

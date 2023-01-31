@@ -88,15 +88,15 @@
     ///////////////////////////////////////////////////////////////////////
     // MDOU MULTIPLIER DROPDOWN
     const mults = [
-        { "id": "1.22", "value": "Current" },
-        { "id": "1.18", "value": "Mid to target" },
+        { "id": "1.19", "value": "Current" },
+        { "id": "1.17", "value": "Mid to target" },
         { "id": "1.15", "value": "Target" },
     ]
     const multcombo = new dhx.Combobox(null, {
         multiselection: false,
         data: mults,
         label: "MDOU Multiplier for FTEs",
-        value: "1.22",
+        value: "1.19",
         readOnly: true,
     });
     multcombo.events.on("change", function(id) {
@@ -138,7 +138,7 @@
     ///////////////////////////////////////////////////////////////////////
     // THE BIG TREEGRID
     treegridcelltemplate = function(text, row, col) {
-        if (text && row.id == 'lcat' && col.id == 'name') {
+        if (text && row.id == 'lcat') {
             //return "<i>"+text+"</i><span style='width:3px'></span>";
             //return "<b>"+text+"</b>";
             return "<b>"+text+"</b>";

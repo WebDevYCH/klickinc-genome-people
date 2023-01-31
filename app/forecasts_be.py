@@ -198,41 +198,50 @@ def model_linreg():
         if startdate >= today:
             thislookahead = lookaheadmonths
 
-        # for each portfolio with forecasts at this month or later
-        for p in db.session.query(PortfolioForecast).where(
-                    PortfolioForecast.yearmonth >= startdate,
-                    PortfolioForecast.forecast != None,
-                    PortfolioForecast.forecast != "0.00"
-                ).distinct(PortfolioForecast.portfolioid).all():
-            loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
-            # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
-            json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
-                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
-            #loglines.append(f"{json}")
+        try:
+            # for each portfolio with forecasts at this month or later
+            for p in db.session.query(PortfolioForecast).where(
+                        PortfolioForecast.yearmonth >= startdate,
+                        PortfolioForecast.forecast != None,
+                        PortfolioForecast.forecast != "0.00"
+                    ).distinct(PortfolioForecast.portfolioid).all():
+                loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
+                # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+                json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
+                    [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
+                #loglines.append(f"{json}")
 
-            if 'Entries' in json:
-                # for each Genome forecast
-                for pfin in json['Entries']:
-                    # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
-                    pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                    upsert(db.session, PortfolioLRForecast, {
-                        'portfolioid': pfin['AccountPortfolioID'],
-                        'yearmonth': pfin['YearMonth'],
-                        'laborroleid': pfin['LaborRoleID'],
-                        'source': sourcename,
-                    }, {
-                        'forecastedhours': pfin['PredictedHour'],
-                        'forecasteddollars': None
-                    })
+                try:
+                    if 'Entries' in json:
+                        # for each Genome forecast
+                        for pfin in json['Entries']:
+                            # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
+                            pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
+                            upsert(db.session, PortfolioLRForecast, {
+                                'portfolioid': pfin['AccountPortfolioID'],
+                                'yearmonth': pfin['YearMonth'],
+                                'laborroleid': pfin['LaborRoleID'],
+                                'source': sourcename,
+                            }, {
+                                'forecastedhours': pfin['PredictedHour'],
+                                'forecasteddollars': None
+                            })
 
-                    rowcount += 1
-                    if rowcount % 100 == 0:
-                        loglines.append(f"  updated {rowcount} rows")
+                            rowcount += 1
+                            if rowcount % 100 == 0:
+                                loglines.append(f"  updated {rowcount} rows")
+                                db.session.commit()
+                        loglines.append(f"    updated {rowcount} rows")
                         db.session.commit()
-                loglines.append(f"    updated {rowcount} rows")
-                db.session.commit()
-            else:
-                loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                    else:
+                        loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                except Exception as e:
+                    loglines.append(f"ERROR: {e}")
+                    handle_ex(e)
+
+        except Exception as e:
+            loglines.append(f"ERROR: {e}")
+            handle_ex(e)
 
         loglines.append(f"  updated {rowcount} rows")
         db.session.commit()

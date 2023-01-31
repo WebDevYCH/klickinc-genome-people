@@ -202,15 +202,14 @@ def queryClientCst(clients, csts):
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source, mult=1.22):
 
     if source == 'gsheet':
-        # add rough 4% for autobilling
-        # TODO: account for per-laborrole autobilling
-        hours *= 1.04
+        # add rough 6% for autobilling
+        # TODO: account for per-laborrole and portfolio autobilling
+        hours *= 1.06
 
         # add rough 20% for project overages, as reflected in RC/EAHR
         # TODO: make this more dynamic somehow
         # 1.14 as target based on 2020 experience
-        # 1.22 or so for PM
-        # 1.32 for medical strategist
+        # 1.22 or so in 2023, but we have to get it down fast
         hours *= mult
 
         # simplistic model, as PM forecasts are simplistic
