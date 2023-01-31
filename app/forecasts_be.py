@@ -13,7 +13,12 @@ from model import *
 from forecasts_core import *
 
 from google.cloud import bigquery
-from supervised import AutoML
+
+try:
+    from supervised import AutoML
+except:
+    pass
+    
 import warnings
 
 explain_model_path = "../cache/automl_lrforecast_explain"
