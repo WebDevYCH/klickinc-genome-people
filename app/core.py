@@ -5,6 +5,7 @@ import pickle
 import re
 import requests
 import redis as redislib
+from textmagic.rest import TextmagicRestClient
 
 from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -145,6 +146,19 @@ def getGoogleSheet(url):
     #return gc.open_by_url(url)
     gc = gspread.service_account(filename = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
     return gc.open_by_url(url)
+
+def handle_ex(e):
+    tmu = app.config['TEXTMAGIC-USERNAME']
+    tmk = app.config['TEXTMAGIC-KEY']
+    tmp = app.config['TEXTMAGIC-PHONE']
+    if tmu != '':
+        tmc = TextmagicRestClient(tmu, tmk)
+        # if e is a string send it, otherwise send the first 300 chars of the traceback
+        if isinstance(e, str):
+            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + e)
+        else:
+            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + traceback.format_exc()[0:300])
+
 
 # set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit
 def setGoogleSheetCellFormat(worksheet, cellpos, format):

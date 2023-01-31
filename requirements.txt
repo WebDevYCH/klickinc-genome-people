@@ -26,3 +26,4 @@ gpt_index
 pypdf2
 docx2txt
 gensim
+textmagic
