@@ -1,3 +1,4 @@
+import asyncio
 import datetime, os, re
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
@@ -27,6 +28,36 @@ compete_model_path = "../cache/automl_lrforecast_compete"
 optuna_model_path = "../cache/automl_lrforecast_optuna"
 bq_csv_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.csv"
 bq_pickle_path = f"../cache/automl_lrforecast_bq_{datetime.datetime.now().strftime('%Y%m%d')}.pkl"
+
+automl_query = """
+select sum(Hours) as Hours, 
+d.Year*100+d.Month as YearMonth,
+(p.PDName) as PDName, (p.GADName) as GADName, p.AccountPortfolioID, 
+(p.ClientName) as ClientName, (p.Name) as PortfolioName,
+p.CST as CSTName,
+(lr.LaborRole) as LaborRole, p.OfficeName,
+pf.FEARevenue as RevenueForecastForPortfolioMonth,
+string_agg(distinct cic.Name, " // ") as CIChannel,
+string_agg(distinct cil.Name, " // ") as CILifecycle,
+string_agg(distinct cid.Name, " // ") as CIDeliverable,
+from `genome-datalake-prod.GenomeDW.F_Actuals` fact
+join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
+join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
+join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+left outer join `genome-datalake-prod.GenomeReports.Finance_vMAPEEARevenue` pf on p.AccountPortfolioID=pf.AccountPortfolioID and date(pf.YearMonth)=date(d.Year,d.Month,1)
+left outer join `genome-datalake-prod.GenomeDW.CIChannelMapping` cicmap on cicmap.ProjectID=pr.ProjectID and date(cicmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CIChannel` cic on cicmap.InsightID=cic.ID
+left outer join `genome-datalake-prod.GenomeDW.CILifecycleMapping` cilmap on cilmap.ProjectID=pr.ProjectID and date(cilmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CILifecycle` cil on cilmap.InsightID=cil.ID
+left outer join `genome-datalake-prod.GenomeDW.CIDeliverableMapping` cidmap on cidmap.ProjectID=pr.ProjectID and date(cidmap.YearMonthDay)=d.Date
+left outer join `genome-datalake-prod.GenomeDW.CIDeliverable` cid on cidmap.InsightID=cid.ID
+where pr.Billable=true
+group by d.Year, d.Month,
+p.PDName, p.GADName, p.AccountPortfolioID, p.ClientName, p.Name,
+p.CST,
+lr.LaborRole, p.OfficeName, pf.FEARevenue
+"""
 
 
 ###################################################################
@@ -92,7 +123,7 @@ def model_linear():
 
     sourcename = 'linear'
     lookbackmonths = 4
-    lookaheadmonths = 1
+    lookaheadmonths = 12
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
     startdate = today.replace(day=1, month=1) - relativedelta(years=1)
@@ -157,7 +188,7 @@ def model_linreg():
 
     sourcename = 'linreg'
     lookbackmonths = 8
-    lookaheadmonths = 4
+    lookaheadmonths = 12
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
     startdate = today.replace(day=1, month=1) - relativedelta(years=1)
@@ -172,41 +203,50 @@ def model_linreg():
         if startdate >= today:
             thislookahead = lookaheadmonths
 
-        # for each portfolio with forecasts at this month or later
-        for p in db.session.query(PortfolioForecast).where(
-                    PortfolioForecast.yearmonth >= startdate,
-                    PortfolioForecast.forecast != None,
-                    PortfolioForecast.forecast != "0.00"
-                ).distinct(PortfolioForecast.portfolioid).all():
-            loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
-            # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
-            json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
-                [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
-            #loglines.append(f"{json}")
+        try:
+            # for each portfolio with forecasts at this month or later
+            for p in db.session.query(PortfolioForecast).where(
+                        PortfolioForecast.yearmonth >= startdate,
+                        PortfolioForecast.forecast != None,
+                        PortfolioForecast.forecast != "0.00"
+                    ).distinct(PortfolioForecast.portfolioid).all():
+                loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
+                # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+                json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
+                    [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
+                #loglines.append(f"{json}")
 
-            if 'Entries' in json:
-                # for each Genome forecast
-                for pfin in json['Entries']:
-                    # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
-                    pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                    upsert(db.session, PortfolioLRForecast, {
-                        'portfolioid': pfin['AccountPortfolioID'],
-                        'yearmonth': pfin['YearMonth'],
-                        'laborroleid': pfin['LaborRoleID'],
-                        'source': sourcename,
-                    }, {
-                        'forecastedhours': pfin['PredictedHour'],
-                        'forecasteddollars': None
-                    })
+                try:
+                    if 'Entries' in json:
+                        # for each Genome forecast
+                        for pfin in json['Entries']:
+                            # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
+                            pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
+                            upsert(db.session, PortfolioLRForecast, {
+                                'portfolioid': pfin['AccountPortfolioID'],
+                                'yearmonth': pfin['YearMonth'],
+                                'laborroleid': pfin['LaborRoleID'],
+                                'source': sourcename,
+                            }, {
+                                'forecastedhours': pfin['PredictedHour'],
+                                'forecasteddollars': None
+                            })
 
-                    rowcount += 1
-                    if rowcount % 100 == 0:
-                        loglines.append(f"  updated {rowcount} rows")
+                            rowcount += 1
+                            if rowcount % 100 == 0:
+                                loglines.append(f"  updated {rowcount} rows")
+                                db.session.commit()
+                        loglines.append(f"    updated {rowcount} rows")
                         db.session.commit()
-                loglines.append(f"    updated {rowcount} rows")
-                db.session.commit()
-            else:
-                loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                    else:
+                        loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
+                except Exception as e:
+                    loglines.append(f"ERROR: {e}")
+                    handle_ex(e)
+
+        except Exception as e:
+            loglines.append(f"ERROR: {e}")
+            handle_ex(e)
 
         loglines.append(f"  updated {rowcount} rows")
         db.session.commit()
@@ -227,7 +267,7 @@ def model_cilinear():
     loglines.append("Starting CI-Selected-Portfolio Linear Extrapolator")
     loglines.append("")
 
-    lookahead = 4
+    lookahead = 12
     sourcename = 'cilinear'
     startdate = datetime.date.today().replace(day=1)
     enddate = startdate + relativedelta(months=lookahead)
@@ -327,8 +367,8 @@ def model_actuals():
             'laborroleid': inrow['LaborRole'],
             'source': sourcename,
         }, {
-            'actualhours': inrow['Hours'],
-            'actualdollars': inrow['Dollars'],
+            'forecastedhours': inrow['Hours'],
+            'forecasteddollars': inrow['Dollars'],
         })
 
         rowcount += 1
@@ -343,9 +383,9 @@ def model_actuals():
 
 @app.cli.command('model_gsheets')
 def model_gsheets_cmd():
-    model_gsheets()
+    asyncio.run(model_gsheets())
 
-def model_gsheets():
+async def model_gsheets():
     loglines = AdminLog()
     with app.app_context():
         Base.prepare(autoload_with=db.engine, reflect=True)
@@ -358,41 +398,45 @@ def model_gsheets():
 
     source = 'gsheet'
 
-    # gather some lookup data
-    loglines.append("gathering lookup data")
-    #rates = get_clrrates()
-    #laborroles = db.session.query(LaborRole).all()
+    # delete existing gsheet records, in case a portfolio got disconnected
+    loglines.append(f"deleting existing forecasts")
+    db.session.query(PortfolioLRForecast).filter(
+        PortfolioLRForecast.yearmonth >= datetime.date(thisyear, 1, 1),
+        PortfolioLRForecast.yearmonth < datetime.date(thisyear+1, 1, 1),
+        PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
-    # for each Google Sheet forecast
-    for gs in db.session.query(PortfolioLRForecastSheet).filter(
+    loglines.append("gathering labor role forecasts")
+    pfforecastsheets = db.session.query(PortfolioLRForecastSheet).filter(
         PortfolioLRForecastSheet.year >= thisyear,
         PortfolioLRForecastSheet.gsheet_url != None,
         PortfolioLRForecastSheet.gsheet_url != '',
+        PortfolioLRForecastSheet.gsheet_url != 'a url',
         PortfolioLRForecastSheet.tabname != None,
         PortfolioLRForecastSheet.tabname != ''
-    ).order_by(PortfolioLRForecastSheet.gsheet_url,PortfolioLRForecastSheet.tabname).all():
+    ).order_by(PortfolioLRForecastSheet.gsheet_url,PortfolioLRForecastSheet.tabname).all()
 
-        # get the sheet with gspread
-        loglines.append(f"for portfolio {gs.portfolioid}, getting sheet {gs.gsheet_url}")
-        sheet = getGoogleSheet(gs.gsheet_url)
+    # for check each mapping to make sure we can reference the sheet+tab
+    for pfforecastsheet in pfforecastsheets:
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, getting sheet {pfforecastsheet.gsheet_url}")
+        sheet = getGoogleSheet(pfforecastsheet.gsheet_url)
+        loglines.append(f"  getting worksheet {pfforecastsheet.tabname}")
+        worksheet = sheet.worksheet(pfforecastsheet.tabname)
+        await asyncio.sleep(1)
 
-        # get the worksheet and convert to a dataframe for speed
-        loglines.append(f"for portfolio {gs.portfolioid}, getting worksheet {gs.tabname}")
-        worksheet = sheet.worksheet(gs.tabname)
+    # for each Google Sheet forecast
+    for pfforecastsheet in pfforecastsheets:
+
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, getting sheet {pfforecastsheet.gsheet_url}")
+        sheet = getGoogleSheet(pfforecastsheet.gsheet_url)
+        loglines.append(f"  getting worksheet {pfforecastsheet.tabname}")
+        worksheet = sheet.worksheet(pfforecastsheet.tabname)
+
         df = pd.DataFrame(worksheet.get_all_values())
-
-        # delete any existing plr forecasts for this portfolio in this record's year
-        loglines.append(f"for portfolio {gs.portfolioid}, deleting existing forecasts")
-        db.session.query(PortfolioLRForecast).filter(
-            PortfolioLRForecast.portfolioid == gs.portfolioid,
-            PortfolioLRForecast.yearmonth >= datetime.date(gs.year, 1, 1),
-            PortfolioLRForecast.yearmonth < datetime.date(gs.year+1, 1, 1),
-            PortfolioLRForecast.source == source).delete(synchronize_session='fetch')
 
         # the sheet has plr forecasts starting in row 15, with laborroleid in col 0
         # forecasted hours are in columns for each month based on the weeks in them: 8=Jan, 13=Feb, 18=Mar, 
         # for each row in the sheet starting at row 15
-        loglines.append(f"for portfolio {gs.portfolioid}, processing rows")
+        loglines.append(f"for portfolio {pfforecastsheet.portfolioid}, processing rows")
         monthcols = {1:8,2:13,3:18,4:24,5:29,6:35,7:40,8:45,9:51,10:56,11:61,12:67}
         for index, row in df.iterrows():
             # if the row is >=14 and has a labor role ID
@@ -404,10 +448,10 @@ def model_gsheets():
                     if row[monthcol] != None and row[monthcol] != '' and row[monthcol] != '0':
                         # create a record with the forecasted hours and dollars
                         pflr = PortfolioLRForecast()
-                        pflr.portfolioid = gs.portfolioid
-                        pflr.yearmonth = datetime.date(gs.year, month, 1)
+                        pflr.portfolioid = pfforecastsheet.portfolioid
+                        pflr.yearmonth = datetime.date(pfforecastsheet.year, month, 1)
                         pflr.laborroleid = row[0]
-                        pflr.forecastedhours = row[monthcol]
+                        pflr.forecastedhours = re.sub(r'[^0-9.]', '', row[monthcol])
                         pflr.forecasteddollars = re.sub(r'[^0-9.]', '', row[monthcol+2])
                         pflr.source = source
                         pflr.updateddate = datetime.date.today()
@@ -417,9 +461,11 @@ def model_gsheets():
                             db.session.commit()
 
         db.session.commit()
+        await asyncio.sleep(1)
 
     return loglines
 
+# AutoML using MLJAR
 @app.cli.command('model_mljar')
 def model_mljar_cmd():
     model_mljar()
@@ -443,9 +489,16 @@ def model_mljar():
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
     startdate = today.replace(day=1, month=1) - relativedelta(years=1)
-    lookaheadmonths = 3
+    lookaheadmonths = 12
 
     laborroles = db.session.query(LaborRole).all()
+
+    # load up the CI data for each portfolio+month combination
+    pfinfodict = {}
+
+    pfinforows = bigquery.Client().query(automl_query).result()
+    for row in pfinforows:
+        pfinfodict[f"{row['AccountPortfolioID']}-{row['YearMonth']}"] = row
 
     commitrowcount = 0
     loglines.append(f"processing {startdate}")
@@ -454,9 +507,34 @@ def model_mljar():
     for pf in db.session.query(PortfolioForecast).filter(
         PortfolioForecast.yearmonth >= startdate,
         PortfolioForecast.yearmonth < startdate + relativedelta(months=lookaheadmonths)
-    ).all():
+    ).order_by(PortfolioForecast.yearmonth).all():
         loglines.append(f"  for portfolio {pf.portfolioid}, processing {pf.yearmonth}")
         starttime = datetime.datetime.now()
+        pfinfo = None
+        pfinfokey = f"{pf.portfolioid}-{pf.yearmonth.year*100 + pf.yearmonth.month}"
+        if pfinfokey in pfinfodict:
+            pfinfo = pfinfodict[pfinfokey]
+        else:
+            # probably this is a future month; assume it's the same as the current month
+            loglines.append(f"    no CI data for {pfinfokey}; trying last month's data")
+            lastmonth = today - relativedelta(months=1)
+            pfinfokey = f"{pf.portfolioid}-{lastmonth.year*100 + lastmonth.month}"
+            if pfinfokey in pfinfodict:
+                pfinfo = pfinfodict[pfinfokey]
+            else:
+                # no CI data for this month either; just use blank data
+                loglines.append(f"    AND no CI data for {pfinfokey}! going with blank data")
+                pfinfo = {
+                    "YearMonth": pf.yearmonth.year*100 + pf.yearmonth.month,
+                    "PDName": None,
+                    "GADName": None,
+                    "CSTName": None,
+                    "OfficeName": None,
+                    "CIChannel": "",
+                    "CILifecycle": "",
+                    "CIDeliverable": "",
+                }
+
         # build a dataframe to predict the hours for this portfolio and month
         # model was trained on feature set:
         #   YearMonth, PDName, GADName, AccountPortfolioID, ClientName, PortfolioName, LaborRole, OfficeName, CIChannel, CILifecycle, CIDeliverable
@@ -468,17 +546,18 @@ def model_mljar():
             # add a row to the dataframe with the portfolio's feature values and the labor role
             Xdf = Xdf.append({
                 'ID': f"{pf.portfolioid}-{lr.id}-{pf.yearmonth.year*100 + pf.yearmonth.month}",
-                'YearMonth': pf.yearmonth.year*100 + pf.yearmonth.month,
-                'PDName': pf.portfolio.currpdname,
-                'GADName': pf.portfolio.currgadname,
+                'YearMonth': pfinfo["YearMonth"],
+                'PDName': pfinfo["PDName"] or pf.portfolio.currpdname,
+                'GADName': pfinfo["GADName"] or pf.portfolio.currgadname,
                 'AccountPortfolioID': pf.portfolio.id,
                 'ClientName': pf.portfolio.clientname,
                 'PortfolioName': pf.portfolio.name,
                 'LaborRole': lr.id,
-                'OfficeName': pf.portfolio.currofficename,
-                'CIChannel': None,
-                'CILifecycle': None,
-                'CIDeliverable': None,
+                'CSTName': pfinfo["CSTName"] or pf.portfolio.currbusinessunit,
+                'OfficeName': pfinfo["OfficeName"] or pf.portfolio.currofficename,
+                'CIChannel': pfinfo["CIChannel"],
+                'CILifecycle': pfinfo["CILifecycle"],
+                'CIDeliverable': pfinfo["CIDeliverable"],
             }, ignore_index=True)
 
         # load the model and predict the dataset (returns a numpy.ndarray)
@@ -631,42 +710,11 @@ def train_automl_model():
 
     # run query against Genome datalake in BQ, or load from a cache file
     df = None
-    if os.path.exists(bq_pickle_path):
-        loglines.append(f"  loading from cache")
-        df = pd.read_pickle(bq_pickle_path)
-    else:
-        loglines.append(f"  running query")
-        rows = bigquery.Client().query("""
-select sum(Hours) as Hours, 
-d.Year*100+d.Month as YearMonth,
-(p.PDName) as PDName, (p.GADName) as GADName, p.AccountPortfolioID, 
-(p.ClientName) as ClientName, (p.Name) as PortfolioName,
-(lr.LaborRole) as LaborRole, p.OfficeName,
-pf.FEARevenue as RevenueForecastForPortfolioMonth,
-string_agg(distinct cic.Name, " // ") as CIChannel,
-string_agg(distinct cil.Name, " // ") as CILifecycle,
-string_agg(distinct cid.Name, " // ") as CIDeliverable,
-from `genome-datalake-prod.GenomeDW.F_Actuals` fact
-join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
-join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
-join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
-join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
-left outer join `genome-datalake-prod.GenomeReports.Finance_vMAPEEARevenue` pf on p.AccountPortfolioID=pf.AccountPortfolioID and date(pf.YearMonth)=date(d.Year,d.Month,1)
-left outer join `genome-datalake-prod.GenomeDW.CIChannelMapping` cicmap on cicmap.ProjectID=pr.ProjectID and date(cicmap.YearMonthDay)=d.Date
-left outer join `genome-datalake-prod.GenomeDW.CIChannel` cic on cicmap.InsightID=cic.ID
-left outer join `genome-datalake-prod.GenomeDW.CILifecycleMapping` cilmap on cilmap.ProjectID=pr.ProjectID and date(cilmap.YearMonthDay)=d.Date
-left outer join `genome-datalake-prod.GenomeDW.CILifecycle` cil on cilmap.InsightID=cil.ID
-left outer join `genome-datalake-prod.GenomeDW.CIDeliverableMapping` cidmap on cidmap.ProjectID=pr.ProjectID and date(cidmap.YearMonthDay)=d.Date
-left outer join `genome-datalake-prod.GenomeDW.CIDeliverable` cid on cidmap.InsightID=cid.ID
-where pr.Billable=true
-group by d.Year, d.Month,
-p.PDName, p.GADName, p.AccountPortfolioID, p.ClientName, p.Name,
-lr.LaborRole, p.OfficeName, pf.FEARevenue
-""").result()
-        loglines.append(f"  results rows {rows.total_rows}")
-        df = rows.to_dataframe()
-        df.to_csv(bq_csv_path)
-        df.to_pickle(bq_pickle_path)
+    loglines.append(f"  running query")
+    rows = bigquery.Client().query(automl_query).result()
+    loglines.append(f"  results rows {rows.total_rows}")
+    df = rows.to_dataframe()
+    df.to_csv(bq_csv_path)
 
     # split into train and test
     loglines.append(f"  splitting into train and test")

@@ -1,5 +1,6 @@
 import calendar
 import datetime, re
+from statistics import mean
 import pandas as pd
 
 from flask import render_template, request
@@ -105,16 +106,20 @@ def dept_lr_forecasts_data():
     lrcat = request.args.get('lrcat')
     showportfolios = request.args.get('showportfolios') == 'true'
     showsources = request.args.get('showsources') == 'true'
+    showfullyear = request.args.get('showyear') == 'true'
+    showhours = request.args.get('showhours') == 'true'
+    mult = float(request.args.get('mult'))
 
     # cache the results (sorting is slow)
-    df = Cache.get(f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}")
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{mult}"
+    df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, mult)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
-        Cache.set(f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}", df, timeout=300)
+        Cache.set(cachekey, df, timeout_seconds=300)
 
     retval = df.to_dict('records')
     # remove any null values for the parent column
@@ -146,14 +151,17 @@ def pf_client_list():
 def pf_cst_list():
     year = int(request.args.get('year'))
     csts = db.session.query(Portfolio).\
-        distinct(Portfolio.currcst).\
+        distinct(Portfolio.currbusinessunit).\
         join(PortfolioForecast).\
         filter(PortfolioForecast.yearmonth >= datetime.date(year,1,1)).\
         filter(PortfolioForecast.yearmonth < datetime.date(year+1,1,1)).\
-        order_by(Portfolio.currcst).\
+        order_by(Portfolio.currbusinessunit).\
         all()
 
-    return [{"id":c.currcst, "value":c.currcst } for c in csts]
+    retval = [{"id":c.currbusinessunit, "value":c.currbusinessunit } for c in csts]
+    retval.sort(key=lambda x: x['value'])
+    app.logger.info(f"pf_cst_list size: {len(retval)} {retval}")
+    return retval
 
 # GET /forecasts/lrcat-list
 @app.route('/forecasts/lrcat-list')
@@ -175,42 +183,67 @@ def pf_lrcat_list():
 ###################################################################
 ## UTILITIES
 
-# utility to add to a cell in a dataframe, even if it's null
-def addtocell(df, id, col, val):
-    loc = df.loc[df['id'] == id, col]
-    if pd.isnull(df.loc[df['id'] == id, col]).bool():
-        df.loc[df['id'] == id, col] = val
+# utility to add to a cell in a dict-dict, even if it's null
+def addtocell(dict, id, col, val):
+    if dict[id].get(col) == None:
+        dict[id][col] = val
     else:
-        df.loc[df['id'] == id, col] += val
-#    try:
-#        if pd.isnull(df.at[id, col]).bool():
-#            df.at[id, col] = val
-#        else:
-#            df.at[id, col] += val
-#    except:
-#        pass
+        dict[id][col] += val
 
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
-        queryfilter = Portfolio.currcst.in_(csts.split(','))
+        queryfilter = Portfolio.currbusinessunit.in_(csts.split(','))
     elif clients != None and clients != "":
         queryfilter = Portfolio.clientid.in_(clients.split(','))
     else:
         queryfilter = True
     return queryfilter
 
-def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst):
-    business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
-    business_hours_per_day = 7.26
-    # rough accounting for typical vacation and sick time
-    if yearmonth.month == 5: business_hours_per_day /= 1.09
-    elif yearmonth.month == 6: business_hours_per_day /= 1.12
-    elif yearmonth.month == 7: business_hours_per_day /= 1.23
-    elif yearmonth.month == 8: business_hours_per_day /= 1.16
-    elif yearmonth.month == 9: business_hours_per_day /= 1.10
-    else: business_hours_per_day /= 1.07
+def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source, mult=1.22):
 
-    return hours / (business_days * business_hours_per_day)
+    if source == 'gsheet':
+        # add rough 6% for autobilling
+        # TODO: account for per-laborrole and portfolio autobilling
+        hours *= 1.06
+
+        # add rough 20% for project overages, as reflected in RC/EAHR
+        # TODO: make this more dynamic somehow
+        # 1.14 as target based on 2020 experience
+        # 1.22 or so in 2023, but we have to get it down fast
+        hours *= mult
+
+        # simplistic model, as PM forecasts are simplistic
+        business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
+        business_hours_per_day = 7.26
+        fte = hours / (business_days * business_hours_per_day)
+
+        return fte
+    else:
+        # calculate FTEs based on monthly hours, but do it twice and take the average
+        # first time is based on the actual number of business days in the month, calibrated against typical vacation+sick time
+        business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
+        business_hours_per_day = 7.26
+        # rough accounting for typical vacation and sick time
+        if yearmonth.month == 5: business_hours_per_day /= 1.09
+        elif yearmonth.month == 6: business_hours_per_day /= 1.12
+        elif yearmonth.month == 7: business_hours_per_day /= 1.23
+        elif yearmonth.month == 8: business_hours_per_day /= 1.16
+        elif yearmonth.month == 9: business_hours_per_day /= 1.10
+        else: business_hours_per_day /= 1.07
+        fte = hours / (business_days * business_hours_per_day)
+
+        return fte
+
+
+def clean_dictarray(dictarray):
+    parentlookup = {}
+    for d in dictarray:
+        parentlookup[d['parent']] = True
+    filtdictarray = []
+    for d in dictarray:
+        if f"{d['hc']}{d['m1']}{d['m2']}{d['m3']}{d['m4']}{d['m5']}{d['m6']}{d['m7']}{d['m8']}{d['m9']}{d['m10']}{d['m11']}{d['m12']}" != "" or d['id'] in parentlookup:
+            filtdictarray.append(d)
+    return filtdictarray
 
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
@@ -329,120 +362,170 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True):
-
-    # return from cache if possible
-    cachekey = f"dlrfs:{year}-{lrcat}-{clients}-{csts}-{showportfolios}-{showsources}"
-    dfarr = Cache.get(cachekey)
-    if dfarr:
-        return dfarr[0]
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, mult=1.22):
 
     queryfilter = queryClientCst(clients, csts)
 
     primarysource = 'gsheet'
+    thisyear = datetime.date.today().year
+    thismonth = datetime.date.today().month
 
-    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {primarysource} cache miss")
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours}")
 
-    cachekey = f"dlrfs:{year}-{lrcat}-{clients}-{csts}"
-    df = Cache.get(cachekey)
-
-    # create a pandas dataframe of the portfolio labor role forecasts
-    header = ['id','parent','name','detail','source','altid',
+    # working with a dictionary of dictionaries
+    columns = ['id','parent','name','detail','source','hc',
     'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
-    df = pd.DataFrame(columns=header)
+    rowtemplate = dict.fromkeys(columns, None)
 
     # query the labor role forecasts
     pflrs = db.session.query(PortfolioLRForecast).join(Portfolio).join(LaborRole).filter(
             PortfolioLRForecast.yearmonth >= datetime.date(year,1,1),
             PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1),
             LaborRole.categoryname == lrcat,
+            PortfolioLRForecast.forecastedhours != None,
             queryfilter
         ).all()
 
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")
     rowdict = {}
 
-    sources = {}
-
-    # add the portfolio labor role forecasts to the dataframe
+    # add the rows to the dataframe
+    app.logger.info(f"  adding rows to dict")
     for pflr in pflrs:
-        sources[pflr.source] = True
-        # we want the hierarchy to be: labor role -> portfolio -> source
-        # but also labor role -> source sum
 
-        # add a row for the labor role as a root node, if it isn't already there
+        if pflr.forecastedhours == None or pflr.forecastedhours == 0:
+            continue
+
+        # we want four hierarchies:
+        # A: labor role -> portfolio -> source
+        # B: labor role -> source sum
+        # C: lrcat -> portfolio -> source
+        # D: lrcat -> source sum
+        sourcename = f"'{pflr.source}' Source",
+        if pflr.source == 'actuals':
+            sourcename = 'Actuals'
+        elif pflr.source == 'linear':
+            sourcename = 'Linear Forecast'
+        elif pflr.source == 'cilinear':
+            sourcename = 'Linear Forecast by CI Tags'
+        elif pflr.source == 'linreg':
+            sourcename = 'Linear Regression Forecast'
+        elif pflr.source == 'gsheet':
+            sourcename = 'PM Line of Sight Forecast'
+        elif pflr.source == 'mljar':
+            sourcename = 'AutoML Forecast'
+
+        # A: labor role as a root node, if it isn't already there
         lrmainkey = f"{pflr.laborroleid}"
         if lrmainkey not in rowdict:
-            df = pd.concat([df, 
-                pd.DataFrame({ 'id': lrmainkey,
-                'parent': None,
-                'name': pflr.labor_role.name }, index=[0])], ignore_index=True)
-            rowdict[lrmainkey] = True
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrmainkey
+            newrow['parent'] = None
+            newrow['name'] = pflr.labor_role.name
+            rowdict[lrmainkey] = newrow
         
-        # add a row for the sum of the forecasted hours for the labor role by portfolio
+        # A: sum of the forecasted hours for the labor role by portfolio
         lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
         if lrportfoliokey not in rowdict:
-            df = pd.concat([df, 
-                pd.DataFrame({ 'id': lrportfoliokey,
-                'parent': lrmainkey,
-                'name': f"{pflr.portfolio.clientname} - {pflr.portfolio.name}",
-                'detail': 'portfolio' }, index=[0])], ignore_index=True)
-            rowdict[lrportfoliokey] = True
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrportfoliokey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['detail'] = 'portfolio'
+            rowdict[lrportfoliokey] = newrow
 
-        # add a row for the sum of the forecasted hours for the labor role by portfolio and source
+        # A: sum of the forecasted hours for the labor role by portfolio and source
         lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
         if lrsourcekey not in rowdict:
-            df = pd.concat([df,
-                pd.DataFrame({ 'id': lrsourcekey,
-                'parent': lrportfoliokey,
-                'name': f"'{pflr.source}' Source",
-                'altid': f"{pflr.laborroleid}-{pflr.source}",
-                'source': pflr.source,
-                'detail': 'source' }, index=[0])], ignore_index=True)
-            rowdict[lrsourcekey] = True
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrsourcekey
+            newrow['parent'] = lrportfoliokey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'source'
+            rowdict[lrsourcekey] = newrow
 
-        # add a row for the sum of the forecasted hours for the labor role by source
+        # B: sum of the forecasted hours for the labor role by source
         lrsourcesumkey = f"{pflr.laborroleid}-{pflr.source}"
         if lrsourcesumkey not in rowdict:
-            df = pd.concat([df,
-                pd.DataFrame({ 'id': lrsourcesumkey,
-                'parent': lrmainkey,
-                'name': f"'{pflr.source}' Source Sum",
-                'source': pflr.source,
-                'detail': 'sourcesum' }, index=[0])], ignore_index=True)
-            rowdict[lrsourcesumkey] = True
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrsourcesumkey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'sourcesum'
+            rowdict[lrsourcesumkey] = newrow
+
+        # C: sum of the forecasted hours for the labor cat
+        lcatmainkey = f"lcat"
+        if lcatmainkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatmainkey
+            newrow['parent'] = None
+            newrow['name'] = f" {lrcat} Labor Category"
+            newrow['detail'] = 'lcat'
+            rowdict[lcatmainkey] = newrow
+
+        # C: sum of the forecasted hours for the labor cat by portfolio
+        lcatportfoliokey = f"{pflr.portfolioid}-lcat"
+        if lcatportfoliokey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatportfoliokey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['detail'] = 'portfolio'
+            rowdict[lcatportfoliokey] = newrow
+
+        # C: sum of the forecasted hours for the labor cat by portfolio and source
+        lcatsourcekey = f"{pflr.portfolioid}-lcat-{pflr.source}"
+        if lcatsourcekey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatsourcekey
+            newrow['parent'] = lcatportfoliokey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'source'
+            rowdict[lcatsourcekey] = newrow
+
+        # D: sum of the forecasted hours for the labor cat by source
+        lcatsourcesumkey = f"lcat-{pflr.source}"
+        if lcatsourcesumkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatsourcesumkey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'sourcesum'
+            rowdict[lcatsourcesumkey] = newrow
 
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currcst)
-            df.loc[df['id'] == lrsourcekey, mkey] = fte
-            #df.at[lrsourcekey, mkey] = fte
-            addtocell(df, lrsourcesumkey, mkey, fte)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source, mult)
+
+            # possible override to hours
+            if showhours:
+                fte = pflr.forecastedhours
+
+            rowdict[lrsourcekey][mkey] = fte
+            addtocell(rowdict, lrsourcesumkey, mkey, fte)
+            addtocell(rowdict, lcatsourcesumkey, mkey, fte)
 
             # also add to the portfolio and labor role sum rows if this is the primary source
             if pflr.source == primarysource:
-                addtocell(df, lrportfoliokey, mkey, fte)
-                addtocell(df, lrmainkey, mkey, fte)
+                addtocell(rowdict, lrportfoliokey, mkey, fte)
+                addtocell(rowdict, lrmainkey, mkey, fte)
+                addtocell(rowdict, lcatportfoliokey, mkey, fte)
+                addtocell(rowdict, lcatmainkey, mkey, fte)
 
     # calculate the RMSE and R2 for each source
-    for source in sources.keys():
-        # for each filled-in month with this source, if there are actuals for that month as well, then insert them both into their arrays
-        # TODO
-        thissource = []
-        actuals = []
-        for m in range(1,13):
-            mkey = f"m{m}"
-            if df.loc[df['source'] == source, mkey].count() > 0:
-                thissource.append(df.loc[df['source'] == source, mkey].sum())
-                actuals.append(df.loc[df['detail'] == 'actual', mkey].sum())
-
+    # TODO
 
     app.logger.info(f"  df processing done")
 
     # add headcount rows
     if csts != None and csts != "":
-        queryfilter = Portfolio.currcst.in_(csts.split(','))
+        queryfilter = LaborRoleHeadcount.cstname.in_(csts.split(','))
     else:
         queryfilter = True
 
@@ -454,32 +537,53 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         ).all()
 
     for lrhc in lrhcs:
-        # we want the hierarchy to be: labor role -> portfolio -> source
-        # but also labor role -> source sum
-
-        # add a row for the labor role as a root node, if it isn't already there
+        # labor role as a root node, in case it isn't already there
         lrmainkey = f"{lrhc.laborroleid}"
-        if lrmainkey not in df.id.values:
-            df = pd.concat([df, 
-                pd.DataFrame({ 'id': lrmainkey,
-                'parent': None,
-                'name': lrhc.labor_role.name }, index=[0])])
+        if lrmainkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrmainkey
+            newrow['parent'] = None
+            newrow['name'] = lrhc.labor_role.name
+            rowdict[lrmainkey] = newrow
         
-        # add a row for the headcount for the labor role by source
+        # headcount for the labor role
         lrhckey = f"{lrhc.laborroleid}-hc"
-        if lrhckey not in df.id.values:
-            df = pd.concat([df,
-                pd.DataFrame({ 'id': lrhckey,
-                'parent': lrmainkey,
-                'name': f" Headcount EOM",
-                'source': 'headcount',
-                'detail': 'headcount' }, index=[0])])
+        if lrhckey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrhckey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = f" Headcount EOM"
+            newrow['source'] = 'headcount'
+            newrow['detail'] = 'headcount'
+            rowdict[lrhckey] = newrow
+
+        # headcount for the labor cat
+        lcatmainkey = f"lcat"
+        lcathckey = f"lcat-hc"
+        if lcathckey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcathckey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = f" Headcount EOM"
+            newrow['source'] = 'headcount'
+            newrow['detail'] = 'headcount'
+            rowdict[lcathckey] = newrow
 
         # fill in the month column in the headcount row
         mkey = f"m{lrhc.yearmonth.month}"
-        addtocell(df, lrhckey, mkey, lrhc.headcount_eom)
+        addtocell(rowdict, lrhckey, mkey, lrhc.headcount_eom)
+        addtocell(rowdict, lcathckey, mkey, lrhc.headcount_eom)
+
+        # if it's this month, fill in the hc column
+        if lrhc.yearmonth == datetime.date(thisyear, thismonth, 1):
+            addtocell(rowdict, lrmainkey, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lcatmainkey, "hc", lrhc.headcount_eom)
 
     app.logger.info(f"  headcount processing done")
+
+    # create dataframe based on rowdict
+    app.logger.info(f"  creating dataframe")
+    df = pd.DataFrame(rowdict.values(), columns=columns)
 
     # remove the portfolio and source rows if we don't want them
     if showportfolios and showsources:
@@ -498,9 +602,23 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     # switch dataframe nulls to blank
     df = df.fillna('')
 
-    app.logger.info(f"  post-filter processing done")
+    # a little gross ... we want to remove records that have no data in any month and no child records
+    # convert dataframe to array of dictionaries
+    app.logger.info(f"  cleaning out empty rows")
+    dictarray = df.to_dict('records')
+    filtdictarray = clean_dictarray(dictarray)
+    filtdictarray = clean_dictarray(filtdictarray)
+    app.logger.info(f"  {len(dictarray) - len(filtdictarray)} rows removed")
+    df = pd.DataFrame(filtdictarray, columns=columns)
 
-    # save the pre-filtered dataframe to the cache
-    Cache.set(cachekey, [df])
+    # optionally remove all months except current one and the next 3 months
+    if not showfullyear and year == thisyear:
+        app.logger.info(f"  removing months except {thismonth} and next 3")
+        for m in range(1,13):
+            if m < thismonth or m > thismonth + 3:
+                df = df.drop(f"m{m}", axis=1)
+
+
+    app.logger.info(f"  post-filter processing done")
 
     return df

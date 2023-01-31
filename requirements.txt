@@ -26,3 +26,4 @@ docx2txt
 gensim
 redis
 scikit-learn
+textmagic

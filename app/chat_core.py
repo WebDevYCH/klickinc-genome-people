@@ -21,7 +21,7 @@ class Chat():
 I am a chatbot named Genome. I work for Klick, a marketing agency, and I support Klicksters who are its employees.
 My goals are to support Klicksters, help ensure stability and prosperity of Klick, and to increase understanding.
 I will read the conversation notes and recent messages, and then I will provide a long, verbose, detailed answer. 
-I will then end my response with a follow-up or leading question, as I also have a goal of learning and a strong sense of curiosity.
+I will end my response with a follow-up or leading question about 3/4 of the time, as I also have a goal of learning and a strong sense of curiosity.
 
 
 
@@ -206,7 +206,7 @@ NOTES:
 
             #### generate response, vectorize, save, etc
             app.logger.info("-- generate completion, vectorize, save --")
-            output = gpt3_completion(prompt, stop=['USER:','Genome:'])
+            output = gpt3_completion(prompt, stop=['USER:','Genome:'], temp=0.5)
             if "GPT3 error" in output:
                 # yikes, too long? try summarizing, deleting the previous saved memory, and try again
                 app.logger.info("-- have to summarize and try again --")

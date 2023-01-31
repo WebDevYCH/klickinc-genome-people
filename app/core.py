@@ -1,8 +1,11 @@
 from asyncio import sleep
 import datetime
 import os, time
+import pickle
 import re
 import requests
+import redis as redislib
+from textmagic.rest import TextmagicRestClient
 
 from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
@@ -83,19 +86,37 @@ class AdminLog(list):
         super().append(item)
 
 # class to do basic in-memory caching of data
-cache_cache = {}
 class Cache:
-    def __init__(self):
-        cache_cache = {}
-    def get(key):
-        if key in cache_cache:
-            if cache_cache[key]['timeout'] == 0 or cache_cache[key]['time'] + cache_cache[key]['timeout'] > time.time():
-                return cache_cache[key]['value']
+    cache_cache = {}
+    redisconn = None
+    keyprefix = "1234" # change this to force a refresh of redis cache
+
+    def get(key, redis=False):
+        if redis:
+            if not Cache.redisconn: 
+                Cache.redisconn = redislib.Redis(host='localhost', port=6379, db=0)
+            obj = Cache.redisconn.get(Cache.keyprefix+key)
+            if obj:
+
+                return pickle.loads(obj)
             else:
-                del cache_cache[key]
-        return None
-    def set(key, value, timeout=0):
-        cache_cache[key] = {'value': value, 'timeout': timeout, 'time': time.time()}
+                return None
+        else:
+            if key in Cache.cache_cache:
+                centry = Cache.cache_cache[key]
+                if centry['timeout'] == 0 or centry['time'] + centry['timeout'] > time.time():
+                    return Cache.cache_cache[key]['value']
+                else:
+                    del Cache.cache_cache[key]
+            return None
+
+    def set(key, value, timeout_seconds=3600*12, redis=False):
+        if redis:
+            if not Cache.redisconn: 
+                Cache.redisconn = redis.Redis(host='localhost', port=6379, db=0)
+            Cache.redisconn.set(Cache.keyprefix+key, pickle.dumps(value), ex=timeout_seconds)
+        else:
+            Cache.cache_cache[key] = {'value': value, 'timeout': timeout_seconds, 'time': time.time()}
 
 
 # function used in a bunch of places to pick up data from Genome
@@ -123,6 +144,19 @@ def getGoogleSheet(url):
     #return gc.open_by_url(url)
     gc = gspread.service_account(filename = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS'))
     return gc.open_by_url(url)
+
+def handle_ex(e):
+    tmu = app.config['TEXTMAGIC-USERNAME']
+    tmk = app.config['TEXTMAGIC-KEY']
+    tmp = app.config['TEXTMAGIC-PHONE']
+    if tmu != '':
+        tmc = TextmagicRestClient(tmu, tmk)
+        # if e is a string send it, otherwise send the first 300 chars of the traceback
+        if isinstance(e, str):
+            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + e)
+        else:
+            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + traceback.format_exc()[0:300])
+
 
 # set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit
 def setGoogleSheetCellFormat(worksheet, cellpos, format):
@@ -156,23 +190,28 @@ def upsert(session, model, constraints, values, usecache=False):
         cache = Cache.get(outercachekey)
         if not cache:
             cache = {}
-            app.logger.info(f"** CACHE MISS, creating new full table cache for {outercachekey}")
+            app.logger.info(f"** OUTER CACHE MISS, creating new full table cache for {outercachekey}")
             for cobj in session.query(model).all():
                 innercachekey = ','.join([f"{k}:{getattr(cobj, k)}" for k in constraintkeys])
-                #app.logger.info(f"** adding object to cache for cachekey {innercachekey}")
+                #app.logger.info(f"** adding object to cache for cachekey {innercachekey}; key type is {type(innercachekey)}")
                 cache[innercachekey] = cobj
             Cache.set(outercachekey, cache)
-
 
     # now get the object if we don't have it
     obj = None
     if usecache:
+        cache = Cache.get(outercachekey)
+        if not cache:
+            cache = {}
+            app.logger.info(f"** OUTER CACHE MISS ON LOOKUP (this should not happen)")
+            Cache.set(outercachekey, cache)
         # inner cache key should be a string of the key-value pairs in the constraints
         innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
-        obj = cache.get(innercachekey)
-        innercachekey = ','.join([f"{k}:{constraints[k]}" for k in constraintkeys])
-        if not obj:
-            app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}")
+        if innercachekey in cache:
+            #app.logger.info(f"** cache hit for cachekey {innercachekey}; key count is {len(cache)}")
+            obj = cache[innercachekey]
+        else:
+            #app.logger.info(f"** cache miss (how did this happen??), querying for object for cachekey {innercachekey}; key type is {type(innercachekey)}")
             query = session.query(model).filter_by(**constraints)
             obj = query.first()
             cache[innercachekey] = obj
