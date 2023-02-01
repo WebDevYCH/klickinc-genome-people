@@ -569,16 +569,20 @@ def model_mljar():
         rowcount = 0
         for index, row in np.ndenumerate(predictions):
             if row != None and row > 0:
-                upsert(db.session, PortfolioLRForecast, {
-                    'portfolioid': pf.portfolioid,
-                    'yearmonth': pf.yearmonth,
-                    'laborroleid': Xdf.loc[index,'LaborRole'],
-                    'source': source,
-                }, {
-                    'forecastedhours': row,
-                    'forecasteddollars': None,
-                    'updateddate': datetime.date.today()
-                }, usecache=True)
+                try:
+                    upsert(db.session, PortfolioLRForecast, {
+                        'portfolioid': pf.portfolioid,
+                        'yearmonth': pf.yearmonth,
+                        'laborroleid': Xdf.loc[index,'LaborRole'],
+                        'source': source,
+                    }, {
+                        'forecastedhours': row,
+                        'forecasteddollars': None,
+                        'updateddate': datetime.date.today()
+                    }, usecache=True)
+                except Exception as e:
+                    loglines.append(f"    ERROR: {e}")
+                    handle_ex(e)
                 rowcount += 1
                 commitrowcount += 1
 
@@ -588,8 +592,6 @@ def model_mljar():
         loglines.append(f"    processed {rowcount} rows, took {datetime.datetime.now() - starttime} seconds, predictions took {predictendtime - predictstarttime} seconds")
     
     db.session.commit()
-
-
 
 
 # replicate portfolio list to gsheet mapping table (i.e. create empty records for each portfolio)

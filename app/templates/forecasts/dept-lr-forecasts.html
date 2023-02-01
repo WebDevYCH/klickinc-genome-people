@@ -29,7 +29,7 @@
             },
             { id: "multcombo", width: "300px" },
             { id: "checkboxformcontainer", html: '<form id="form"></form>' },
-            { id: "note", html: "Numbers are in FTE, based on typical vacation/sick for each month. Headcount includes full-time and contract, not freelance.</i>" },
+            { id: "note", html: "Numbers are in Billable Allocation, which FTE equivalent accounting for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. BA and HC numbers include full-time and contract, not freelance.</i>" },
             { id: "treegrid" },
         ]
     });
@@ -88,15 +88,15 @@
     ///////////////////////////////////////////////////////////////////////
     // MDOU MULTIPLIER DROPDOWN
     const mults = [
-        { "id": "1.19", "value": "Current" },
-        { "id": "1.17", "value": "Mid to target" },
-        { "id": "1.15", "value": "Target" },
+        { "id": "1.22", "value": "Current (1.22)" },
+        { "id": "1.18", "value": "Mid to target (1.18)" },
+        { "id": "1.15", "value": "Target (1.15)" },
     ]
     const multcombo = new dhx.Combobox(null, {
         multiselection: false,
         data: mults,
         label: "MDOU Multiplier for FTEs",
-        value: "1.19",
+        value: "1.22",
         readOnly: true,
     });
     multcombo.events.on("change", function(id) {
@@ -166,6 +166,8 @@
         columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
         if (year == thisyear)
             columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
+            columns.push({ id: "ba", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BA Now" }] });
+            columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
 
         datarow = treegrid.data.getItem('lcat')
         if (!datarow) return;

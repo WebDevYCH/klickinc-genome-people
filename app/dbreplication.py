@@ -357,14 +357,20 @@ def replicate_laborrolehc():
     # users
     loglines.append("LABORROLE HEADCOUNT TABLE")
     sql = f"""
-select LAST_DAY(uwd.YearMonthDay) as YearMonth, CST, LaborRoleID, EmployeeTypeID, 
-count(*) as HeadCount
-from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUserWorkDay` uwd
-where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)
-and EmployeeTypeID in ('PM','CN')
-and uwd.YearMonthDay > date('2015-01-01')
-group by CST, LaborRoleID, EmployeeTypeID, YearMonth
-order by 1 desc
+  select LAST_DAY(uwd.YearMonthDay) as YearMonth, uwd.CST, LaborRoleID, EmployeeTypeID, 
+  count(*) as HeadCount, sum(Billed) as Billed, sum(Target) as Target, sum(BillableAllocation) as BillableAllocation
+  from GenomeDW.DUserWorkDay uwd
+  left join (
+    select UserID, LAST_DAY(YearMonthDay) as YearMonth, sum(Billed) as Billed, sum(ProratedTarget) as Target, max(BillableAllocation) as BillableAllocation
+    from GenomeBillability.BillableHours bh 
+    where EmployeeType in ('Permanent', 'Contractor')
+    group by UserID, YearMonth 
+  ) bh on uwd.YearMonthDay = bh.YearMonth and uwd.UserID = bh.UserID
+  where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)
+  and EmployeeTypeID in ('PM','CN')
+  and uwd.YearMonthDay > date('2015-01-01')
+  group by uwd.CST, LaborRoleID, EmployeeTypeID, YearMonth
+  order by 1 desc
     """
     rowcount = 0
     for lrhcin in bqclient.query(sql).result():
@@ -373,7 +379,13 @@ order by 1 desc
             'cstname': lrhcin.CST,
             'laborroleid': lrhcin.LaborRoleID,
             'employeetypeid': lrhcin.EmployeeTypeID
-        }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+        }, 
+        { 
+            'headcount_eom': lrhcin.HeadCount,  
+            'billablealloc_eom': lrhcin.BillableAllocation,
+            'billed_hours': lrhcin.Billed,
+            'target_hours': lrhcin.Target
+        }, usecache=True):
             loglines.append(f"Inserted/updated laborrole headcount {lrhcin.YearMonth} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         # if this record is from last month, also save it as the headcount for this month
@@ -383,7 +395,12 @@ order by 1 desc
                 'cstname': lrhcin.CST,
                 'laborroleid': lrhcin.LaborRoleID,
                 'employeetypeid': lrhcin.EmployeeTypeID
-            }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+            }, { 
+                'headcount_eom': lrhcin.HeadCount,  
+                'billablealloc_eom': lrhcin.BillableAllocation,
+                'billed_hours': lrhcin.Billed,
+                'target_hours': lrhcin.Target
+            }, usecache=True):
                 loglines.append(f"Inserted/updated laborrole headcount {datetime.date.today().replace(day=1)} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         rowcount += 1

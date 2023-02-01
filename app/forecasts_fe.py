@@ -190,6 +190,12 @@ def addtocell(dict, id, col, val):
     else:
         dict[id][col] += val
 
+def settocell(dict, id, col, val):
+    dict[id][col] = val
+
+def getfromcell(dict, id, col):
+    return dict[id].get(col)
+
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
         queryfilter = Portfolio.currbusinessunit.in_(csts.split(','))
@@ -374,7 +380,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     # working with a dictionary of dictionaries
     columns = ['id','parent','name','detail','source','hc',
-    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
+    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12','ba','billedpct']
     rowtemplate = dict.fromkeys(columns, None)
 
     # query the labor role forecasts
@@ -523,7 +529,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     app.logger.info(f"  df processing done")
 
-    # add headcount rows
+    # add billable allocm, headcount and billed pct data
     if csts != None and csts != "":
         queryfilter = LaborRoleHeadcount.cstname.in_(csts.split(','))
     else:
@@ -546,38 +552,52 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = lrhc.labor_role.name
             rowdict[lrmainkey] = newrow
         
-        # headcount for the labor role
-        lrhckey = f"{lrhc.laborroleid}-hc"
-        if lrhckey not in rowdict:
+        # BA for the labor role
+        lrbakey = f"{lrhc.laborroleid}-ba"
+        if lrbakey not in rowdict:
             newrow = rowtemplate.copy()
-            newrow['id'] = lrhckey
+            newrow['id'] = lrbakey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f" Headcount EOM"
+            newrow['name'] = f" Billable Alloc EOM"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
-            rowdict[lrhckey] = newrow
+            rowdict[lrbakey] = newrow
 
-        # headcount for the labor cat
+        # BA for the labor cat
         lcatmainkey = f"lcat"
-        lcathckey = f"lcat-hc"
-        if lcathckey not in rowdict:
+        lcatbakey = f"lcat-ba"
+        if lcatbakey not in rowdict:
             newrow = rowtemplate.copy()
-            newrow['id'] = lcathckey
+            newrow['id'] = lcatbakey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f" Headcount EOM"
+            newrow['name'] = f" Billable Alloc EOM"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
-            rowdict[lcathckey] = newrow
+            rowdict[lcatbakey] = newrow
 
         # fill in the month column in the headcount row
         mkey = f"m{lrhc.yearmonth.month}"
-        addtocell(rowdict, lrhckey, mkey, lrhc.headcount_eom)
-        addtocell(rowdict, lcathckey, mkey, lrhc.headcount_eom)
+        addtocell(rowdict, lrbakey, mkey, lrhc.billablealloc_eom)
+        addtocell(rowdict, lcatbakey, mkey, lrhc.billablealloc_eom)
 
         # if it's this month, fill in the hc column
         if lrhc.yearmonth == datetime.date(thisyear, thismonth, 1):
             addtocell(rowdict, lrmainkey, "hc", lrhc.headcount_eom)
             addtocell(rowdict, lcatmainkey, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lrmainkey, "ba", lrhc.billablealloc_eom)
+            addtocell(rowdict, lcatmainkey, "ba", lrhc.billablealloc_eom)
+
+        # if it's this month or the previous 2 months, save target and billable hours and calculate billed pct
+        if lrhc.yearmonth >= datetime.date.today() - relativedelta(months=3):
+            addtocell(rowdict, lrmainkey, f"targethours", lrhc.target_hours)
+            addtocell(rowdict, lrmainkey, f"billedhours", lrhc.billed_hours)
+            targethours = getfromcell(rowdict, lrmainkey, "targethours")
+            billedhours = getfromcell(rowdict, lrmainkey, "billedhours")
+            if targethours != None and targethours != 0:
+                billedpct = billedhours / targethours * 100
+                settocell(rowdict, lrmainkey, "billedpct", billedpct)
+            else:
+                settocell(rowdict, lrmainkey, "billedpct", None)
 
     app.logger.info(f"  headcount processing done")
 
@@ -617,7 +637,6 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         for m in range(1,13):
             if m < thismonth or m > thismonth + 3:
                 df = df.drop(f"m{m}", axis=1)
-
 
     app.logger.info(f"  post-filter processing done")
 
