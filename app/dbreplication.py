@@ -354,17 +354,36 @@ def replicate_laborrolehc():
     loglines.append("Starting Genome DB Replication via BigQuery")
     loglines.append("")
 
-    # users
+    # delete recent data first
+    db.session.query(LaborRoleHeadcount).filter(LaborRoleHeadcount.yearmonth >= datetime.date.today() - datetime.timedelta(days=60)).delete()
+
+    # pull data from bigquery
     loglines.append("LABORROLE HEADCOUNT TABLE")
     sql = f"""
-select LAST_DAY(uwd.YearMonthDay) as YearMonth, CST, LaborRoleID, EmployeeTypeID, 
-count(*) as HeadCount
-from `{app.config['BQPROJECT']}.{app.config['BQDATASET']}.DUserWorkDay` uwd
-where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)
-and EmployeeTypeID in ('PM','CN')
-and uwd.YearMonthDay > date('2015-01-01')
-group by CST, LaborRoleID, EmployeeTypeID, YearMonth
-order by 1 desc
+  select LAST_DAY(uwd.YearMonthDay) as YearMonth, uwd.CST, LaborRoleID, EmployeeTypeID, count(*) as HeadCount, sum(Billed) as Billed, sum(Target) as Target, 
+  sum(BillableAllocation) as BillableAllocation, sum(ifnull(fa.Hours,0)) as AutobillHours
+  from GenomeDW.DUserWorkDay uwd
+  left join (
+    select UserID, LAST_DAY(YearMonthDay) as YearMonth, sum(Billed) as Billed, sum(ProratedTarget) as Target, max(BillableAllocation) as BillableAllocation
+    from GenomeBillability.BillableHours bh 
+    where EmployeeType in ('Permanent', 'Contractor')
+    group by UserID, YearMonth 
+  ) bh on uwd.YearMonthDay = bh.YearMonth and uwd.UserID = bh.UserID
+  left join (
+    select fa.Employee as UserID,
+      LAST_DAY(ActualDate) as YearMonth,
+      sum(fa.Hours) as Hours
+      from `genome-datalake-prod.GenomeDW.F_Actuals` fa
+        inner join `genome-datalake-prod.GenomeDW.DateDimension` dd on dd.DateDimension = fa.Date
+      where fa.Client != 1 and (fa.Oversight != 'None' or fa.SchedulerAssistance != 'None') and dd.Year = 2023
+      group by 
+      fa.Employee, YearMonth
+  ) fa on fa.UserID = uwd.UserID and fa.YearMonth = uwd.YearMonthDay
+  where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)
+  and EmployeeTypeID in ('PM','CN')
+  and uwd.YearMonthDay > date('2015-01-01')
+  group by uwd.CST, LaborRoleID, EmployeeTypeID, YearMonth
+  order by 1 desc
     """
     rowcount = 0
     for lrhcin in bqclient.query(sql).result():
@@ -373,7 +392,14 @@ order by 1 desc
             'cstname': lrhcin.CST,
             'laborroleid': lrhcin.LaborRoleID,
             'employeetypeid': lrhcin.EmployeeTypeID
-        }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+        }, 
+        { 
+            'headcount_eom': lrhcin.HeadCount,  
+            'billablealloc_eom': lrhcin.BillableAllocation,
+            'billed_hours': lrhcin.Billed,
+            'target_hours': lrhcin.Target,
+            'autobill_hours': lrhcin.AutobillHours
+        }, usecache=True):
             loglines.append(f"Inserted/updated laborrole headcount {lrhcin.YearMonth} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         # if this record is from last month, also save it as the headcount for this month
@@ -383,7 +409,13 @@ order by 1 desc
                 'cstname': lrhcin.CST,
                 'laborroleid': lrhcin.LaborRoleID,
                 'employeetypeid': lrhcin.EmployeeTypeID
-            }, { 'headcount_eom': lrhcin.HeadCount }, usecache=True):
+            }, { 
+                'headcount_eom': lrhcin.HeadCount,  
+                'billablealloc_eom': lrhcin.BillableAllocation,
+                'billed_hours': lrhcin.Billed,
+                'target_hours': lrhcin.Target,
+                'autobill_hours': lrhcin.AutobillHours
+            }, usecache=True):
                 loglines.append(f"Inserted/updated laborrole headcount {datetime.date.today().replace(day=1)} {lrhcin.CST} {lrhcin.LaborRoleID} {lrhcin.EmployeeTypeID} {lrhcin.HeadCount}")
 
         rowcount += 1
