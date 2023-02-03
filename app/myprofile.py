@@ -1,6 +1,7 @@
 from flask import render_template, flash, request
 from flask_login import login_required, current_user
-
+from werkzeug.utils import secure_filename
+import os.path
 
 from core import *
 from model import *
@@ -9,25 +10,36 @@ from skillutils import *
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
-    my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+    try:
+        profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+    except:
+        profile = None
+    try:
+        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+    except:
+        my_skills = None
 
     if request.method == "POST":
+        resume = request.form['resume']
         if profile:
-            profile.resume = request.form["resume"]
+            profile.resume = resume
             db.session.commit()
             flash("Successfully updated your resume")
         else:
-            user_profile = UserProfile(resume=request.form["resume"], user_id=int(current_user.userid))
+            user_profile = UserProfile(resume=resume, user_id=int(current_user.userid))
             db.session.add(user_profile)
             db.session.commit()
             flash("Successfully added your resume")
-        relevant_skills = extract_skills_from_text(request.form["resume"])
+        relevant_skills = extract_skills_from_text(resume)
 
         if "message" in relevant_skills:
             flash("An error happened extracting skills! Please try again.")
         else:
             auto_fill_user_skill_from_resume(relevant_skills['data'])
+
+    if not profile:
+        flash("Unable to find an existing profile, please create one by uploading a resume")
+
     return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills)
 
 @app.route('/profile/edit-skills')

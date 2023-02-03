@@ -22,7 +22,7 @@
                 {% if current_user.photourl %}
                 <img src="{{ current_user.photourl }}" class="img-fluid rounded-circle mb-2" width="128" height="128" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                 {% else %}
-                <img src="img/avatars/avatar.jpg" alt="Christina Mason" class="img-fluid rounded-circle mb-2" width="128" height="128" />
+                <img src="img/avatars/avatar.jpg" alt="{{ current_user.firstname }} {{ current_user.lastname }}" class="img-fluid rounded-circle mb-2" width="128" height="128" />
                 {% endif %}
 
                 <h5 class="card-title mb-0">{{ user }}</h5>
