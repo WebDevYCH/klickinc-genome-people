@@ -211,8 +211,6 @@ def queryClientCst(clients, csts):
         queryfilter = True
     return queryfilter
 
-
-
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
     if source == 'gsheet':
         if autobill_lookback > 0:
@@ -290,6 +288,7 @@ def clean_dictarray(dictarray):
         if f"{d['hc']}{d['m1']}{d['m2']}{d['m3']}{d['m4']}{d['m5']}{d['m6']}{d['m7']}{d['m8']}{d['m9']}{d['m10']}{d['m11']}{d['m12']}" != "" or d['id'] in parentlookup:
             filtdictarray.append(d)
     return filtdictarray
+
 
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
