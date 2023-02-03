@@ -1,7 +1,5 @@
 from flask import render_template, flash, request
 from flask_login import login_required, current_user
-from werkzeug.utils import secure_filename
-import os.path
 
 from core import *
 from model import *
