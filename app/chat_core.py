@@ -56,7 +56,7 @@ NOTES:
     gpt3logs_dir = "gpt3logs"
     notes_dir = "notes"
     memory_match_min = 0.8  # minimum similarity score to consider a memory match
-    conversation_lookback = 3 # number of messages to look back in the conversation within the prompt
+    conversation_lookback = 5 # number of messages to look back in the conversation within the prompt
 
     core_memories = ["core", "people", "projects", "pitches"]
     current_memory = []

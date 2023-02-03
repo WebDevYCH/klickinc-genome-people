@@ -27,9 +27,8 @@
                 height: "content",
                 align: "left",
             },
-            { id: "multcombo", width: "300px" },
             { id: "checkboxformcontainer", html: '<form id="form"></form>' },
-            { id: "note", html: "Numbers are in Billable Allocation, which FTE equivalent accounting for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. BA and HC numbers include full-time and contract, not freelance.</i>" },
+            { id: "note", html: "Numbers are in FTE ('Billable Allocation'), accounts for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. Numbers include full-time and contract, not freelance.</i>" },
             { id: "treegrid" },
         ]
     });
@@ -84,28 +83,6 @@
         lrcatcombo.enable();
     });
     layout.getCell("lrcatcombo").attach(lrcatcombo);
-
-    ///////////////////////////////////////////////////////////////////////
-    // MDOU MULTIPLIER DROPDOWN
-    const mults = [
-        { "id": "1.22", "value": "Current (1.22)" },
-        { "id": "1.18", "value": "Mid to target (1.18)" },
-        { "id": "1.15", "value": "Target (1.15)" },
-    ]
-    const multcombo = new dhx.Combobox(null, {
-        multiselection: false,
-        data: mults,
-        label: "MDOU Multiplier for FTEs",
-        value: "1.22",
-        readOnly: true,
-    });
-    multcombo.events.on("change", function(id) {
-        loadgrid();
-    });
-    multcombo.data.events.on("load", function() {
-        multcombo.enable();
-    });
-    layout.getCell("multcombo").attach(multcombo);
 
     ///////////////////////////////////////////////////////////////////////
     // CST DROPDOWN
@@ -164,10 +141,11 @@
         thisyear = "{{thisyear}}";
         // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
         columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
-        if (year == thisyear)
-            columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
+        if (year == thisyear) {
+            //columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
             columns.push({ id: "ba", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BA Now" }] });
             columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
+        }
 
         datarow = treegrid.data.getItem('lcat')
         if (!datarow) return;
@@ -224,7 +202,6 @@
     loadgrid = function(id) {
         var year = yearcombo.getValue();
         var lrcat = lrcatcombo.getValue();
-        var mult = multcombo.getValue();
         var csts = cstcombo.getValue();
         var clients = clientcombo.getValue();
         var showportfolios = form.getItem("showportfolios").getValue();
@@ -233,7 +210,7 @@
         var showhours = form.getItem("showhours").getValue();
         if (lrcat != "") {
             treegrid.data.removeAll();
-            postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours+'&mult='+mult;
+            postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours;
             if (csts != "")
                 treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+postfix);
             else if (clients != "")

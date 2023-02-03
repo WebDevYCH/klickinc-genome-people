@@ -1,6 +1,4 @@
-# from sqlalchemy_serializer import SerializerMixin
-
-
+import time
 import os
 import pickle
 from sqlalchemy.ext.automap import automap_base
@@ -38,7 +36,8 @@ dbsession = Session()
 
 metadatacachefile = "../cache/dbmetadata.cache"
 cached_metadata = None
-if os.path.exists(metadatacachefile):
+# if cache file exists and is <12 hours old, use it
+if os.path.exists(metadatacachefile) and os.path.getmtime(metadatacachefile) > time.time() - 12 * 60 * 60:
     app.logger.info("Loading cached metadata")
     try:
         with open(metadatacachefile, 'rb') as cache_file:

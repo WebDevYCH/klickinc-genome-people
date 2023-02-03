@@ -10,6 +10,13 @@ from core import *
 from model import *
 from forecasts_core import *
 
+autobill_lookback = 0
+
+# rough conversion for project overages, as reflected in RC/EAHR
+# 1.15 as target based on 2020 experience
+# RCHR/EAHR: 2023=1.326, 2022=1.204, 2021=1.445, 2020=1.123
+mdou_pct = 1.15
+
 
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
@@ -108,14 +115,13 @@ def dept_lr_forecasts_data():
     showsources = request.args.get('showsources') == 'true'
     showfullyear = request.args.get('showyear') == 'true'
     showhours = request.args.get('showhours') == 'true'
-    mult = float(request.args.get('mult'))
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{mult}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, mult)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
@@ -205,18 +211,52 @@ def queryClientCst(clients, csts):
         queryfilter = True
     return queryfilter
 
-def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source, mult=1.22):
 
+
+def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
     if source == 'gsheet':
-        # add rough 6% for autobilling
-        # TODO: account for per-laborrole and portfolio autobilling
-        hours *= 1.06
+        if autobill_lookback > 0:
+            # add hours to account for typical autobilling, by laborrole and cst over the last X months
+            outercachekey = 'autobill_pct'
+            autobill_pct = Cache.get(outercachekey)
+            if autobill_pct is None:
+                app.logger.info(f"autobill_pct cache miss, reloading")
+                autobill_pct = {}
+                startdate = datetime.date(yearmonth.year, yearmonth.month, 1) - relativedelta(autobill_lookback)
+                for lrhc in db.session.query(LaborRoleHeadcount).filter(LaborRoleHeadcount.yearmonth >= startdate).all():
+                    innercachekey = f"{lrhc.laborroleid}-{lrhc.cstname}"
+                    innercachekey_autobill = f"{lrhc.laborroleid}-{lrhc.cstname}-autobill"
+                    innercachekey_bill = f"{lrhc.laborroleid}-{lrhc.cstname}-bill"
+                    # save hours billed and autobilled separate, and calculate percentage of autobilled/(billed-autobilled) on the fly
+                    if lrhc.autobill_hours != None:
+                        if innercachekey_autobill not in autobill_pct: autobill_pct[innercachekey_autobill] = 0
+                        if innercachekey_bill not in autobill_pct: autobill_pct[innercachekey_bill] = 0
+                        autobill_pct[innercachekey_autobill] += lrhc.autobill_hours
+                        autobill_pct[innercachekey_bill] += lrhc.billed_hours
 
-        # add rough 20% for project overages, as reflected in RC/EAHR
-        # TODO: make this more dynamic somehow
-        # 1.14 as target based on 2020 experience
-        # 1.22 or so in 2023, but we have to get it down fast
-        hours *= mult
+                        # note divide by zero but move on from it (it happens when a role is purely autobill)
+                        if autobill_pct[innercachekey_bill] - autobill_pct[innercachekey_autobill] != 0:
+                            autobill_pct[innercachekey] = autobill_pct[innercachekey_autobill] / (autobill_pct[innercachekey_bill] - autobill_pct[innercachekey_autobill])
+                        else:
+                            app.logger.info(f"  autobill_pct divide by zero because role is purely autobill: {innercachekey}")
+                            autobill_pct[innercachekey] = -0.1
+
+                Cache.set(outercachekey, autobill_pct, timeout_seconds=3600*12)
+            innercachekey = f"{laborroleid}-{cst}"
+            if innercachekey in autobill_pct:
+                if autobill_pct[innercachekey] < 0:
+                    app.logger.info(f"  autobill_pct was negative due to role being pure autobill for {innercachekey} --> {hours}")
+                else:
+                    app.logger.info(f"  autobill_pct cache HIT for {innercachekey} --> {hours}*(1+{autobill_pct[innercachekey]})")
+                    hours *= 1 + autobill_pct[innercachekey]
+            else:
+                app.logger.info(f"  autobill_pct cache miss for {innercachekey}")
+        else:
+            # no lookback, so just assume 6% autobilling
+            hours *= 1.06
+
+        # rough MDOU% adjustment based on target
+        hours *= mdou_pct
 
         # simplistic model, as PM forecasts are simplistic
         business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
@@ -368,11 +408,12 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, mult=1.22):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False):
 
     queryfilter = queryClientCst(clients, csts)
 
     primarysource = 'gsheet'
+    lcatmainkey = f"lcat"
     thisyear = datetime.date.today().year
     thismonth = datetime.date.today().month
 
@@ -426,7 +467,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
-            newrow['parent'] = None
+            newrow['parent'] = lcatmainkey
             newrow['name'] = pflr.labor_role.name
             rowdict[lrmainkey] = newrow
         
@@ -468,7 +509,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lcatmainkey
             newrow['parent'] = None
-            newrow['name'] = f" {lrcat} Labor Category"
+            newrow['name'] = f" {lrcat} (Labor Category)"
             newrow['detail'] = 'lcat'
             rowdict[lcatmainkey] = newrow
 
@@ -507,7 +548,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source, mult)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source)
 
             # possible override to hours
             if showhours:
@@ -543,12 +584,12 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         ).all()
 
     for lrhc in lrhcs:
-        # labor role as a root node, in case it isn't already there
+        # labor role as a root node, in case it isn't already there from a forecast
         lrmainkey = f"{lrhc.laborroleid}"
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
-            newrow['parent'] = None
+            newrow['parent'] = lcatmainkey
             newrow['name'] = lrhc.labor_role.name
             rowdict[lrmainkey] = newrow
         
@@ -564,7 +605,6 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrbakey] = newrow
 
         # BA for the labor cat
-        lcatmainkey = f"lcat"
         lcatbakey = f"lcat-ba"
         if lcatbakey not in rowdict:
             newrow = rowtemplate.copy()
