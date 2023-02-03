@@ -178,6 +178,8 @@
         treegrid.setColumns(columns);
 
         treegrid.collapseAll();
+        // open the first row
+        treegrid.expand('lcat');
     });
     layout.getCell("treegrid").attach(treegrid);
 
@@ -191,6 +193,7 @@
             { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
             { id: "showyear", type: "checkbox", label: "Show Full Year", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the full year instead of just the next 3 months" },
             { id: "showhours", type: "checkbox", label: "Show Hours Instead of FTE", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show hours instead of FTE" },
+            { id: "showlaborroles", type: "checkbox", label: "Show Labor Roles Instead of Job Function", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show more detail with LR's instead of JF" },
         ]
     });
     form.events.on("change", function(id) {
@@ -208,9 +211,10 @@
         var showsources = form.getItem("showsources").getValue();
         var showyear = form.getItem("showyear").getValue();
         var showhours = form.getItem("showhours").getValue();
+        var showlaborroles = form.getItem("showlaborroles").getValue();
         if (lrcat != "") {
             treegrid.data.removeAll();
-            postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours;
+            postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours+'&showlaborroles='+showlaborroles;
             if (csts != "")
                 treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+postfix);
             else if (clients != "")

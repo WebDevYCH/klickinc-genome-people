@@ -115,13 +115,14 @@ def dept_lr_forecasts_data():
     showsources = request.args.get('showsources') == 'true'
     showfullyear = request.args.get('showyear') == 'true'
     showhours = request.args.get('showhours') == 'true'
+    showlaborroles = request.args.get('showlaborroles') == 'true'
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{showlaborroles}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, showlaborroles)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         df.sort_values(by=['name'], inplace=True)
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
@@ -407,7 +408,7 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, showlaborroles=False):
 
     queryfilter = queryClientCst(clients, csts)
 
@@ -416,7 +417,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     thisyear = datetime.date.today().year
     thismonth = datetime.date.today().month
 
-    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours}")
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours} {showlaborroles}")
 
     # working with a dictionary of dictionaries
     columns = ['id','parent','name','detail','source','hc',
@@ -461,17 +462,25 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         elif pflr.source == 'mljar':
             sourcename = 'AutoML Forecast'
 
+        if showlaborroles:
+            lr_or_jf = pflr.labor_role.id
+        else:
+            lr_or_jf = pflr.labor_role.jobfunction
+
         # A: labor role as a root node, if it isn't already there
-        lrmainkey = f"{pflr.laborroleid}"
+        lrmainkey = f"{lr_or_jf}"
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = pflr.labor_role.name
+            if showlaborroles:
+                newrow['name'] = pflr.labor_role.name
+            else:
+                newrow['name'] = pflr.labor_role.jobfunction
             rowdict[lrmainkey] = newrow
         
         # A: sum of the forecasted hours for the labor role by portfolio
-        lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
+        lrportfoliokey = f"{pflr.portfolioid}-{lr_or_jf}"
         if lrportfoliokey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrportfoliokey
@@ -481,7 +490,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrportfoliokey] = newrow
 
         # A: sum of the forecasted hours for the labor role by portfolio and source
-        lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+        lrsourcekey = f"{pflr.portfolioid}-{lr_or_jf}-{pflr.source}"
         if lrsourcekey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrsourcekey
@@ -492,7 +501,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrsourcekey] = newrow
 
         # B: sum of the forecasted hours for the labor role by source
-        lrsourcesumkey = f"{pflr.laborroleid}-{pflr.source}"
+        lrsourcesumkey = f"{lr_or_jf}-{pflr.source}"
         if lrsourcesumkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrsourcesumkey
@@ -583,8 +592,17 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         ).all()
 
     for lrhc in lrhcs:
+        # we can't count the CST's that don't have forecasts in this system
+        if lrhc.cstname in ['Brave Consulting']:
+            continue
+
+        if showlaborroles:
+            lr_or_jf = lrhc.labor_role.id
+        else:
+            lr_or_jf = lrhc.labor_role.jobfunction
+
         # labor role as a root node, in case it isn't already there from a forecast
-        lrmainkey = f"{lrhc.laborroleid}"
+        lrmainkey = f"{lr_or_jf}"
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
@@ -593,12 +611,12 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrmainkey] = newrow
         
         # BA for the labor role
-        lrbakey = f"{lrhc.laborroleid}-ba"
+        lrbakey = f"{lr_or_jf}-ba"
         if lrbakey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrbakey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f" Billable Alloc EOM"
+            newrow['name'] = f" FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lrbakey] = newrow
@@ -609,7 +627,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lcatbakey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f" Billable Alloc EOM"
+            newrow['name'] = f" FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lcatbakey] = newrow
