@@ -10,7 +10,7 @@ from core import *
 from model import *
 from forecasts_core import *
 
-autobill_lookback = 0
+autobill_lookback = 4
 
 # rough conversion for project overages, as reflected in RC/EAHR
 # 1.15 as target based on 2020 experience
