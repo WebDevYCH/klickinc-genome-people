@@ -245,11 +245,14 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
             if innercachekey in autobill_pct:
                 if autobill_pct[innercachekey] < 0:
                     app.logger.info(f"  autobill_pct was negative due to role being pure autobill for {innercachekey} --> {hours}")
+                elif autobill_pct[innercachekey] > 5:
+                    app.logger.info(f"  autobill_pct was >5 for {innercachekey} --> {hours}")
                 else:
-                    app.logger.info(f"  autobill_pct cache HIT for {innercachekey} --> {hours}*(1+{autobill_pct[innercachekey]})")
+                    #app.logger.info(f"  autobill_pct cache HIT for {innercachekey} --> {hours}*{1+autobill_pct[innercachekey]}")
                     hours *= 1 + autobill_pct[innercachekey]
             else:
-                app.logger.info(f"  autobill_pct cache miss for {innercachekey}")
+                #app.logger.info(f"  autobill_pct cache miss for {innercachekey}")
+                pass
         else:
             # no lookback, so just assume 6% autobilling
             hours *= 1.06
@@ -450,17 +453,17 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # D: lrcat -> source sum
         sourcename = f"'{pflr.source}' Source",
         if pflr.source == 'actuals':
-            sourcename = 'Actuals'
+            sourcename = ' Actuals'
         elif pflr.source == 'linear':
-            sourcename = 'Linear Forecast'
+            sourcename = ' Linear Forecast'
         elif pflr.source == 'cilinear':
-            sourcename = 'Linear Forecast by CI Tags'
+            sourcename = ' Linear Forecast by CI Tags'
         elif pflr.source == 'linreg':
-            sourcename = 'Linear Regression Forecast'
+            sourcename = ' Linear Regression Forecast'
         elif pflr.source == 'gsheet':
-            sourcename = 'PM Line of Sight Forecast'
+            sourcename = ' PM Line of Sight Forecast'
         elif pflr.source == 'mljar':
-            sourcename = 'AutoML Forecast'
+            sourcename = ' AutoML Forecast'
 
         if showlaborroles:
             lr_or_jf = pflr.labor_role.id
@@ -616,7 +619,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lrbakey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f" FTE"
+            newrow['name'] = f"  FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lrbakey] = newrow
@@ -627,7 +630,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lcatbakey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f" FTE"
+            newrow['name'] = f"  FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lcatbakey] = newrow
