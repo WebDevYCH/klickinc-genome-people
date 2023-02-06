@@ -23,13 +23,13 @@
 					<thead>
 					<tr>
 						<th>Name</th>
-						<th>Actions</th>
+						<th class="text-end">Actions</th>
 					</tr>
 					</thead>
 					{% for skill in skills %}
 						<tr>
 							<td>{{ skill.name }}</td>
-							<td>
+							<td class="text-end">
 								<a href="/profile/skill-edit/delete/{{ skill.id }}" class="btn btn-sm btn-danger">
 									<i class="fas fa-trash"></i>
 								</a>
