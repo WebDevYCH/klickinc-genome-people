@@ -38,7 +38,7 @@ def profile():
     if not profile:
         flash("Unable to find an existing profile, please create one by uploading a resume")
 
-    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills)
+    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills, title="Profile")
 
 @app.route('/profile/edit-skills')
 @login_required
