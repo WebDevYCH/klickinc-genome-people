@@ -239,11 +239,10 @@
 			});
 		});
 		let flag = 'Create';
-		const resume = $('#resume-panel').html();
+		const resume = $('#resume-panel').html().trim();
 		if (resume) flag = 'Edit';
 		$('#upload-resume-btn').on('click', function () {
 			if (flag === 'Create') {
-				editor.root.innerHTML = '<p><br><p>';
 				$('.modal-title').html('Create your resume');
 			} else {
 				editor.root.innerHTML = resume;
