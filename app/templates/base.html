@@ -121,7 +121,6 @@
                         </a>
                     </li>
 
-                    <!-- 
                     <li class="sidebar-header">
                         Job Board
                     </li>
@@ -130,7 +129,6 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
-                    -->
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
@@ -463,10 +461,10 @@
     </div>
 
     <div class="loading"></div>
-    {% block script %}{% endblock %}
     <script src="/static/js/app.js"></script>
     <script src="/static/js/jquery-3.6.1.min.js"></script>
     <script src="/static/js/custom.js"></script>
+    {% block script %}{% endblock %}
 </body>
 
 </html>
