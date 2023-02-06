@@ -7,9 +7,11 @@
 
 
 {% block app_content %}
-
-<div id="layout" style="height: 80%; width: 100%"></div>
-
+<div class="card">
+	<div class="card-body">
+		<div id="layout" style="height: 80%; width: 100%"></div>
+	</div>
+</div>
 <script>
     {% block layout %}
     const layout = new dhx.Layout("layout", {

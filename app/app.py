@@ -34,7 +34,7 @@ import requests
 def index():
     '''This is the route for the Home Page.'''
     if current_user.is_authenticated:
-        return render_template('index.html', title='Genome People')
+        return render_template('index.html', title='Main')
     else:
         #return render_template('login.html', title='Google Login') # webpage with login button
         return redirect("/login") # redirect straight to the oath process

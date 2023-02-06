@@ -12,12 +12,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link rel="shortcut icon" href="/static/img/icons/icon-48x48.png" />
 
-    <title>
-        {% if title %}
-            {{ title }}
-        {% else %}
-            Genome People
-        {% endif %}
+    <title>Genome People
+        {% block title %}
+            {% if title %}
+                 - {{ title }}
+            {% endif %}
+        {% endblock %}
     </title>
 
     {% block app_head %}{% endblock %}
@@ -416,12 +416,8 @@
 
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    {# application content needs to be provided in the app_content block #}
-                                    {% block app_content %}{% endblock %}
-                                </div>
-                            </div>
+							{# application content needs to be provided in the app_content block #}
+							{% block app_content %}{% endblock %}
                         </div>
                     </div>
 
