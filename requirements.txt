@@ -26,5 +26,5 @@ gensim
 redis
 scikit-learn
 textmagic
-beautifulsoup
+beautifulsoup4
 pytz
