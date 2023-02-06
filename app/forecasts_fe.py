@@ -124,7 +124,10 @@ def dept_lr_forecasts_data():
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
         df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, showlaborroles)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
-        df.sort_values(by=['name'], inplace=True)
+        try:
+            df.sort_values(by=['name'], inplace=True)
+        except:
+            app.logger.info(f"dept_lr_forecasts_data sort failed, leaving alone")
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
         Cache.set(cachekey, df, timeout_seconds=300)
 
@@ -460,6 +463,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             sourcename = ' Linear Forecast by CI Tags'
         elif pflr.source == 'linreg':
             sourcename = ' Linear Regression Forecast'
+        elif pflr.source.startswith('linreg'):
+            sourcename = f' Linear Regression Forecast ({pflr.source[6:]}m lookback)'
         elif pflr.source == 'gsheet':
             sourcename = ' PM Line of Sight Forecast'
         elif pflr.source == 'mljar':

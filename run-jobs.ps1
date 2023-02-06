@@ -27,35 +27,35 @@ if ($args.Count -eq 0) {
     Write-Host " chat jobs:       $jobs_chat"
 }
 elseif ($args[0] -eq "job") {
-    python.exe -m flask $args[1] *>&1 | Tee-Object -FilePath $logfile
+    python -m flask $args[1] *>&1 | Tee-Object -FilePath $logfile
 }
 elseif ($args[0] -eq "often") {
     foreach ($function in $jobs_core_often.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
 elseif ($args[0] -eq "daily") {
     foreach ($function in $jobs_core_daily.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
 elseif ($args[0] -eq "skills") {
     foreach ($function in $jobs_skills.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
 elseif ($args[0] -eq "forecast") {
     foreach ($function in $jobs_forecast.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
 elseif ($args[0] -eq "tmkt") {
     foreach ($function in $jobs_tmkt.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
 elseif ($args[0] -eq "train") {
     foreach ($function in $jobs_train.Split(" ")) {
-        python.exe -m flask $function *>&1 | Tee-Object -FilePath $logfile
+        python -m flask $function *>&1 | Tee-Object -FilePath $logfile
     }
 }
