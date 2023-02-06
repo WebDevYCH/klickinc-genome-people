@@ -10,6 +10,13 @@ from core import *
 from model import *
 from forecasts_core import *
 
+autobill_lookback = 4
+
+# rough conversion for project overages, as reflected in RC/EAHR
+# 1.15 as target based on 2020 experience
+# RCHR/EAHR: 2023=1.326, 2022=1.204, 2021=1.445, 2020=1.123
+mdou_pct = 1.15
+
 
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
@@ -108,16 +115,19 @@ def dept_lr_forecasts_data():
     showsources = request.args.get('showsources') == 'true'
     showfullyear = request.args.get('showyear') == 'true'
     showhours = request.args.get('showhours') == 'true'
-    mult = float(request.args.get('mult'))
+    showlaborroles = request.args.get('showlaborroles') == 'true'
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{mult}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{showlaborroles}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, mult)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, showlaborroles)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
-        df.sort_values(by=['name'], inplace=True)
+        try:
+            df.sort_values(by=['name'], inplace=True)
+        except:
+            app.logger.info(f"dept_lr_forecasts_data sort failed, leaving alone")
         app.logger.info(f"dept_lr_forecasts_data sorted size: {len(df)}")
         Cache.set(cachekey, df, timeout_seconds=300)
 
@@ -190,6 +200,12 @@ def addtocell(dict, id, col, val):
     else:
         dict[id][col] += val
 
+def settocell(dict, id, col, val):
+    dict[id][col] = val
+
+def getfromcell(dict, id, col):
+    return dict[id].get(col)
+
 def queryClientCst(clients, csts):
     if csts != None and csts != "":
         queryfilter = Portfolio.currbusinessunit.in_(csts.split(','))
@@ -199,18 +215,53 @@ def queryClientCst(clients, csts):
         queryfilter = True
     return queryfilter
 
-def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source, mult=1.22):
-
+def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
     if source == 'gsheet':
-        # add rough 6% for autobilling
-        # TODO: account for per-laborrole and portfolio autobilling
-        hours *= 1.06
+        if autobill_lookback > 0:
+            # add hours to account for typical autobilling, by laborrole and cst over the last X months
+            outercachekey = 'autobill_pct'
+            autobill_pct = Cache.get(outercachekey)
+            if autobill_pct is None:
+                app.logger.info(f"autobill_pct cache miss, reloading")
+                autobill_pct = {}
+                startdate = datetime.date(yearmonth.year, yearmonth.month, 1) - relativedelta(autobill_lookback)
+                for lrhc in db.session.query(LaborRoleHeadcount).filter(LaborRoleHeadcount.yearmonth >= startdate).all():
+                    innercachekey = f"{lrhc.laborroleid}-{lrhc.cstname}"
+                    innercachekey_autobill = f"{lrhc.laborroleid}-{lrhc.cstname}-autobill"
+                    innercachekey_bill = f"{lrhc.laborroleid}-{lrhc.cstname}-bill"
+                    # save hours billed and autobilled separate, and calculate percentage of autobilled/(billed-autobilled) on the fly
+                    if lrhc.autobill_hours != None:
+                        if innercachekey_autobill not in autobill_pct: autobill_pct[innercachekey_autobill] = 0
+                        if innercachekey_bill not in autobill_pct: autobill_pct[innercachekey_bill] = 0
+                        autobill_pct[innercachekey_autobill] += lrhc.autobill_hours
+                        autobill_pct[innercachekey_bill] += lrhc.billed_hours
 
-        # add rough 20% for project overages, as reflected in RC/EAHR
-        # TODO: make this more dynamic somehow
-        # 1.14 as target based on 2020 experience
-        # 1.22 or so in 2023, but we have to get it down fast
-        hours *= mult
+                        # note divide by zero but move on from it (it happens when a role is purely autobill)
+                        if autobill_pct[innercachekey_bill] - autobill_pct[innercachekey_autobill] != 0:
+                            autobill_pct[innercachekey] = autobill_pct[innercachekey_autobill] / (autobill_pct[innercachekey_bill] - autobill_pct[innercachekey_autobill])
+                        else:
+                            app.logger.info(f"  autobill_pct divide by zero because role is purely autobill: {innercachekey}")
+                            autobill_pct[innercachekey] = -0.1
+
+                Cache.set(outercachekey, autobill_pct, timeout_seconds=3600*12)
+            innercachekey = f"{laborroleid}-{cst}"
+            if innercachekey in autobill_pct:
+                if autobill_pct[innercachekey] < 0:
+                    app.logger.info(f"  autobill_pct was negative due to role being pure autobill for {innercachekey} --> {hours}")
+                elif autobill_pct[innercachekey] > 5:
+                    app.logger.info(f"  autobill_pct was >5 for {innercachekey} --> {hours}")
+                else:
+                    #app.logger.info(f"  autobill_pct cache HIT for {innercachekey} --> {hours}*{1+autobill_pct[innercachekey]}")
+                    hours *= 1 + autobill_pct[innercachekey]
+            else:
+                #app.logger.info(f"  autobill_pct cache miss for {innercachekey}")
+                pass
+        else:
+            # no lookback, so just assume 6% autobilling
+            hours *= 1.06
+
+        # rough MDOU% adjustment based on target
+        hours *= mdou_pct
 
         # simplistic model, as PM forecasts are simplistic
         business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
@@ -244,6 +295,7 @@ def clean_dictarray(dictarray):
         if f"{d['hc']}{d['m1']}{d['m2']}{d['m3']}{d['m4']}{d['m5']}{d['m6']}{d['m7']}{d['m8']}{d['m9']}{d['m10']}{d['m11']}{d['m12']}" != "" or d['id'] in parentlookup:
             filtdictarray.append(d)
     return filtdictarray
+
 
 # get the portfolio forecasts (in dollars), returns a dictionary
 def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=True):
@@ -362,19 +414,20 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, mult=1.22):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, showlaborroles=False):
 
     queryfilter = queryClientCst(clients, csts)
 
     primarysource = 'gsheet'
+    lcatmainkey = f"lcat"
     thisyear = datetime.date.today().year
     thismonth = datetime.date.today().month
 
-    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours}")
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours} {showlaborroles}")
 
     # working with a dictionary of dictionaries
     columns = ['id','parent','name','detail','source','hc',
-    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12']
+    'm1','m2','m3','m4','m5','m6','m7','m8','m9','m10','m11','m12','ba','billedpct']
     rowtemplate = dict.fromkeys(columns, None)
 
     # query the labor role forecasts
@@ -403,29 +456,39 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # D: lrcat -> source sum
         sourcename = f"'{pflr.source}' Source",
         if pflr.source == 'actuals':
-            sourcename = 'Actuals'
+            sourcename = ' Actuals'
         elif pflr.source == 'linear':
-            sourcename = 'Linear Forecast'
+            sourcename = ' Linear Forecast'
         elif pflr.source == 'cilinear':
-            sourcename = 'Linear Forecast by CI Tags'
+            sourcename = ' Linear Forecast by CI Tags'
         elif pflr.source == 'linreg':
-            sourcename = 'Linear Regression Forecast'
+            sourcename = ' Linear Regression Forecast'
+        elif pflr.source.startswith('linreg'):
+            sourcename = f' Linear Regression Forecast ({pflr.source[6:]}m lookback)'
         elif pflr.source == 'gsheet':
-            sourcename = 'PM Line of Sight Forecast'
+            sourcename = ' PM Line of Sight Forecast'
         elif pflr.source == 'mljar':
-            sourcename = 'AutoML Forecast'
+            sourcename = ' AutoML Forecast'
+
+        if showlaborroles:
+            lr_or_jf = pflr.labor_role.id
+        else:
+            lr_or_jf = pflr.labor_role.jobfunction
 
         # A: labor role as a root node, if it isn't already there
-        lrmainkey = f"{pflr.laborroleid}"
+        lrmainkey = f"{lr_or_jf}"
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
-            newrow['parent'] = None
-            newrow['name'] = pflr.labor_role.name
+            newrow['parent'] = lcatmainkey
+            if showlaborroles:
+                newrow['name'] = pflr.labor_role.name
+            else:
+                newrow['name'] = pflr.labor_role.jobfunction
             rowdict[lrmainkey] = newrow
         
         # A: sum of the forecasted hours for the labor role by portfolio
-        lrportfoliokey = f"{pflr.portfolioid}-{pflr.laborroleid}"
+        lrportfoliokey = f"{pflr.portfolioid}-{lr_or_jf}"
         if lrportfoliokey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrportfoliokey
@@ -435,7 +498,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrportfoliokey] = newrow
 
         # A: sum of the forecasted hours for the labor role by portfolio and source
-        lrsourcekey = f"{pflr.portfolioid}-{pflr.laborroleid}-{pflr.source}"
+        lrsourcekey = f"{pflr.portfolioid}-{lr_or_jf}-{pflr.source}"
         if lrsourcekey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrsourcekey
@@ -446,7 +509,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             rowdict[lrsourcekey] = newrow
 
         # B: sum of the forecasted hours for the labor role by source
-        lrsourcesumkey = f"{pflr.laborroleid}-{pflr.source}"
+        lrsourcesumkey = f"{lr_or_jf}-{pflr.source}"
         if lrsourcesumkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrsourcesumkey
@@ -462,7 +525,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lcatmainkey
             newrow['parent'] = None
-            newrow['name'] = f" {lrcat} Labor Category"
+            newrow['name'] = f" {lrcat} (Labor Category)"
             newrow['detail'] = 'lcat'
             rowdict[lcatmainkey] = newrow
 
@@ -501,7 +564,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
         if pflr.forecastedhours != None and pflr.forecastedhours != 0:
-            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source, mult)
+            fte = monthly_hours_to_fte(pflr.forecastedhours, pflr.yearmonth, pflr.laborroleid, pflr.portfolio.currbusinessunit, pflr.source)
 
             # possible override to hours
             if showhours:
@@ -523,7 +586,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     app.logger.info(f"  df processing done")
 
-    # add headcount rows
+    # add billable allocm, headcount and billed pct data
     if csts != None and csts != "":
         queryfilter = LaborRoleHeadcount.cstname.in_(csts.split(','))
     else:
@@ -537,47 +600,69 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         ).all()
 
     for lrhc in lrhcs:
-        # labor role as a root node, in case it isn't already there
-        lrmainkey = f"{lrhc.laborroleid}"
+        # we can't count the CST's that don't have forecasts in this system
+        if lrhc.cstname in ['Brave Consulting']:
+            continue
+
+        if showlaborroles:
+            lr_or_jf = lrhc.labor_role.id
+        else:
+            lr_or_jf = lrhc.labor_role.jobfunction
+
+        # labor role as a root node, in case it isn't already there from a forecast
+        lrmainkey = f"{lr_or_jf}"
         if lrmainkey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lrmainkey
-            newrow['parent'] = None
+            newrow['parent'] = lcatmainkey
             newrow['name'] = lrhc.labor_role.name
             rowdict[lrmainkey] = newrow
         
-        # headcount for the labor role
-        lrhckey = f"{lrhc.laborroleid}-hc"
-        if lrhckey not in rowdict:
+        # BA for the labor role
+        lrbakey = f"{lr_or_jf}-ba"
+        if lrbakey not in rowdict:
             newrow = rowtemplate.copy()
-            newrow['id'] = lrhckey
+            newrow['id'] = lrbakey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f" Headcount EOM"
+            newrow['name'] = f"  FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
-            rowdict[lrhckey] = newrow
+            rowdict[lrbakey] = newrow
 
-        # headcount for the labor cat
-        lcatmainkey = f"lcat"
-        lcathckey = f"lcat-hc"
-        if lcathckey not in rowdict:
+        # BA for the labor cat
+        lcatbakey = f"lcat-ba"
+        if lcatbakey not in rowdict:
             newrow = rowtemplate.copy()
-            newrow['id'] = lcathckey
+            newrow['id'] = lcatbakey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f" Headcount EOM"
+            newrow['name'] = f"  FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
-            rowdict[lcathckey] = newrow
+            rowdict[lcatbakey] = newrow
 
         # fill in the month column in the headcount row
         mkey = f"m{lrhc.yearmonth.month}"
-        addtocell(rowdict, lrhckey, mkey, lrhc.headcount_eom)
-        addtocell(rowdict, lcathckey, mkey, lrhc.headcount_eom)
+        addtocell(rowdict, lrbakey, mkey, lrhc.billablealloc_eom)
+        addtocell(rowdict, lcatbakey, mkey, lrhc.billablealloc_eom)
 
         # if it's this month, fill in the hc column
         if lrhc.yearmonth == datetime.date(thisyear, thismonth, 1):
             addtocell(rowdict, lrmainkey, "hc", lrhc.headcount_eom)
             addtocell(rowdict, lcatmainkey, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lrmainkey, "ba", lrhc.billablealloc_eom)
+            addtocell(rowdict, lcatmainkey, "ba", lrhc.billablealloc_eom)
+
+        # if it's this month or the previous 2 months, save target and billable hours and calculate billed pct
+        if lrhc.yearmonth >= datetime.date.today() - relativedelta(months=3):
+            addtocell(rowdict, lrmainkey, f"targethours", lrhc.target_hours)
+            addtocell(rowdict, lrmainkey, f"billedhours", lrhc.billed_hours)
+            targethours = getfromcell(rowdict, lrmainkey, "targethours")
+            billedhours = getfromcell(rowdict, lrmainkey, "billedhours")
+            if targethours != None and targethours != 0:
+                billedpct = billedhours / targethours * 100
+                settocell(rowdict, lrmainkey, "billedpct", billedpct)
+            else:
+                settocell(rowdict, lrmainkey, "billedpct", None)
 
     app.logger.info(f"  headcount processing done")
 
@@ -617,7 +702,6 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         for m in range(1,13):
             if m < thismonth or m > thismonth + 3:
                 df = df.drop(f"m{m}", axis=1)
-
 
     app.logger.info(f"  post-filter processing done")
 

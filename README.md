@@ -25,3 +25,34 @@ Run the application::
 
     ./start-webapp.sh
 
+
+### AI Notes
+
+Completion API can:
+- generate new text
+- summarize text
+- expand text
+- answer questions from its corpus
+- answer questions about its prompt
+- read code
+- generate code
+- convert code to other code
+- (transformers in general can convert from A to B, where A and  B can be things protein->protein_folded)
+
+ChatGPT adds to the completion API:
+- short term memory (i.e. previous prompt/completion pairs are added to the context of the new prompt)
+- i.e. adds state
+- can somehow handle >750 words (chunking and summarization)
+
+LangChain (py lib) adds to the completion API:
+- determining when an external source is needed
+- bringing in that source
+
+Gpt-Index (py lib) adds to LangChain:
+- can bring in SQL databases as a source
+- can run SQL directly
+
+Embedding API can:
+- convert any text to a ~1500 dimension vector describing its content (semantic meaning)
+
+

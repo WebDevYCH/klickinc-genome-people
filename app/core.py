@@ -3,6 +3,7 @@ import datetime
 import os, time
 import pickle
 import re
+import traceback
 import requests
 import redis as redislib
 from textmagic.rest import TextmagicRestClient
@@ -153,9 +154,9 @@ def handle_ex(e):
         tmc = TextmagicRestClient(tmu, tmk)
         # if e is a string send it, otherwise send the first 300 chars of the traceback
         if isinstance(e, str):
-            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + e)
+            message = tmc.messages.create(phones=tmp, text=f"GP FAIL {e}")
         else:
-            message = tmc.messages.create(phones=tmp, text="broker-ibkr " + bot + " FAIL " + traceback.format_exc()[0:300])
+            message = tmc.messages.create(phones=tmp, text=f"GBP FAIL {traceback.format_exc()[0:300]}")
 
 
 # set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit

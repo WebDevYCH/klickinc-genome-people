@@ -1,7 +1,6 @@
 Flask
 Flask-Admin
 Flask-SQLAlchemy
-Flask-Bootstrap
 Flask-Login
 Flask-WTF
 Flask-Session
