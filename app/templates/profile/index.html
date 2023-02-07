@@ -5,17 +5,22 @@
 
 {% block app_content%}
 <!-- Latest compiled and minified Bootstrap CSS -->
-<div class="row">
+<!-- <div class="row">
 	<div class="col-12 d-flex justify-content-end">
 		<button class="btn btn-link me-2">View Jobs</button>
 		<button class="btn btn-link me-2">Post a Job</button>
 		<button class="btn btn-link">Profile</button>
 	</div>
-</div>
-<div class="d-flex justify-content-between">
-	<h1 class="h3 mb-3">Profile</h1>
-</div>
-<div class="row mb-2">
+</div> -->
+<div class="row">
+	<div class="col-12">
+			<p class="lead">
+				Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam
+				euismod lacus velit, at condimentum erat tincidunt eu.
+			</p>
+	</div>
+</div>	
+<!-- <div class="row mb-2">
 	<div class="col-md-4">
 		<p class="lead">
 			Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam
@@ -33,7 +38,7 @@
 			Add Individual Skill
 		</button>
 	</div>
-</div>
+</div> -->
 
 <div class="profile-page row">
 	<div class="col-md-4 col-xl-3 col-3">
@@ -66,11 +71,12 @@
 				<div class="row">
 					<div class="d-flex justify-content-between">
 						<h5 class="h6 card-title">Skills</h5>
-						<a
+						<!--<a
 							href="/profile/edit-skills"
-							class="btn btn-sm btn-secondary">
+							class="btn btn-sm btn-primary">
 							<i class="fas fa-edit"></i>
-						</a>
+							{{ "Edit Skills" if skills else "Add Skills" }}
+						</a>-->
 					</div>
 				</div>
 				{% for skill in skills %}
@@ -99,11 +105,12 @@
 					<h5 class="card-title mb-0">Resume</h5>
 					<a
 						href="#"
-						class="btn btn-sm btn-secondary"
+						class="btn btn-sm btn-primary"
 						id="upload-resume-btn"
 						data-bs-toggle="modal"
 						data-bs-target="#edit_resume_modal">
 						<i class="fas fa-edit"></i>
+						{{ "Edit Resume" if profile.resume else "Upload Resume"}}
 					</a>
 				</div>
 			</div>
@@ -239,11 +246,10 @@
 			});
 		});
 		let flag = 'Create';
-		const resume = $('#resume-panel').html();
+		const resume = $('#resume-panel').html().trim();
 		if (resume) flag = 'Edit';
 		$('#upload-resume-btn').on('click', function () {
 			if (flag === 'Create') {
-				editor.root.innerHTML = '<p><br><p>';
 				$('.modal-title').html('Create your resume');
 			} else {
 				editor.root.innerHTML = resume;
