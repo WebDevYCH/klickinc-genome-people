@@ -266,10 +266,60 @@ def tmkt_job_postings_load_index():
 
     return loglines
 
+# interactive test: query job matches for a person
+@app.cli.command('tmkt_test_query_jobs')
+def tmkt_test_query_jobs():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+
+    print("Type a user email address, and a list of best-matching jobs will be returned.")
+    # load job postings
+    jobpostings = db.session.query(JobPosting).filter(JobPosting.posted_date >= datetime.datetime.now() - datetime.timedelta(days=365)).all()
+
+    prompt = ""
+    while True:
+        prompt = input("\nEmail address: ")
+        # load user profile
+        user = db.session.query(User).where(User.email==prompt).first()
+        if not user:
+            print("User not found.")
+            continue
+        userprofile = db.session.query(UserProfile).where(UserProfile.user_id==user.userid).first()
+        if not userprofile:
+            print("User profile not found.")
+            continue
+        if not userprofile.resume_vector:
+            print("User profile resume vector not found.")
+            continue
+        # convert from json string to vector
+        resume_vector = json.loads(userprofile.resume_vector.replace("{", "[").replace("}", "]"))
+
+        # find best matching jobs
+        scored_jobs = {}
+        for jobposting in jobpostings:
+            if not jobposting.job_posting_vector:
+                continue
+            jobposting_vector = json.loads(jobposting.job_posting_vector.replace("{", "[").replace("}", "]"))
+            score = cosine_similarity(resume_vector, jobposting_vector)
+            if score >= 0.8:
+                scored_jobs[jobposting.id] = { "score": score, "jobposting": jobposting }
+
+        # sort by score
+        sorted_jobs = sorted(scored_jobs.items(), key=lambda x: x[1]['score'], reverse=True)
+
+        # print top 10 results from the last year
+        resultcount = 0
+        for job in sorted_jobs:
+            print(f"  {job[1]['score']}: {job[1]['jobposting'].title}")
+            resultcount += 1
+            if resultcount >= 20:
+                break
 
 
+    return loglines
 
-# interactive chat: core memories
+# interactive test: query person matches for a job
 @app.cli.command('tmkt_test_query_jobs')
 def tmkt_test_query_jobs():
     loglines = AdminLog()

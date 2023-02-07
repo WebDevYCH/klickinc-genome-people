@@ -10,7 +10,7 @@ export GOOGLE_APPLICATION_CREDENTIALS="../keys/google-key.json"
 cd app
 
 while /usr/bin/true; do
-    python -m flask run -p 6005 2>&1 |tee -a $logfile
+    python3 -m flask run -p 6005 2>&1 |tee -a $logfile
     echo "Restarting..."
     sleep 15
 done

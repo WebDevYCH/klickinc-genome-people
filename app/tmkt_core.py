@@ -4,7 +4,7 @@ import json
 from core import *
 from model import *
 from core import app
-from skillutils import *
+from skills_core import *
 from flask_login import current_user
 from flask import render_template, request
 

@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 
 from core import *
 from model import *
-from skillutils import *
+from skills_core import *
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
