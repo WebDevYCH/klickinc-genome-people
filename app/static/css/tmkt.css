@@ -1,0 +1,43 @@
+.job-details {
+	height: 70px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
+}
+.other-info {
+	font-size: x-small;
+}
+#people-list {
+	height: 450px;
+	overflow: auto;
+}
+.accordion-button::after {
+	background-image: none;
+  }
+  
+.accordion-button:not(.collapsed)::after {
+	background-image: none;
+
+}
+
+.accordion-button{
+	--bs-accordion-btn-icon-width: 0;
+	--bs-accordion-active-bg: white;
+	border-end-end-radius: 5px;
+}
+.accordion {
+	--bs-accordion-bg: white;
+}
+
+.accordion-flush .accordion-item, .accordion-flush .accordion-item .accordion-button {
+	border-radius: 5px;
+}
+
+.accordion-flush .accordion-item .accordion-button:not(.collapsed) {
+    border-bottom-left-radius: 0px;
+	border-bottom-right-radius: 0px;
+}
+
+.card-title {
+	--bs-card-title-spacer-y: 0px;
+}

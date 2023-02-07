@@ -132,6 +132,7 @@ def jobsearch():
         d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
         d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
         result_job['expiry_day'] = abs((d2 - d1).days)
+        result_job['posted_for'] = abs((today-job.posted_date).days) 
         result.append(result_job)
 
     if request.method == 'POST':
