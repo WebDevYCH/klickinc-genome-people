@@ -2,7 +2,6 @@ import re
 from flask_login import login_required
 from datetime import date
 import json
-from skillutils import *
 from flask_login import current_user
 from flask import render_template, request
 import pandas as pd
@@ -18,6 +17,7 @@ from core import *
 from model import *
 from tmkt_core import *
 from chat_core import *
+from skills_core import *
 
 people_resume_index_dir = "../data/resumes"
 people_index_file = "../cache/people_index.json"
