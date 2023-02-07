@@ -760,7 +760,6 @@
 					for (let skill in job.job_posting_skills) {
 						skill_txt += job.job_posting_skills[skill] + `,`;
 					}
-					console.log(skill_txt);
 					var current_user_id = '{{ current_user.userid }}';
 					data +=
 						`<div class="row job-card">
@@ -771,15 +770,15 @@
 						`">` +
 						job.title +
 						`</span>
-                                        <span class="fs-6">(` +
-						moment(job.posted_date).format('YYYY-MM-D') +
+                                        <span class="fs-6"><i>(` +
+						moment(job.posted_date).format('YYYY-MM-DD') +
 						` ~ <span class="card-expiry">` +
-						moment(job.expiry_date).format('YYYY-MM-D') +
+						moment(job.expiry_date).format('YYYY-MM-DD') +
 						`</span>, <span class="card-category" category-id="` +
 						job.job_posting_category_id +
 						`">` +
 						job.job_posting_category_name +
-						`</span>)</span>
+						`</span>)</i></span>
                                     </div>
                                     <div class="job-details">
                                         Description: <span class="card-description">` +

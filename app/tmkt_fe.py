@@ -22,13 +22,17 @@ def postjob():
     poster_id = request.form['poster_id']
     posted_date = date.today()
     expiry_date = request.form['expiry_date']
+        
+    # Get GPT3 Embedding value for resume
+    vector = gpt3_embedding(job_description)
+    if not isinstance(vector, list):
+        vector = None
 
-    createJob = JobPosting(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title, description=job_description)
+    createJob = JobPosting(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title,description=job_description,job_posting_vector=vector)
     db.session.add(createJob)
     db.session.commit()
     
     datas = extract_skills_from_text(job_description)['data']
-
     for data in datas:
         skill_name = data['skill']['name']
 
@@ -49,8 +53,19 @@ def editjob():
     posted_date = date.today()
     expiry_date = request.form['expiry_date']
     id = request.form['job_posting_id']
+        
+    # Get GPT3 Embedding value for resume
+    vector = gpt3_embedding(description)
+    if not isinstance(vector, list):
+        vector = None
+
+    upsert(db.session, JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'posted_date': posted_date, 'expiry_date': expiry_date, 'title': title, 'description': description, 'job_posting_vector': vector})
+    db.session.commit()
 
     datas = extract_skills_from_text(description)['data']
+
+    # flush existing skills on this job posting
+    db.session.query(JobPostingSkill).filter(JobPostingSkill.job_posting_id == id).delete(synchronize_session="fetch")
 
     for data in datas:
         skill_name = data['skill']['name']
@@ -61,8 +76,6 @@ def editjob():
             db.session.add(createSkill)
             db.session.commit()
 
-    upsert(JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'posted_date': posted_date, 'expiry_date': expiry_date, 'title': title, 'description': description})
-    db.session.commit()
     return redirect(url_for('jobsearch'))
 
 @app.route('/tmkt/jobsearch', methods=['GET', 'POST'])
@@ -89,71 +102,42 @@ def jobsearch():
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
         else:
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-
-        result = []   
-        for job in jobs:
-            job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
-            result_posting_skill = []
-            result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
-            for category in categories:
-                data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
-                if data_category['id'] == result_job['job_posting_category_id']:
-                    result_job['job_posting_category_name'] = data_category['name']
-                else:
-                    continue
-            for key, r in job_posting_skills:
-                # print(dir(r))
-                value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
-                result_posting_skill.append(value['name'])
-                # print(result_posting_skill)
-            result_job['job_posting_skills'] = result_posting_skill
-            
-            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
-            result_job['apply'] = 0
-            if apply != None:
-                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
-                if apply_value['available'] == 1: 
-                    result_job['apply'] = 1
-            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
-            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
-            result_job['expiry_day'] = abs((d2 - d1).days)
-            result.append(result_job)
-
-        return json.dumps(result)
     else:
         delta = 7
         jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
-        
-        result = []
-        for job in jobs:
-            job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
-            result_posting_skill = []
-            result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
-            for category in categories:
-                data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
-                if data_category['id'] == result_job['job_posting_category_id']:
-                    result_job['job_posting_category_name'] = data_category['name']
-                else:
-                    continue
-            for key, r in job_posting_skills:
-                value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
-                result_posting_skill.append(value['name'])
 
-            result_job['job_posting_skills'] = result_posting_skill
-            # print(job.id)
-            apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
-            result_job['apply'] = 0
-            if apply != None:
-                apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
-                if apply_value['available'] == 1: 
-                    result_job['apply'] = 1
-            
-            d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
-            d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
-            result_job['expiry_day'] = abs((d2 - d1).days)
-            result.append(result_job)
-            
-    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
+    #process the results of the GET or POST (same logic)
+    result = []   
+    for job in jobs:
+        job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
+        result_posting_skill = []
+        result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
+        for category in categories:
+            data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
+            if data_category['id'] == result_job['job_posting_category_id']:
+                result_job['job_posting_category_name'] = data_category['name']
+            else:
+                continue
+        for key, r in job_posting_skills:
+            value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+            result_posting_skill.append(value['name'])
+        result_job['job_posting_skills'] = result_posting_skill
+        
+        apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+        result_job['apply'] = 0
+        if apply != None:
+            apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+            if apply_value['available'] == 1: 
+                result_job['apply'] = 1
+        d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+        d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+        result_job['expiry_day'] = abs((d2 - d1).days)
+        result.append(result_job)
+
+    if request.method == 'POST':
+        return json.dumps(result, skipkeys=True, default=str, ensure_ascii=False)
+    else:
+        return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
 @app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required

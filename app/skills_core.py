@@ -1,4 +1,4 @@
-from flask import json
+from flask import json, flash
 import requests
 import json
 
@@ -61,7 +61,7 @@ def auto_fill_user_skill_from_resume(userid, data, sourceid):
         full_skills[skill.name] = skill.id  
 
     # flush existing skills on this user
-    db.session.query(UserSkill).filter(UserSkill.user_id == current_user.userid).delete(synchronize_session="fetch")
+    db.session.query(UserSkill).filter(UserSkill.user_id == userid).delete(synchronize_session="fetch")
 
     # add skills back in
     for skill in data:

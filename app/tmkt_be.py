@@ -126,7 +126,7 @@ def tmkt_chatdb_train():
                     prompt += f"{user.firstname} is no longer employed here.\n"
                 prompt += f"Klick is a marketing agency.\n\n"
             try:
-                reader = PyPDF2.PdfReader(open(fullpath, 'rb'))
+                reader = pypdf.PdfReader(open(fullpath, 'rb'))
                 for page in reader.pages:
                     prompt += page.extract_text().replace("\\n", "\n")
             except Exception as e:
