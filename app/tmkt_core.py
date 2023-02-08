@@ -8,23 +8,3 @@ from skills_core import *
 from flask_login import current_user
 from flask import render_template, request
 
-###################################################################
-## MODEL
-
-Base.classes.job_posting.__str__ = obj_name
-Base.classes.job_posting.__json__ = obj_name_joined
-JobPosting = Base.classes.job_posting
-
-Base.classes.job_posting_category.__str__ = obj_name
-JobPostingCategory = Base.classes.job_posting_category
-
-JobPostingSkill = Base.classes.job_posting_skill
-
-UserAvailable = Base.classes.user_available
-
-ApplyJob = Base.classes.apply_job
-
-Base.classes.skill.__str__ = obj_name
-Skill = Base.classes.skill
-
-Title = Base.classes.title

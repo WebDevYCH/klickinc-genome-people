@@ -6,7 +6,7 @@ from model import *
 from core import app
 from skills_core import *
 from flask_login import current_user
-from flask import render_template, request
+from flask import render_template, request, flash
 
 from tmkt_core import *
 
@@ -31,16 +31,11 @@ def postjob():
     createJob = JobPosting(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title,description=job_description,job_posting_vector=vector)
     db.session.add(createJob)
     db.session.commit()
-    
-    datas = extract_skills_from_text(job_description)['data']
-    for data in datas:
-        skill_name = data['skill']['name']
 
-        db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
-        if db_skill:
-            createSkill = JobPostingSkill(job_posting_id = createJob.id, skill_id = db_skill.id)
-            db.session.add(createSkill)
-            db.session.commit()
+    # extract relevant skills from job posting description
+    result = auto_fill_skill_from_text("user_profile", current_user.userid, job_description)
+    if not result == "success":
+        flash(f"Skill extraction failed: {result}")
 
     return redirect(url_for('jobsearch'))
 
@@ -50,7 +45,6 @@ def editjob():
     title = request.form['title']
     category_id = request.form['category_id']
     description = request.form['description']
-    posted_date = date.today()
     expiry_date = request.form['expiry_date']
     id = request.form['job_posting_id']
         
@@ -59,22 +53,13 @@ def editjob():
     if not isinstance(vector, list):
         vector = None
 
-    upsert(db.session, JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'posted_date': posted_date, 'expiry_date': expiry_date, 'title': title, 'description': description, 'job_posting_vector': vector})
+    upsert(db.session, JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'expiry_date': expiry_date, 'title': title, 'description': description, 'job_posting_vector': vector})
     db.session.commit()
 
-    datas = extract_skills_from_text(description)['data']
-
-    # flush existing skills on this job posting
-    db.session.query(JobPostingSkill).filter(JobPostingSkill.job_posting_id == id).delete(synchronize_session="fetch")
-
-    for data in datas:
-        skill_name = data['skill']['name']
-
-        db_skill = db.session.query(Skill).filter_by(name = skill_name).first()
-        if(db_skill):
-            createSkill = JobPostingSkill(job_posting_id = id, skill_id = db_skill.id)
-            db.session.add(createSkill)
-            db.session.commit()
+    # extract relevant skills from job posting description
+    result = auto_fill_skill_from_text("user_profile", current_user.userid, description)
+    if not result == "success":
+        flash(f"Skill extraction failed: {result}")
 
     return redirect(url_for('jobsearch'))
 
@@ -106,6 +91,12 @@ def jobsearch():
         delta = 7
         jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
 
+    # attempt to find existing user profile
+    try:
+        profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+    except:
+        profile = None
+
     #process the results of the GET or POST (same logic)
     result = []   
     for job in jobs:
@@ -131,9 +122,19 @@ def jobsearch():
                 result_job['apply'] = 1
         d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
         d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
-        result_job['expiry_day'] = abs((d2 - d1).days)
+        # adding sort for negative number of days to expiry (so sort reverse order works correctly)
+        result_job['expiry_sort'] = (d1 - d2).days
+        result_job['expiry_day'] = abs(result_job['expiry_sort'])
         result_job['posted_for'] = abs((today-job.posted_date).days) 
+        # add cosine similarity between job posting and user profile
+        if profile and profile.resume_vector and job.job_posting_vector:
+            result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
+        else:
+            result_job['similarity'] = 0
         result.append(result_job)
+    
+    # sort by similarity
+    result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
 
     if request.method == 'POST':
         return json.dumps(result, skipkeys=True, default=str, ensure_ascii=False)

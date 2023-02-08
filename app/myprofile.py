@@ -40,13 +40,9 @@ def profile():
             flash("Successfully added your resume")
 
         # extract relevant skills from resume
-        relevant_skills = extract_skills_from_text(resume)
-
-        # if there was no error, add skills to user
-        if "message" in relevant_skills:
-            flash("An error happened extracting skills! Please try again.")
-        else:
-            auto_fill_user_skill_from_resume(current_user.userid, relevant_skills['data'], 1)
+        result = auto_fill_skill_from_text("user_profile", current_user.userid, resume, 1)
+        if not result == "success":
+            flash(f"Skill extraction failed: {result}")
 
     # if there is no profile, flash a message
     if not profile:

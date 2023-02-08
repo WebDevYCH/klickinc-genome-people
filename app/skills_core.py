@@ -1,4 +1,4 @@
-from flask import json, flash
+from flask import json
 import requests
 import json
 
@@ -52,32 +52,6 @@ def extract_skills_from_text(text):
     data = response.json()
     return data
 
-# fill out user skills records from resume
-def auto_fill_user_skill_from_resume(userid, data, sourceid):
-    UserSkill = Base.classes.user_skill
-    # gather full list of skills
-    full_skills = {}
-    for skill in db.session.query(Skill).all():
-        full_skills[skill.name] = skill.id  
-
-    # flush existing skills on this user
-    db.session.query(UserSkill).filter(UserSkill.user_id == userid).delete(synchronize_session="fetch")
-
-    # add skills back in
-    for skill in data:
-        if skill['skill']['name'] in full_skills:
-            upsert(db.session, UserSkill, 
-                { 
-                    'user_id': userid, 
-                    'skill_id': full_skills[skill['skill']['name']], 
-                    'user_skill_source_id': sourceid,
-                },
-                {
-                }
-            )
-    db.session.commit()
-    return True
-
 def make_extract_json_string(text, threshold):
     result = {
         "text": text,
@@ -88,3 +62,34 @@ def make_extract_json_string(text, threshold):
 
     return json_string
 
+# remove and add skills to User Profile or Job Posting
+def auto_fill_skill_from_text(type, id, description, sourceid = 1):
+    relevant_skills = extract_skills_from_text(description)
+    # if there was no error, add skills to user
+    if "message" in relevant_skills:
+        return relevant_skills['message']
+    else:
+        # gather full list of skills
+        full_skills = {}
+        for skill in db.session.query(Skill).all():
+            full_skills[skill.name] = skill.id  
+
+        # flush existing skills
+        if type == 'job_posting':
+            db.session.query(JobPostingSkill).filter(JobPostingSkill.job_posting_id == id).delete(synchronize_session="fetch")
+        else:
+            db.session.query(UserSkill).filter(UserSkill.user_id == id).delete(synchronize_session="fetch")
+
+        # fill skills
+        for skill in relevant_skills['data']:
+            if skill['skill']['name'] in full_skills:
+                if type == 'job_posting':
+                    createSkill = JobPostingSkill(job_posting_id = id, skill_id = skill.id)
+                else:
+                    createSkill = UserSkill(user_id = id, skill_id = skill.id, sourceid = sourceid)
+                
+                if (createSkill):
+                    db.session.add(createSkill)
+                    db.session.commit()
+
+    return "success"
