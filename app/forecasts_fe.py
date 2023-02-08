@@ -2,6 +2,7 @@ import calendar
 import datetime, re
 from statistics import mean
 import pandas as pd
+from sklearn.metrics import mean_squared_error, r2_score
 
 from flask import render_template, request
 from flask_login import login_required
@@ -170,7 +171,6 @@ def pf_cst_list():
 
     retval = [{"id":c.currbusinessunit, "value":c.currbusinessunit } for c in csts]
     retval.sort(key=lambda x: x['value'])
-    app.logger.info(f"pf_cst_list size: {len(retval)} {retval}")
     return retval
 
 # GET /forecasts/lrcat-list
@@ -214,6 +214,26 @@ def queryClientCst(clients, csts):
     else:
         queryfilter = True
     return queryfilter
+
+def sourcename_from_source(source):
+    sourcename = f"'{source}' Source",
+    if source == 'actuals':
+        sourcename = ' Actuals'
+    elif source == 'linear':
+        sourcename = ' Linear Forecast'
+    elif source.startswith('linear'):
+        sourcename = f' Linear Forecast ({source[6:]}m lookback)'
+    elif source == 'cilinear':
+        sourcename = ' Linear Forecast by CI Tags'
+    elif source == 'linreg':
+        sourcename = ' Linear Regression Forecast'
+    elif source.startswith('linreg'):
+        sourcename = f' Linear Regression Forecast ({source[6:]}m lookback)'
+    elif source == 'gsheet':
+        sourcename = ' PM Line of Sight Forecast'
+    elif source == 'mljar':
+        sourcename = ' AutoML Forecast'
+    return sourcename
 
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
     if source == 'gsheet':
@@ -269,7 +289,10 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
         fte = hours / (business_days * business_hours_per_day)
 
         return fte
-    else:
+    elif source == 'mljar':
+        # this is the only model that theoretically has an understanding of business days per month
+        # and typical vacation time
+
         # calculate FTEs based on monthly hours, but do it twice and take the average
         # first time is based on the actual number of business days in the month, calibrated against typical vacation+sick time
         business_days = calendar.monthrange(yearmonth.year, yearmonth.month)[1]
@@ -284,6 +307,13 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
         fte = hours / (business_days * business_hours_per_day)
 
         return fte
+    else:
+        # simplistic models
+        business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
+        business_hours_per_day = 7.26
+        fte = hours / (business_days * business_hours_per_day)
+
+        return fte
 
 
 def clean_dictarray(dictarray):
@@ -292,7 +322,7 @@ def clean_dictarray(dictarray):
         parentlookup[d['parent']] = True
     filtdictarray = []
     for d in dictarray:
-        if f"{d['hc']}{d['m1']}{d['m2']}{d['m3']}{d['m4']}{d['m5']}{d['m6']}{d['m7']}{d['m8']}{d['m9']}{d['m10']}{d['m11']}{d['m12']}" != "" or d['id'] in parentlookup:
+        if f"{d['hc']}{d['m1']}{d['m2']}{d['m3']}{d['m4']}{d['m5']}{d['m6']}{d['m7']}{d['m8']}{d['m9']}{d['m10']}{d['m11']}{d['m12']}" != "" or d['id'] in parentlookup or d['detail'] == 'errorrates':
             filtdictarray.append(d)
     return filtdictarray
 
@@ -325,6 +355,17 @@ def get_pfs(year, clients, csts, doforecasts=True, doactuals=True, dotargets=Tru
             pfout['id'] = key
             pfout['parent'] = f"{pf.portfolio.clientid}"
             pfout['name'] = pf.portfolio.name
+            if pf.forecast != None:
+                pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.forecast)
+                bypfid[key] = pfout
+
+        # targets (as child nodes)
+        if doforecasts:
+            key = f"f{pf.portfolioid}"
+            pfout = bypfid.get(key) or {}
+            pfout['id'] = key
+            pfout['parent'] = f"{pf.portfolioid}"
+            pfout['name'] = "Forecast"
             if pf.forecast != None:
                 pfout[f"m{pf.yearmonth.month}"] = re.sub('\\...$','',pf.forecast)
                 bypfid[key] = pfout
@@ -441,12 +482,18 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")
     rowdict = {}
+    sources = {}
 
     # add the rows to the dataframe
     app.logger.info(f"  adding rows to dict")
     for pflr in pflrs:
 
+        # skip rows with no forecasted hours
         if pflr.forecastedhours == None or pflr.forecastedhours == 0:
+            continue
+
+        # skip rows with source 'actuals' and it's this year and month
+        if pflr.source == 'actuals' and pflr.yearmonth.year == thisyear and pflr.yearmonth.month == thismonth:
             continue
 
         # we want four hierarchies:
@@ -454,21 +501,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # B: labor role -> source sum
         # C: lrcat -> portfolio -> source
         # D: lrcat -> source sum
-        sourcename = f"'{pflr.source}' Source",
-        if pflr.source == 'actuals':
-            sourcename = ' Actuals'
-        elif pflr.source == 'linear':
-            sourcename = ' Linear Forecast'
-        elif pflr.source == 'cilinear':
-            sourcename = ' Linear Forecast by CI Tags'
-        elif pflr.source == 'linreg':
-            sourcename = ' Linear Regression Forecast'
-        elif pflr.source.startswith('linreg'):
-            sourcename = f' Linear Regression Forecast ({pflr.source[6:]}m lookback)'
-        elif pflr.source == 'gsheet':
-            sourcename = ' PM Line of Sight Forecast'
-        elif pflr.source == 'mljar':
-            sourcename = ' AutoML Forecast'
+        sourcename = sourcename_from_source(pflr.source)
+        sources[pflr.source] = sourcename
 
         if showlaborroles:
             lr_or_jf = pflr.labor_role.id
@@ -485,7 +519,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                 newrow['name'] = pflr.labor_role.name
             else:
                 newrow['name'] = pflr.labor_role.jobfunction
-            rowdict[lrmainkey] = newrow
+            rowdict[newrow['id']] = newrow
         
         # A: sum of the forecasted hours for the labor role by portfolio
         lrportfoliokey = f"{pflr.portfolioid}-{lr_or_jf}"
@@ -495,7 +529,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['parent'] = lrmainkey
             newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
             newrow['detail'] = 'portfolio'
-            rowdict[lrportfoliokey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # A: sum of the forecasted hours for the labor role by portfolio and source
         lrsourcekey = f"{pflr.portfolioid}-{lr_or_jf}-{pflr.source}"
@@ -506,7 +540,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
             newrow['detail'] = 'source'
-            rowdict[lrsourcekey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # B: sum of the forecasted hours for the labor role by source
         lrsourcesumkey = f"{lr_or_jf}-{pflr.source}"
@@ -517,7 +551,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
             newrow['detail'] = 'sourcesum'
-            rowdict[lrsourcesumkey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # C: sum of the forecasted hours for the labor cat
         lcatmainkey = f"lcat"
@@ -527,7 +561,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['parent'] = None
             newrow['name'] = f" {lrcat} (Labor Category)"
             newrow['detail'] = 'lcat'
-            rowdict[lcatmainkey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # C: sum of the forecasted hours for the labor cat by portfolio
         lcatportfoliokey = f"{pflr.portfolioid}-lcat"
@@ -537,7 +571,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['parent'] = lcatmainkey
             newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
             newrow['detail'] = 'portfolio'
-            rowdict[lcatportfoliokey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # C: sum of the forecasted hours for the labor cat by portfolio and source
         lcatsourcekey = f"{pflr.portfolioid}-lcat-{pflr.source}"
@@ -548,7 +582,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
             newrow['detail'] = 'source'
-            rowdict[lcatsourcekey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # D: sum of the forecasted hours for the labor cat by source
         lcatsourcesumkey = f"lcat-{pflr.source}"
@@ -559,7 +593,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = sourcename
             newrow['source'] = pflr.source
             newrow['detail'] = 'sourcesum'
-            rowdict[lcatsourcesumkey] = newrow
+            rowdict[newrow['id']] = newrow
 
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
@@ -581,10 +615,88 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                 addtocell(rowdict, lcatportfoliokey, mkey, fte)
                 addtocell(rowdict, lcatmainkey, mkey, fte)
 
-    # calculate the RMSE and R2 for each source
-    # TODO
-
     app.logger.info(f"  df processing done")
+
+    # calculate the RMSE and R2 for each source in rowdict, and adds rows to the treegrid to display this
+    if showsources:
+        newrow = rowtemplate.copy()
+        newrow['id'] = 'errorrates'
+        newrow['parent'] = None
+        newrow['name'] = '-- Model error rates'
+        newrow['source'] = 'errorrates'
+        newrow['detail'] = 'errorrates'
+        rowdict[newrow['id']] = newrow
+
+        # for each source that is visible in this dataset
+        for source in sources.keys():
+            # gather each data point for that source, save it in predictions, and save the equivalent 'actuals' record in actuals
+            actuals = []
+            predictions = []
+            for row in rowdict.values():
+                if row['detail'] == 'source' and row['source'] == source:
+                    actualskey = row['id'].replace(f"-{source}","-actuals")
+                    #app.logger.info(f"    for source '{source}': row={row} and actualskey={actualskey}")
+                    for m in range(1,13):
+                        # skip this month and future months
+                        if year == thisyear and m >= thismonth:
+                            continue
+                        elif year > thisyear:
+                            continue
+                        mkey = f"m{m}"
+                        prediction = row[mkey]
+                        actual = None
+                        # find actuals by morphing the current key to an actuals key
+                        if actualskey in rowdict:
+                            actual = rowdict[actualskey][mkey]
+                        if actual != None and prediction != None:
+                            actuals.append(actual)
+                            predictions.append(row[mkey])
+        
+            # now calculate the score
+            if len(actuals) == 0 or len(predictions) == 0:
+                app.logger.info(f"    for source '{source}': no data to score")
+                continue
+            rmsescore = mean_squared_error(actuals,predictions, squared=False)
+            r2score = r2_score(actuals, predictions)
+            stddev = np.std(actuals)
+            app.logger.info(f"    for source '{source}': RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score}")
+
+            newrow = rowtemplate.copy()
+            sourceid = f"errorrates-{source}"
+            newrow['id'] = sourceid
+            newrow['parent'] = 'errorrates'
+            newrow['name'] = sourcename_from_source(source)
+            newrow['source'] = 'errorrates'
+            newrow['detail'] = 'errorrates'
+            rowdict[newrow['id']] = newrow
+
+            newrow = rowtemplate.copy()
+            newrow['id'] = 'errorrates-' + source + '-rmse'
+            newrow['parent'] = sourceid
+            newrow['name'] = f"RMSE: {rmsescore:.2f}"
+            newrow['source'] = 'errorrates'
+            newrow['detail'] = 'errorrates'
+            rowdict[newrow['id']] = newrow
+
+            newrow = rowtemplate.copy()
+            newrow['id'] = 'errorrates-' + source + '-rmsestddev'
+            newrow['parent'] = sourceid
+            newrow['name'] = f"RMSE/stddev: {rmsescore/stddev:.2f}"
+            newrow['source'] = 'errorrates'
+            newrow['detail'] = 'errorrates'
+            rowdict[newrow['id']] = newrow
+
+            newrow = rowtemplate.copy()
+            newrow['id'] = 'errorrates-' + source + '-r2'
+            newrow['parent'] = sourceid
+            newrow['name'] = f"R2: {r2score:.2f}"
+            newrow['source'] = 'errorrates'
+            newrow['detail'] = 'errorrates'
+            rowdict[newrow['id']] = newrow
+
+
+    app.logger.info(f"  error calculation done")
+    # error calculation done
 
     # add billable allocm, headcount and billed pct data
     if csts != None and csts != "":

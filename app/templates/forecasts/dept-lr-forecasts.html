@@ -30,6 +30,7 @@
             { id: "checkboxformcontainer", html: '<form id="form"></form>' },
             { id: "note", html: "Numbers are in FTE ('Billable Allocation'), accounts for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. Numbers include full-time and contract, not freelance.</i>" },
             { id: "treegrid" },
+            { id: "errorrates", html: `<div id="errorrates"` },
         ]
     });
 
@@ -135,6 +136,7 @@
         rowHeight: 32,
         label: "Forecasts and Targets",
     });
+
     treegrid.data.events.on("load", function() {
         unloading();
         year = yearcombo.getValue();

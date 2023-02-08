@@ -123,9 +123,9 @@ def model_linear():
 
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
-    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
 
     for lookbackmonths in [4,8,12,16]:
+        startdate = today.replace(day=1, month=1) - relativedelta(years=1)
         sourcename = f'linear{lookbackmonths}'
         lookaheadmonths = 12
         while startdate < today:
