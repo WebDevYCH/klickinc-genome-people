@@ -104,7 +104,7 @@
 										<a href="#" id="close_post_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
 									</div>
 								{% endif %}
-								{% if job.apply == 0 %}
+								{% if (job.apply == 0 and current_user.userid != job.poster_user_id) %}
 									<div class="clearfix">
 										<a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
 									</div>
@@ -453,7 +453,7 @@
 			data: data,
 			success: function (res) {
 				var jobs = JSON.parse(res);
-				var data = '';
+				var data = '<div class="accordion accordion-flush" id="accordion-tmkt">';
 				jobs.forEach((job) => {
 					let skill_txt = '';
 					for (let skill in job.job_posting_skills) {
@@ -461,62 +461,66 @@
 					}
 					var current_user_id = '{{ current_user.userid }}';
 					data +=
-						`<div class="row job-card">
-                                <div class="col-md-9">
-                                    <div>
-                                        <span class="card-title mb-0 text-primary fs-3" job-posting-id="` +
-						job.id +
-						`">` +
-						job.title +
-						`</span>
-                                        <span class="fs-6"><i>(` +
-						moment(job.posted_date).format('YYYY-MM-DD') +
-						` ~ <span class="card-expiry">` +
-						moment(job.expiry_date).format('YYYY-MM-DD') +
-						`</span>, <span class="card-category" category-id="` +
-						job.job_posting_category_id +
-						`">` +
-						job.job_posting_category_name +
-						`</span>)</i></span>
-                                    </div>
-                                    <div class="job-details">
-                                        Description: <span class="card-description">`+job.description+`</span>
-                                    </div>
-                                    <div class="other-info">
-                                        Skills:`+skill_txt+`
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div>
-                                        <span class="float-end ms-5 text-muted">Today</span>
-                                        `+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
-                                    </div>
-                                    <div class="clearfix">
-                                        <label class="float-end text-danger">Expires in `+job.expiry_day+` days</label>
-                                    </div>
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">View applicants</a>
-                                    </div>
-                                    ` + (current_user_id == job.poster_user_id ? `
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
-                                    </div>
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
-                                    </div>` : '') + `
-                                    `+ (job.apply == 0 ? `
-                                        <div class="clearfix">
-                                            <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
-                                        </div>
-                                    `:'') + `
-                                    `+ (job.apply == 1 ? `
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
-                                    </div>
-                                    `:'') + `
-                                </div>
-                            </div>`;
+						`<div class="accordion-item  job-card mb-2">
+							<div class='card'> 
+								<h2 class="accordion-header" id="flush-headingOne">
+									<div class="accordion-button d-block collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tmkt`+ job.id +`" aria-expanded="true" aria-controls="#tmkt`+ job.id +`">
+										<div class="d-flex mb-2 justify-content-between align-items-center">
+											<div class="d-flex align-items-center">
+												<span class="card-title text-primary fs-3 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
+												<span class="badge rounded-pill bg-primary card-category" category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
+												<span class="card-expiry" hidden>` +job.expiry_date + `</span>
+											</div>
+											<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + `Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>
+										</div>
+										<div class="card-subtitle text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
+									</div>
+								</h2>
+							</div>
+							<div id="tmkt` +  job.id + `" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordion-tmkt">
+								<div class="accordion-body">
+									<div class="row">
+										<div class="col-md-9">
+											<div class="card-description">` +  job.description + `</div>
+											<div class="other-info">
+												`+ skill_txt +`
+											</div>
+										</div>
+										<div class="col-md-3">
+											<div class="clearfix">
+												`+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
+											</div>
+											<div class="clearfix">
+												<label class="float-end text-danger">Expires in ` + job.expiry_day + ` days</label>
+											</div>
+											` + (current_user_id == job.poster_user_id ? `
+											<div class="clearfix">
+												<a href="#" class="float-end text-decoration-underline">View applicants</a>
+											</div>
+											<div class="clearfix">
+												<a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
+											</div>
+											<div class="clearfix">
+												<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
+											</div>` : '') + `
+											`+ (job.apply == 0 && current_user_id != job.poster_user_id ? `
+												<div class="clearfix">
+													<a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
+												</div>
+											`:'') + `
+											`+ (job.apply == 1 ? `
+											<div class="clearfix">
+												<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
+											</div>
+											`:'') + `
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					`;
                 });
+				data += `</div>`;
                 $("#job-list").html(data);
                 $("#job-num").html("There are "+jobs.length+" job postings that meet the search criteria");
                 unloading();
