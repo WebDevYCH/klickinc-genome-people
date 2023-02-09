@@ -189,6 +189,7 @@ def getapplicants():
             dictB['applied_date'] = 'Yesterday'
         apply_data.append(dictB)
     return json.dumps(apply_data)
+
 @app.route('/tmkt/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():

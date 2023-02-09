@@ -65,6 +65,7 @@
 								<div class="d-flex align-items-center">
 									<span class="card-title text-primary fs-3 me-1" job-posting-id="{{ job.id }}">{{ job.title }}</span>
 									<span class="badge rounded-pill bg-primary card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category_name }}</span>
+									<span class="badge rounded-pill bg-primary card-similarity" hidden>{{ job.similarity }}</span>
 									<span class="card-expiry" hidden>{{ job.expiry_date }}</span>
 								</div>
 								<span class="text-muted"><i> {% if job.posted_for == 0 %}Today{% elif job.posted_for == 1 %}{{job.posted_for}} Day Ago{% else %}{{job.posted_for}} Days Ago{% endif %}</i></span>
@@ -469,6 +470,7 @@
 											<div class="d-flex align-items-center">
 												<span class="card-title text-primary fs-3 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
 												<span class="badge rounded-pill bg-primary card-category" category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
+                                                <span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
 												<span class="card-expiry" hidden>` +job.expiry_date + `</span>
 											</div>
 											<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + `Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>
