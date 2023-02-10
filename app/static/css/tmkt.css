@@ -41,3 +41,13 @@
 .card-title {
 	--bs-card-title-spacer-y: 0px;
 }
+
+.dhx_list-item, .dhx_list-item--text {
+    background-color: white;
+    margin-bottom: 15px;
+	padding: 0px;
+	padding-left: 5px;;
+}
+.dhx_list-item--focus, .dhx_list-item--selected:hover, .dhx_list-item:hover {
+	background-color: white;
+}

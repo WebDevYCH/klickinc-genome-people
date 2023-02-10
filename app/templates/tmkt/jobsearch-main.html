@@ -1,0 +1,183 @@
+{% extends "base.html" %} 
+
+{% block app_head %}
+<script src="/static/js/dhtmlxsuite.js"></script>
+<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"/>
+<link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
+{% endblock %}
+
+<!-- component container -->
+{% block app_content %}
+<div class="row">
+	<div class="d-flex mb-2 justify-content-between align-items-center">
+		<div class="row">
+			<div class="col-auto">
+				<select id="job-category-select" class="form-select me-1" aria-label="select job category">
+					<option value="0" selected>Select Job Category</option>
+					{% for category in categories %}
+					<option value="{{ category.id }}">{{ category.name }}</option>
+					{% endfor %}	
+				</select>
+			</div>
+			<div class="col-auto">
+				<select id="date-posted-select" class="form-select" aria-label="select date posted">
+					<option value="0" selected>Select Date Posted</option>
+					<option value="1">Last 24 hours</option>
+					<option value="3">Last 3 days</option>
+					<option value="7">Last 7 days</option>
+					<option value="30">Last 30 days</option>
+				</select>
+			</div>
+			<div class="col-auto">
+				<select id="job-title-select" class="form-select" aria-label="select job title">
+					<option value="" selected>Select Job Title</option>
+					{% for title in titles %}
+					<option value={{ title.name }}>{{ title.name }}</option>
+					{% endfor %}	
+				</select>
+			</div>
+		</div>	
+		<div >
+			<input type="text" id="text_search" class="form-control" placeholder="Search" aria-label="Search">
+		</div>
+	</div>
+</div>	
+<div class="row">
+	<div class="accordion accordion-flush">
+		<div id="jobListView" class="col-12"></div>
+	</div>
+</div>
+{% endblock %}
+
+{% block script %}
+<script>
+	/* -------------------------------------------------------------------------- */
+	/*                             Document Selectors                             */
+	/* -------------------------------------------------------------------------- */
+	const textSearchInput = document.querySelector("#text_search");
+	const jobTitleSelect = document.querySelector("#job-title-select");
+	const jobCategorySelect = document.querySelector("#job-category-select");
+	const datePostedSelect = document.querySelector("#date-posted-select");
+
+	var jobs = {{ jobs | tojson }};
+
+	function listTemplate(job) {
+		let template = `
+			<div class="accordion-item  job-card mb-2">
+				<div class='card-body'> 
+					<h2 class="accordion-header" id="flush-headingOne">
+						<div class="accordion-button d-block collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tmkt`+ job.id +`" aria-expanded="true" aria-controls="#tmkt`+ job.id +`">
+							<div class="d-flex mb-2 justify-content-between align-items-center">
+								<div class="d-flex align-items-center">
+									<span class="card-title text-primary fs-3 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
+									<span class="badge rounded-pill bg-primary card-category" category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
+									<span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
+									<span class="card-expiry" hidden>` +job.expiry_date + `</span>
+								</div>
+								<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>
+							</div>
+							<div class="card-subtitle text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
+						</div>
+					</h2>
+				</div>
+				<div id="tmkt` +  job.id + `" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordion-tmkt">
+					<div class="accordion-body">
+						<div class="row">
+							<div class="col-md-10">
+								<div class="card-description">` +  job.description + `</div>
+								<div class="other-info">
+									`+ job.job_posting_skills.join(', ') +`
+								</div>
+							</div>
+							<div class="col-md-2">
+								<div class="clearfix">
+									`+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
+								</div>
+								<div class="clearfix">
+									<label class="float-end text-danger">Expires in ` + job.expiry_day + ` days</label>
+								</div>
+								` + (9376 == job.poster_user_id ? `
+								<div class="clearfix">
+									<a href="#" class="float-end text-decoration-underline">View applicants</a>
+								</div>
+								<div class="clearfix">
+									<a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
+								</div>
+								<div class="clearfix">
+									<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
+								</div>` : '') + `
+								`+ (job.apply == 0 && 9376 != job.poster_user_id ? `
+									<div class="clearfix">
+										<a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
+									</div>
+								`:'') + `
+								`+ (job.apply == 1 ? `
+								<div class="clearfix">
+									<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
+								</div>
+								`:'') + `
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		`;
+		return template;
+	}
+	
+	const jobList = new dhx.List("jobListView", {
+		css: "dhx_widget--bg_gray",
+		template: listTemplate,
+	});
+	
+	jobList.data.parse(jobs);
+
+
+	/* -------------------------------------------------------------------------- */
+	/*                              Filter Functions                              */
+	/* -------------------------------------------------------------------------- */
+
+	// Filter by text search for title and description
+	// Filter by select for title, category and date posted
+	function filterList() {
+		const title = jobTitleSelect.value.toLowerCase();
+		const text = textSearchInput.value.toLowerCase();
+		const category = jobCategorySelect.value;
+		const datePosted = datePostedSelect.value;
+
+		let filteredList = jobs.filter(function(item) {
+			const today = new Date();
+			const timeDiff = today.getTime() - new Date(item.posted_date).getTime();
+			const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+			return (
+				(item.title.toLowerCase().includes(text) || item.description.toLowerCase().includes(text)) &&
+				(item.title.toLowerCase().includes(title)) &&
+				(item.job_posting_category_id == category || category == 0) &&
+				(diffDays <= datePosted || datePosted == 0)
+			);
+		});
+		
+		jobList.data.parse(filteredList);
+	}
+
+	textSearchInput.addEventListener("keyup", function () {
+		filterList();
+	});
+	jobTitleSelect.addEventListener("change", function () {
+		filterList();
+	});
+	jobCategorySelect.addEventListener("change", function () {
+		filterList();
+	});
+
+	datePostedSelect.addEventListener("change", function () {
+		filterList();
+	});
+
+</script>	
+
+<link rel="stylesheet" href="{{ url_for('static',filename='css/tmkt.css')}}"/>
+
+
+{% endblock %}
