@@ -4,49 +4,39 @@ from flask_login import login_required, current_user
 from core import *
 from model import *
 from skills_core import *
+from profile_core import *
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    # attempt to find existing profile and skills
+    # attempt to find existing profile
     try:
         profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
     except:
         profile = None
-    try:
-        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
-    except:
-        my_skills = None
 
+    result = None
     if request.method == "POST":
+        # if not profile exists, create a new model
+        if not profile:
+            profile = UserProfile(user_id=int(current_user.userid))
         # get resume from form editor
-        resume = request.form['resume']
-        
-        # Get GPT3 Embedding value for resume
-        vector = gpt3_embedding(resume)
-        if not isinstance(vector, list):
-            vector = None
-        
-        # Update profile, if it exists. Otherwise, create a new one.
-        if profile:
-            profile.resume = resume
-            profile.resume_vector = vector
-            db.session.commit()
-            flash("Successfully updated your resume")
-        else:
-            user_profile = UserProfile(resume=resume, user_id=int(current_user.userid), resume_vector=vector)
-            db.session.add(user_profile)
-            db.session.commit()
-            flash("Successfully added your resume")
-
-        # extract relevant skills from resume
-        result = auto_fill_skill_from_text("user_profile", current_user.userid, resume, 1)
-        if not result == "success":
-            flash(f"Skill extraction failed: {result}")
+        profile.resume = request.form['resume']
+        # save resume to user profile
+        result = save_resume(current_user, profile)
+        # flash results message
+        if result:
+            flash(result)
 
     # if there is no profile, flash a message
     if not profile:
         flash("Unable to find an existing profile, please create one by uploading a resume")
+
+    # attempt to find existing skills
+    try:
+        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+    except:
+        my_skills = None
 
     return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills, title="Profile")
 

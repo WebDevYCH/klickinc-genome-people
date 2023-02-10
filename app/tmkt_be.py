@@ -18,6 +18,7 @@ from model import *
 from tmkt_core import *
 from chat_core import *
 from skills_core import *
+from profile_core import *
 
 people_resume_index_dir = "../data/resumes"
 people_index_file = "../cache/people_index.json"
@@ -153,39 +154,28 @@ def tmkt_resumes_load_index():
         peoplecount += 1
         fullpath = os.path.join(people_resume_index_dir, filename)
         if os.path.isfile(fullpath) and filename.endswith(".pdf"):
-            # convert the PDF to text and craft a prompt for training
-            prompt = ""
+            # convert the PDF to text and craft a prompt for training (prompt is now generated in the save_resume() function)
             email = re.sub(".com-.*", ".com", filename)
             loglines.append(f"  Processing {filename}, email {email}, person {peoplecount}")
             user = db.session.query(User).where(User.email==email).first()
             if user:
                 loglines.append(f"    Found user {user.firstname} {user.lastname}")
-                prompt += f"Resume for {user.firstname} {user.lastname}, current title {user.title}, who started at Klick in {user.started.year}.\n"
-                if user.enabled:
-                    prompt += f"{user.firstname} works in the {user.department} department.\n"
-                else:
-                    prompt += f"{user.firstname} is no longer employed here.\n"
-                prompt += f"Klick is a marketing agency.\n\n"
                 resume = ""
                 try:
                     reader = pypdf.PdfReader(open(fullpath, 'rb'))
                     for page in reader.pages:
                         resume += page.extract_text().replace("\\n", "\n")
-                        prompt += resume
                 except Exception as e:
                     loglines.append(f"    ERROR: Could not read {fullpath}: {e}")
                     continue
 
-                vector = gpt3_embedding(prompt)
-                if not isinstance(vector, list):
-                    vector = None
-
                 # strip out null characters, as sometimes PDF's contain them
                 resume = resume.replace('\x00', '')
 
-                upsert(db.session, UserProfile, { "user_id": user.userid }, { "resume": resume, "resume_vector": vector })
-                db.session.commit()
-
+                result_msg = save_resume(user, resume, False)
+                # if result message doesn't start with "Successfully", then it's an error
+                if not result_msg.startswith("Successfully"):
+                    loglines.append(f"    ERROR: {result_msg}")
 
 # embeddings test data -- load example job postings and index with embeddings vectors
 @app.cli.command('tmkt_job_postings_load_index')
@@ -200,10 +190,8 @@ def tmkt_job_postings_load_index():
     df = df.fillna('')
     # csv has fields "Posting Title", "Status", "Date Created (UTC)", "Posting Commitment", "Posting Hiring Manager", "Posting Hiring Manager Email", "Description", "ListTitle1", "ListContent1", "ListTitle2", "ListContent2", "ListTitle3", "ListContent3", "ListTitle4", "ListContent4", "ListTitle5", "ListContent5", "Additional"
     for index, row in df.iterrows():
+        job_posting = JobPosting()
         loglines.append(f"  Processing job title {row['Posting Title']}, index {index}")
-        prompt = ""
-        prompt += f"Job posting for {row['Posting Title']}, posted on {row['Date Created (UTC)']}, with a {row['Posting Commitment']} commitment.\n"
-        prompt += f"Job description: {row['Description']}\n\n"
 
         description = f"""
         <p>{row['Description']}</p>
@@ -221,48 +209,36 @@ def tmkt_job_postings_load_index():
         <p>{row['Additional']}</p>
         """
 
-        # convert html to plaintext for indexing
-        soup = BeautifulSoup(description, 'html.parser')
-        prompt += soup.get_text()
-
         lookup_email = row['Posting Hiring Manager Email']
         if not lookup_email:
             lookup_email = row['Posting Owner Email']
         user = db.session.query(User).where(User.email==lookup_email).first()
         if user:
+            job_posting.poster_user_id = user.userid
             loglines.append(f"    Found user {user.firstname} {user.lastname}")
 
-            vector = gpt3_embedding(prompt)
-            if not isinstance(vector, list):
-                vector = None
-
-            category = 1 # full time
+            job_posting.job_posting_category_id = 1 # full time
             if row['Posting Commitment'] == "Part Time":
-                category = 2
+                job_posting.job_posting_category_id = 2
             elif row['Posting Commitment'] == "Contract":
-                category = 3
+                job_posting.job_posting_category_id = 3
 
             # convert date created from UTC to EST
             posted_date = datetime.datetime.strptime(row['Date Created (UTC)'], '%Y-%m-%d %H:%M:%S')
             posted_date = pytz.utc.localize(posted_date)
             posted_date = posted_date.astimezone(pytz.timezone("America/New_York"))
+            job_posting.posted_date = posted_date
+            job_posting.expiry_date = posted_date + datetime.timedelta(days=90)
 
-            # convert date created from UTC to EST
-            upsert(db.session, JobPosting, 
-                { "title": row['Posting Title'], "poster_user_id": user.userid }, 
-                { 
-                    "description": description, 
-                    "job_posting_vector": vector,
-                    "job_posting_category_id": category,
-                    "posted_date": posted_date,
-                    "expiry_date": posted_date + datetime.timedelta(days=90),
-                }
-            )
-            db.session.commit()
+            job_posting.title = row['Posting Title']
+            job_posting.description = description
+            
+            result_msg = save_job_posting(user, job_posting)
+            # if result message doesn't start with "Successfully", then it's an error
+            if not result_msg.startswith("Successfully"):
+                loglines.append(f"    ERROR: {result_msg}")
         else:
             loglines.append(f"    ERROR: Could not find user {lookup_email}")
-
-        db.session.commit()
 
     return loglines
 

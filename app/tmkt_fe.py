@@ -16,50 +16,43 @@ from tmkt_core import *
 @app.route('/tmkt/postjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
-    title = request.form['title']
-    category_id = request.form['category_id']
-    job_description = request.form['description']
-    poster_id = request.form['poster_id']
-    posted_date = date.today()
-    expiry_date = request.form['expiry_date']
-        
-    # Get GPT3 Embedding value for resume
-    vector = gpt3_embedding(job_description)
-    if not isinstance(vector, list):
-        vector = None
+    job_posting = JobPosting()
+    job_posting.job_posting_category_id = request.form['category_id']
+    job_posting.poster_user_id = current_user.userid
+    job_posting.posted_date = date.today()
+    job_posting.expiry_date = request.form['expiry_date']
+    job_posting.title = request.form['title']
+    job_posting.description = request.form['description']
 
-    createJob = JobPosting(job_posting_category_id=category_id, poster_user_id=poster_id, posted_date=posted_date, expiry_date=expiry_date,title=title,description=job_description,job_posting_vector=vector)
-    db.session.add(createJob)
-    db.session.commit()
-
-    # extract relevant skills from job posting description
-    result = auto_fill_skill_from_text("user_profile", current_user.userid, job_description)
-    if not result == "success":
-        flash(f"Skill extraction failed: {result}")
+    # save job posting
+    flash(save_job_posting(current_user, job_posting))
 
     return redirect(url_for('jobsearch'))
 
 @app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
 def editjob():
-    title = request.form['title']
-    category_id = request.form['category_id']
-    description = request.form['description']
-    expiry_date = request.form['expiry_date']
-    id = request.form['job_posting_id']
+    # find existing job posting
+    try:
+        job_posting = db.session.query(JobPosting).filter(JobPosting.id==request.form['job_posting_id']).one()
+    except:
+        # if none exists, create new job posting
+        job_posting = JobPosting()
         
-    # Get GPT3 Embedding value for resume
-    vector = gpt3_embedding(description)
-    if not isinstance(vector, list):
-        vector = None
+    # if unable to find existing record, attempt to reinsert it using the id from the form
+    if not job_posting.id:        
+        job_posting.id = request.form['job_posting_id']
+        job_posting.poster_user_id = current_user.userid
+        job_posting.posted_date = date.today()
 
-    upsert(db.session, JobPosting, {'id': id}, {'job_posting_category_id': category_id, 'expiry_date': expiry_date, 'title': title, 'description': description, 'job_posting_vector': vector})
-    db.session.commit()
+    # fill job posting with form data
+    job_posting.job_posting_category_id = request.form['category_id']
+    job_posting.expiry_date = request.form['expiry_date']
+    job_posting.title = request.form['title']
+    job_posting.description = request.form['description']
 
-    # extract relevant skills from job posting description
-    result = auto_fill_skill_from_text("user_profile", current_user.userid, description)
-    if not result == "success":
-        flash(f"Skill extraction failed: {result}")
+    # save job posting
+    flash(save_job_posting(current_user, job_posting))
 
     return redirect(url_for('jobsearch'))
 
@@ -274,21 +267,31 @@ def setusersetting():
     db.session.commit()
     return user_Available
 
-@app.route('/tmkt/closepost', methods=['GET', 'POST'])
+@app.route('/tmkt/closepost', methods=['POST'])
 @login_required
 def closepost():
-    userId = request.form['userId']
-    postId = request.form['postId']
-    upsert(JobPosting, {'id': postId}, {'removed_date': date.today()})
-    db.session.commit()
-    return userId
+    # find existing job posting
+    try:
+        job_posting_id = request.form['postId']
+        job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
+        flash(close_job_posting(job_posting))
+    except:
+        # if none exists, flash error
+        flash('Error closing job posting')
 
-@app.route('/tmkt/cancelapplication', methods=['GET', 'POST'])
+    return redirect(url_for('jobsearch'))
+
+@app.route('/tmkt/cancelapplication', methods=['POST'])
 @login_required
 def cancelapplication():
-    userId = request.form['userId']
-    postId = request.form['postId']
-    db.session.execute(ApplyJob).filter(ApplyJob.user_id == userId, ApplyJob.job_id == postId).delete()
+    # find existing job application
+    try:
+        job_posting_id = request.form['postId']
+        user_id = request.form['userId']
+        job_apply = db.session.query(ApplyJob).filter(ApplyJob.user_id==user_id, ApplyJob.job_id==job_posting_id).one()
+        flash(cancel_job_application(job_apply))
+    except Exception as e:
+        # if none exists, flash error
+        flash('Error cancelling application')
 
-    db.session.commit()
     return redirect(url_for('jobsearch'))

@@ -18,6 +18,7 @@ import gspread
 import openai
 import numpy as np
 from numpy.linalg import norm
+from bs4 import BeautifulSoup
 
 ###################################################################
 ## INITIALIZATION
@@ -297,4 +298,22 @@ def gpt3_completion(prompt, engine='text-davinci-003', temp=0.1, top_p=1.0, toke
             elif retry >= max_retry:
                 raise
 
-
+# prompt development for GPT Embedding
+def fill_prompt_for_text(type, user, description, title=None, posted_date=None, category=None):
+    soup = BeautifulSoup(description, 'html.parser')
+    clean_description = soup.get_text()
+    if type == "user_profile":
+        prompt = f"Resume for {user.firstname} {user.lastname}, current title {user.title}, who started at Klick in {user.started.year}.\n"
+        if user.enabled:
+            prompt += f"{user.firstname} works in the {user.department} department.\n"
+        else:
+            prompt += f"{user.firstname} is no longer employed here.\n"
+        prompt += f"Klick is a marketing agency.\n\n"
+        prompt += clean_description
+    elif type == "job_posting":
+        # get category name from category id
+        prompt = f"Job posting for {title}, posted on {posted_date}, with a {category} commitment.\n"
+        prompt += f"Job description: {clean_description}"
+    else:
+        prompt = clean_description
+    return prompt
