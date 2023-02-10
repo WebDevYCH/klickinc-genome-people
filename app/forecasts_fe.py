@@ -250,7 +250,7 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
                     innercachekey_autobill = f"{lrhc.laborroleid}-{lrhc.cstname}-autobill"
                     innercachekey_bill = f"{lrhc.laborroleid}-{lrhc.cstname}-bill"
                     # save hours billed and autobilled separate, and calculate percentage of autobilled/(billed-autobilled) on the fly
-                    if lrhc.autobill_hours != None:
+                    if lrhc.autobill_hours != None and lrhc.billed_hours != None:
                         if innercachekey_autobill not in autobill_pct: autobill_pct[innercachekey_autobill] = 0
                         if innercachekey_bill not in autobill_pct: autobill_pct[innercachekey_bill] = 0
                         autobill_pct[innercachekey_autobill] += lrhc.autobill_hours
@@ -265,11 +265,14 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
 
                 Cache.set(outercachekey, autobill_pct, timeout_seconds=3600*12)
             innercachekey = f"{laborroleid}-{cst}"
+            # TODO: account for 99% autobill edge cases
+            # rule: schedule assist can't account for more than 4% of that craft's hours
+            # rule: total of schedule assist 
             if innercachekey in autobill_pct:
                 if autobill_pct[innercachekey] < 0:
                     app.logger.info(f"  autobill_pct was negative due to role being pure autobill for {innercachekey} --> {hours}")
-                elif autobill_pct[innercachekey] > 5:
-                    app.logger.info(f"  autobill_pct was >5 for {innercachekey} --> {hours}")
+                elif autobill_pct[innercachekey] > 50:
+                    app.logger.info(f"  autobill_pct was >50 for {innercachekey} --> {hours}")
                 else:
                     #app.logger.info(f"  autobill_pct cache HIT for {innercachekey} --> {hours}*{1+autobill_pct[innercachekey]}")
                     hours *= 1 + autobill_pct[innercachekey]
@@ -281,6 +284,7 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
             hours *= 1.06
 
         # rough MDOU% adjustment based on target
+        # TODO: gather portfolio-specific MDOU% targets and apply them here
         hours *= mdou_pct
 
         # simplistic model, as PM forecasts are simplistic
@@ -289,7 +293,7 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
         fte = hours / (business_days * business_hours_per_day)
 
         return fte
-    elif source == 'mljar':
+    elif source == 'mljar' or source.startswith('linreg'):
         # this is the only model that theoretically has an understanding of business days per month
         # and typical vacation time
 
@@ -459,6 +463,9 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
     queryfilter = queryClientCst(clients, csts)
 
+    if showsources:
+        showfullyear = True
+
     primarysource = 'gsheet'
     lcatmainkey = f"lcat"
     thisyear = datetime.date.today().year
@@ -483,6 +490,16 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")
     rowdict = {}
     sources = {}
+
+    # C: sum of the forecasted hours for the labor cat
+    lcatmainkey = f"lcat"
+    if lcatmainkey not in rowdict:
+        newrow = rowtemplate.copy()
+        newrow['id'] = lcatmainkey
+        newrow['parent'] = None
+        newrow['name'] = f" {lrcat} (Labor Category)"
+        newrow['detail'] = 'lcat'
+        rowdict[newrow['id']] = newrow
 
     # add the rows to the dataframe
     app.logger.info(f"  adding rows to dict")
@@ -527,7 +544,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lrportfoliokey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['name'] = f" {pflr.portfolio.clientname} - {pflr.portfolio.name}"
             newrow['detail'] = 'portfolio'
             rowdict[newrow['id']] = newrow
 
@@ -553,23 +570,13 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['detail'] = 'sourcesum'
             rowdict[newrow['id']] = newrow
 
-        # C: sum of the forecasted hours for the labor cat
-        lcatmainkey = f"lcat"
-        if lcatmainkey not in rowdict:
-            newrow = rowtemplate.copy()
-            newrow['id'] = lcatmainkey
-            newrow['parent'] = None
-            newrow['name'] = f" {lrcat} (Labor Category)"
-            newrow['detail'] = 'lcat'
-            rowdict[newrow['id']] = newrow
-
         # C: sum of the forecasted hours for the labor cat by portfolio
         lcatportfoliokey = f"{pflr.portfolioid}-lcat"
         if lcatportfoliokey not in rowdict:
             newrow = rowtemplate.copy()
             newrow['id'] = lcatportfoliokey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f"{pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['name'] = f" {pflr.portfolio.clientname} - {pflr.portfolio.name}"
             newrow['detail'] = 'portfolio'
             rowdict[newrow['id']] = newrow
 
@@ -625,6 +632,9 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         newrow['name'] = '-- Model error rates'
         newrow['source'] = 'errorrates'
         newrow['detail'] = 'errorrates'
+        newrow['m1'] = 'R2'
+        newrow['m2'] = 'EMSA/stddev'
+        newrow['m3'] = 'EMSA'
         rowdict[newrow['id']] = newrow
 
         # for each source that is visible in this dataset
@@ -668,32 +678,10 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['name'] = sourcename_from_source(source)
             newrow['source'] = 'errorrates'
             newrow['detail'] = 'errorrates'
+            newrow['m1'] = r2score
+            newrow['m2'] = rmsescore/stddev
+            newrow['m3'] = rmsescore
             rowdict[newrow['id']] = newrow
-
-            newrow = rowtemplate.copy()
-            newrow['id'] = 'errorrates-' + source + '-rmse'
-            newrow['parent'] = sourceid
-            newrow['name'] = f"RMSE: {rmsescore:.2f}"
-            newrow['source'] = 'errorrates'
-            newrow['detail'] = 'errorrates'
-            rowdict[newrow['id']] = newrow
-
-            newrow = rowtemplate.copy()
-            newrow['id'] = 'errorrates-' + source + '-rmsestddev'
-            newrow['parent'] = sourceid
-            newrow['name'] = f"RMSE/stddev: {rmsescore/stddev:.2f}"
-            newrow['source'] = 'errorrates'
-            newrow['detail'] = 'errorrates'
-            rowdict[newrow['id']] = newrow
-
-            newrow = rowtemplate.copy()
-            newrow['id'] = 'errorrates-' + source + '-r2'
-            newrow['parent'] = sourceid
-            newrow['name'] = f"R2: {r2score:.2f}"
-            newrow['source'] = 'errorrates'
-            newrow['detail'] = 'errorrates'
-            rowdict[newrow['id']] = newrow
-
 
     app.logger.info(f"  error calculation done")
     # error calculation done
@@ -736,7 +724,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lrbakey
             newrow['parent'] = lrmainkey
-            newrow['name'] = f"  FTE"
+            newrow['name'] = f"  Existing FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lrbakey] = newrow
@@ -747,7 +735,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow = rowtemplate.copy()
             newrow['id'] = lcatbakey
             newrow['parent'] = lcatmainkey
-            newrow['name'] = f"  FTE"
+            newrow['name'] = f"  Existing FTE"
             newrow['source'] = 'headcount'
             newrow['detail'] = 'headcount'
             rowdict[lcatbakey] = newrow

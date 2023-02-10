@@ -124,7 +124,7 @@ def model_linear():
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
 
-    for lookbackmonths in [4,8,12,16]:
+    for lookbackmonths in [4,8,10,12,16]:
         startdate = today.replace(day=1, month=1) - relativedelta(years=1)
         sourcename = f'linear{lookbackmonths}'
         lookaheadmonths = 12
@@ -188,7 +188,7 @@ def model_linreg():
     loglines.append("Starting Same-Portfolio Linear Regression Extrapolator")
     loglines.append("")
 
-    for lookbackmonths in [4,8,12,16]:
+    for lookbackmonths in [4,8,10,12,16]:
         sourcename = f'linreg{lookbackmonths}'
         lookaheadmonths = 12
         # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
@@ -324,6 +324,110 @@ def model_cilinear():
                 loglines.append(f"  {pflr.laborroleid} {pflr.forecastedhours} hours")
 
         db.session.commit()
+
+    return loglines
+
+# blend multiple models together
+@app.cli.command('model_blend')
+def model_blend_cmd():
+    model_blend()
+
+def model_blend():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Multi-Model Blends")
+    loglines.append("")
+
+    blends = {
+        'blend1': {
+            'models': ['gsheet','linear4','linear8','linreg8'],
+        },
+        'blend2': {
+            'models': ['gsheet','linear4','linear8','linreg8','linreg10'],
+        },
+        'blend3': {
+            'models': ['gsheet','linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+        'blendm1': {
+            'models': ['linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+        'blendm2': {
+            'models': ['linear4','linear8','linreg8','linreg10'],
+        },
+        'blendm3': {
+            'models': ['linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+    }
+
+    for blend in blends.keys():
+        lookaheadmonths = 12
+
+        # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
+        today = datetime.date.today()
+        startdate = today.replace(day=1, month=1) - relativedelta(years=1)
+
+        while startdate < today + relativedelta(months=lookaheadmonths):
+            rowcount = 0
+            loglines.append(f"processing {blend} for {startdate}")
+
+            # gather the list of forecasts for this month and save in a hash by portfolio ID and labor role and source
+            forecastedhours = {}
+            forecastedpflrs = {}
+            loglines.append("  gathering portfolio forecast list")
+            for plrf in db.session.query(PortfolioLRForecast).where(
+                        PortfolioLRForecast.yearmonth == startdate,
+                        PortfolioLRForecast.forecastedhours != None,
+                        PortfolioLRForecast.forecastedhours != 0
+                    ).all():
+                fhkey = f"{plrf.portfolioid}-{plrf.laborroleid}-{plrf.source}"
+                forecastedhours[fhkey] = plrf.forecastedhours
+                fkey = f"{plrf.portfolioid}-{plrf.laborroleid}"
+                forecastedpflrs[fkey] = True
+
+
+            try:
+                rowcount = 0
+                # for each portfolio-laborrole combination with a forecast
+                for fkey in forecastedpflrs.keys():
+                    modelcount = 0
+                    modelhours = 0
+                    # for each model in the blend
+                    for model in blends[blend]['models']:
+                        # if there is a forecast for this portfolio-laborrole-model combination
+                        fhkey = f"{fkey}-{model}"
+                        if fhkey in forecastedhours:
+                            # add the forecast to the blend
+                            modelcount += 1
+                            modelhours += forecastedhours[fhkey]
+                    if modelcount > 0:
+                        #loglines.append(f"    {blend} {startdate} {fkey}: found {modelcount} models, {modelhours} hours --> {modelhours / modelcount} hours")
+                        # calculate the average hours for the blend
+                        blendhours = modelhours / modelcount
+                        upsert(db.session, PortfolioLRForecast, {
+                            'portfolioid': fkey.split('-')[0],
+                            'yearmonth': startdate,
+                            'laborroleid': fkey.split('-')[1],
+                            'source': blend,
+                        }, {
+                            'forecastedhours': blendhours,
+                            'updateddate': datetime.date.today(),
+                        })
+                        rowcount += 1
+                        if rowcount % 100 == 0:
+                            loglines.append(f"    {rowcount} rows")
+                            db.session.commit()
+                loglines.append(f"    {rowcount} rows")
+                db.session.commit()
+                
+                
+            except Exception as e:
+                loglines.append(f"ERROR: {e}")
+                handle_ex(e)
+
+            # add 1 month to startdate
+            startdate = startdate + relativedelta(months=1)
+
 
     return loglines
 
