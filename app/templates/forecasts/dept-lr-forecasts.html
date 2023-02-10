@@ -144,9 +144,9 @@
         // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
         columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
         if (year == thisyear) {
-            //columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
-            columns.push({ id: "ba", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "FTE Now" }] });
             columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
+            columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
+            columns.push({ id: "ba", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "FTE Now" }] });
         }
 
         datarow = treegrid.data.getItem('lcat')
@@ -188,14 +188,14 @@
     ///////////////////////////////////////////////////////////////////////
     // CHECKBOXES
     const form = new dhx.Form("form", {
-        width: "300px",
+        width: "400px",
         height: "100%",
         rows: [
-            { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast, including test predictive models" },
-            { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
-            { id: "showyear", type: "checkbox", label: "Show Full Year", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the full year instead of just the next 3 months" },
-            { id: "showhours", type: "checkbox", label: "Show Hours Instead of FTE", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show hours instead of FTE" },
-            { id: "showlaborroles", type: "checkbox", label: "Show Labor Roles Instead of Job Function", labelWidth: "250px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show more detail with LR's instead of JF" },
+            { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast, including test predictive models" },
+            { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
+            { id: "showyear", type: "checkbox", label: "Show Full Year", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the full year instead of just the next 3 months" },
+            { id: "showhours", type: "checkbox", label: "Show Hours Instead of FTE", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show unmodified hours instead of FTE" },
+            { id: "showlaborroles", type: "checkbox", label: "Show Labor Roles Instead of Job Function", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show more detail with LR's instead of JF" },
         ]
     });
     form.events.on("change", function(id) {
