@@ -33,15 +33,16 @@ def postjob():
 @login_required
 def editjob():
     # find existing job posting
+    job_posting_id = request.form['job_posting_id']
     try:
-        job_posting = db.session.query(JobPosting).filter(JobPosting.id==request.form['job_posting_id']).one()
+        job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
     except:
         # if none exists, create new job posting
         job_posting = JobPosting()
         
     # if unable to find existing record, attempt to reinsert it using the id from the form
     if not job_posting.id:        
-        job_posting.id = request.form['job_posting_id']
+        job_posting.id = job_posting_id
         job_posting.poster_user_id = current_user.userid
         job_posting.posted_date = date.today()
 
@@ -57,6 +58,7 @@ def editjob():
     return redirect(url_for('jobsearch'))
 
 @app.route("/tmkt/jobsearch-main")
+@login_required
 def jobmain():
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
     # skill = db.session.query(Skill).all()
@@ -105,7 +107,7 @@ def jobmain():
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
-        apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id == job.id, JobPostingApplication.user_id == current_user.userid).first()
+        apply = get_job_posting_application(job.id, current_user.userid, False)
         result_job['apply'] = 0
         if apply != None:
             apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
@@ -180,7 +182,7 @@ def jobsearch():
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
-        apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id == job.id, JobPostingApplication.user_id == current_user.userid).first()
+        apply = get_job_posting_application(job.id, current_user.userid, False)
         result_job['apply'] = 0
         if apply != None:
             apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
@@ -226,10 +228,18 @@ def searchpeople():
 @app.route('/tmkt/applyjob', methods=['POST'])
 @login_required
 def applyjob():
-    apply_job = JobPostingApplication()
+    job_posting_id = request.form['job_posting_id']
+    try:
+        apply_job = get_job_posting_application(job_posting_id, current_user.userid, True)
+    except:
+        apply_job = JobPostingApplication()
 
-    apply_job.job_posting_id = request.form['job_posting_id']
-    apply_job.user_id = current_user.userid
+    if not apply_job.id:
+        apply_job.job_posting_id = job_posting_id
+        apply_job.user_id = current_user.userid
+    
+    apply_job.applied_date = date.today()
+    apply_job.cancelled_date = None
     apply_job.comments = request.form['comments']
     apply_job.skills = request.form['skills']
     apply_job.available = 1
@@ -244,7 +254,7 @@ def getapplicants():
     jobpostingid = request.form['job_posting_id']
     # To be fixed for the applicants schema:
     # data = db.session.query(User).limit(5).all()
-    data = db.session.query(JobPostingApplication, User).join(User, JobPostingApplication.user_id == User.userid).filter(JobPostingApplication.job_id == jobpostingid).all()
+    data = db.session.query(JobPostingApplication, User).join(User, JobPostingApplication.user_id == User.userid).filter(JobPostingApplication.job_id == jobpostingid, JobPostingApplication.cancelled_date == None).all()
     applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
     apply_data = []
     for r, key in data:
@@ -290,10 +300,13 @@ def cancelapplication():
     try:
         job_posting_id = request.form['postId']
         user_id = request.form['userId']
-        job_apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.user_id==user_id, JobPostingApplication.job_posting_id==job_posting_id).one()
-        flash(cancel_job_application(job_apply))
+        job_apply = get_job_posting_application(job_posting_id, user_id, False)
+        if job_apply:
+            flash(cancel_job_application(job_apply))
+        else:
+            flash('Error cancelling application, no application found')
     except Exception as e:
         # if none exists, flash error
-        flash('Error cancelling application')
+        flash(f'Error cancelling application {e}')
 
     return redirect(url_for('jobsearch'))

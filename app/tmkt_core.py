@@ -25,7 +25,6 @@ Skill = Base.classes.skill
 
 Title = Base.classes.title
 
-
 # save job posting function
 def save_job_posting(user, job_posting, update_skills = True):
     result_msg = None
@@ -85,10 +84,17 @@ def close_job_posting(job_posting):
 def cancel_job_application(job_application):
     result_msg = None
     try:
-        job_application.delete()
+        job_application.cancelled_date = date.today()
         db.session.commit()
         result_msg = "Successfully cancelled job application"
     except Exception as e:
         result_msg = f"Error cancelling job application: {e}"
 
-    return result_msg    
+    return result_msg
+
+# get job posting application function
+def get_job_posting_application(job_posting_id, user_id, include_cancelled = False):
+    if include_cancelled:
+        return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date != None).one_or_none()
+    else:
+        return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date == None).one_or_none()
