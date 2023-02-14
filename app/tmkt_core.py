@@ -14,8 +14,6 @@ JobPosting = Base.classes.job_posting
 Base.classes.job_posting_category.__str__ = obj_name
 JobPostingCategory = Base.classes.job_posting_category
 
-JobPostingSkill = Base.classes.job_posting_skill
-
 UserAvailable = Base.classes.user_available
 
 JobPostingApplication = Base.classes.job_posting_application

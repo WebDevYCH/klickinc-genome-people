@@ -11,6 +11,7 @@ from model import *
 Base.classes.skill.__str__ = obj_name
 Skill = Base.classes.skill
 UserSkill = Base.classes.user_skill
+JobPostingSkill = Base.classes.job_posting_skill
 
 ###################################################################
 ## ADMIN
