@@ -34,6 +34,19 @@ def save_job_posting(user, job_posting, update_skills = True):
 
     return result_msg
 
+# apply job posting function
+def apply_job_posting(job_application):
+    result_msg = None
+    try:
+        if not job_application.id:
+            db.session.add(job_application)
+        db.session.commit()
+        result_msg = "Successfully applied to job posting"
+    except Exception as e:
+        result_msg = f"Error applying to job posting: {e}"
+
+    return result_msg
+
 # close job posting function
 def close_job_posting(job_posting):
     result_msg = None

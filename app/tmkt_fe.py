@@ -105,7 +105,7 @@ def jobmain():
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
-        apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+        apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id == job.id, JobPostingApplication.user_id == current_user.userid).first()
         result_job['apply'] = 0
         if apply != None:
             apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
@@ -180,7 +180,7 @@ def jobsearch():
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
-        apply = db.session.query(ApplyJob).filter(ApplyJob.job_id == job.id, ApplyJob.user_id == current_user.userid).first()
+        apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id == job.id, JobPostingApplication.user_id == current_user.userid).first()
         result_job['apply'] = 0
         if apply != None:
             apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
@@ -223,18 +223,20 @@ def searchpeople():
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 
-@app.route('/tmkt/applyjob', methods=['GET', 'POST'])
+@app.route('/tmkt/applyjob', methods=['POST'])
 @login_required
 def applyjob():
-    jobpostingid = request.form['job_posting_id']
-    comments = request.form['comments']
-    skills = request.form['skills']
-    userId = request.form['userId']
-    apply_job = ApplyJob(user_id = userId, job_id = jobpostingid, comments = comments, skills =skills, applied_date = date.today())
-    db.session.add(apply_job)
-    db.session.commit()
+    apply_job = JobPostingApplication()
 
-    return "Applied!"
+    apply_job.job_posting_id = request.form['job_posting_id']
+    apply_job.user_id = current_user.userid
+    apply_job.comments = request.form['comments']
+    apply_job.skills = request.form['skills']
+    apply_job.available = 1
+
+    flash(apply_job_posting(apply_job))
+
+    return redirect(url_for('jobsearch'))
 
 @app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
@@ -242,7 +244,7 @@ def getapplicants():
     jobpostingid = request.form['job_posting_id']
     # To be fixed for the applicants schema:
     # data = db.session.query(User).limit(5).all()
-    data = db.session.query(ApplyJob, User).join(User, ApplyJob.user_id == User.userid).filter(ApplyJob.job_id == jobpostingid).all()
+    data = db.session.query(JobPostingApplication, User).join(User, JobPostingApplication.user_id == User.userid).filter(JobPostingApplication.job_id == jobpostingid).all()
     applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
     apply_data = []
     for r, key in data:
@@ -288,7 +290,7 @@ def cancelapplication():
     try:
         job_posting_id = request.form['postId']
         user_id = request.form['userId']
-        job_apply = db.session.query(ApplyJob).filter(ApplyJob.user_id==user_id, ApplyJob.job_id==job_posting_id).one()
+        job_apply = db.session.query(JobPostingApplication).filter(JobPostingApplication.user_id==user_id, JobPostingApplication.job_posting_id==job_posting_id).one()
         flash(cancel_job_application(job_apply))
     except Exception as e:
         # if none exists, flash error

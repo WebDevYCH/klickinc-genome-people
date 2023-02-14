@@ -176,6 +176,8 @@ def tmkt_resumes_load_index():
                 # if result message doesn't start with "Successfully", then it's an error
                 if not result_msg.startswith("Successfully"):
                     loglines.append(f"    ERROR: {result_msg}")
+    
+    return loglines
 
 # embeddings test data -- load example job postings and index with embeddings vectors
 @app.cli.command('tmkt_job_postings_load_index')
