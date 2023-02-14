@@ -7,20 +7,19 @@
 .other-info {
 	font-size: x-small;
 }
+
 #people-list {
 	height: 450px;
 	overflow: auto;
 }
+
 .accordion-button::after {
 	background-image: none;
-  }
-  
+}
 .accordion-button:not(.collapsed)::after {
 	background-image: none;
-
 }
-
-.accordion-button{
+.accordion-button {
 	--bs-accordion-btn-icon-width: 0;
 	--bs-accordion-active-bg: white;
 	border-end-end-radius: 5px;
@@ -28,13 +27,12 @@
 .accordion {
 	--bs-accordion-bg: white;
 }
-
-.accordion-flush .accordion-item, .accordion-flush .accordion-item .accordion-button {
+.accordion-flush .accordion-item,
+.accordion-flush .accordion-item .accordion-button {
 	border-radius: 5px;
 }
-
 .accordion-flush .accordion-item .accordion-button:not(.collapsed) {
-    border-bottom-left-radius: 0px;
+	border-bottom-left-radius: 0px;
 	border-bottom-right-radius: 0px;
 }
 
@@ -42,12 +40,19 @@
 	--bs-card-title-spacer-y: 0px;
 }
 
-.dhx_list-item, .dhx_list-item--text {
-    background-color: white;
-    margin-bottom: 15px;
+.job-ul-list > .dhx_list-item,
+.job-ul-list > .dhx_list-item--text {
+	background-color: white;
+	margin-bottom: 15px;
 	padding: 0px;
-	padding-left: 5px;;
+	padding-left: 5px;
 }
-.dhx_list-item--focus, .dhx_list-item--selected:hover, .dhx_list-item:hover {
+.job-ul-list > .dhx_list-item--focus,
+.job-ul-list > .dhx_list-item--selected:hover,
+.job-ul-list > .dhx_list-item:hover {
+	background-color: white;
+}
+
+.dhx_input {
 	background-color: white;
 }

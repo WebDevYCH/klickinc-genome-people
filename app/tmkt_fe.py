@@ -17,7 +17,7 @@ from tmkt_core import *
 @login_required
 def postjob():
     job_posting = JobPosting()
-    job_posting.job_posting_category_id = request.form['category_id']
+    job_posting.job_posting_category_id = request.form['job_posting_category_id']
     job_posting.poster_user_id = current_user.userid
     job_posting.posted_date = date.today()
     job_posting.expiry_date = request.form['expiry_date']
@@ -33,7 +33,7 @@ def postjob():
 @login_required
 def editjob():
     # find existing job posting
-    job_posting_id = request.form['job_posting_id']
+    job_posting_id = request.form['id']
     try:
         job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
     except:
@@ -47,7 +47,7 @@ def editjob():
         job_posting.posted_date = date.today()
 
     # fill job posting with form data
-    job_posting.job_posting_category_id = request.form['category_id']
+    job_posting.job_posting_category_id = request.form['job_posting_category_id']
     job_posting.expiry_date = request.form['expiry_date']
     job_posting.title = request.form['title']
     job_posting.description = request.form['description']
@@ -119,6 +119,8 @@ def jobmain():
         result_job['expiry_sort'] = (d1 - d2).days
         result_job['expiry_day'] = abs(result_job['expiry_sort'])
         result_job['posted_for'] = abs((today-job.posted_date).days) 
+        result_job['posted_date'] = job.posted_date.strftime("%Y-%m-%d")
+        result_job['expiry_date'] = job.expiry_date.strftime("%Y-%m-%d")
         # add cosine similarity between job posting and user profile
         if profile and profile.resume_vector and job.job_posting_vector:
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
