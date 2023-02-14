@@ -25,8 +25,19 @@ Run the application::
 
     ./start-webapp.sh
 
+## Standards and Conventions
 
-### AI Notes
+- Use singular noun forms for table names, e.g. `job_posting`
+- Use camel case for model classes that reflect tables, e.g. `JobPosting`
+- Try to keep submodules/mini-applications separate from the core modules if possible, to avoid bloating the core modules. In particular, for an app called `app`:
+  - use `app_be.py` for backend code
+  - use `app_fe.py` for frontend code
+  - use `app_core.py` for shared code and model classes related to this application
+  - have `be` and `fe` modules load `core` module only (obviously no circular dependencies)
+- Similar to the Python modules, keep templates in a single folder under `templates/`, e.g. `templates/app`
+
+
+## AI Notes
 
 Completion API can:
 - generate new text

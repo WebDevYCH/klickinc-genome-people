@@ -96,21 +96,3 @@ Base.classes.portfolio.__str__ = obj_name_portfolio
 Portfolio = Base.classes.portfolio
 
 LaborRoleHeadcount = Base.classes.labor_role_headcount
-
-Base.classes.job_posting.__str__ = obj_name
-Base.classes.job_posting.__json__ = obj_name_joined
-JobPosting = Base.classes.job_posting
-
-Base.classes.job_posting_category.__str__ = obj_name
-JobPostingCategory = Base.classes.job_posting_category
-
-JobPostingSkill = Base.classes.job_posting_skill
-
-UserAvailable = Base.classes.user_available
-
-JobPostingApplication = Base.classes.job_posting_application
-
-Base.classes.skill.__str__ = obj_name
-Skill = Base.classes.skill
-
-Title = Base.classes.title

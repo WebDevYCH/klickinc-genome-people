@@ -4,6 +4,28 @@ from core import *
 from model import *
 from skills_core import *
 
+###################################################################
+## MODEL
+
+Base.classes.job_posting.__str__ = obj_name
+Base.classes.job_posting.__json__ = obj_name_joined
+JobPosting = Base.classes.job_posting
+
+Base.classes.job_posting_category.__str__ = obj_name
+JobPostingCategory = Base.classes.job_posting_category
+
+JobPostingSkill = Base.classes.job_posting_skill
+
+UserAvailable = Base.classes.user_available
+
+JobPostingApplication = Base.classes.job_posting_application
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
+
+Title = Base.classes.title
+
+
 # save job posting function
 def save_job_posting(user, job_posting, update_skills = True):
     result_msg = None
