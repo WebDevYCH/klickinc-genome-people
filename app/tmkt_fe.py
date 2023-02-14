@@ -27,7 +27,7 @@ def postjob():
     # save job posting
     flash(save_job_posting(current_user, job_posting))
 
-    return redirect(url_for('jobsearch'))
+    return render_template('tmkt/jobsearch.html', title="Job Search")
 
 @app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
@@ -55,7 +55,7 @@ def editjob():
     # save job posting
     flash(save_job_posting(current_user, job_posting))
 
-    return redirect(url_for('jobsearch'))
+    return render_template('tmkt/jobsearch.html', title="Job Search")
 
 @app.route("/tmkt/jobsearch-main")
 @login_required
@@ -129,7 +129,7 @@ def jobmain():
     # sort by similarity
     result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
 
-    return render_template('tmkt/jobsearch-main.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
+    return render_template('tmkt/jobsearch-main.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title="Job Search")
 
 @app.route('/tmkt/jobsearch', methods=['GET', 'POST'])
 @login_required
@@ -207,7 +207,7 @@ def jobsearch():
     if request.method == 'POST':
         return json.dumps(result, skipkeys=True, default=str, ensure_ascii=False)
     else:
-        return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
+        return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title="Job Search")
 
 @app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
@@ -246,7 +246,7 @@ def applyjob():
 
     flash(apply_job_posting(apply_job))
 
-    return redirect(url_for('jobsearch'))
+    return render_template('tmkt/jobsearch.html', title="Job Search")
 
 @app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
@@ -291,7 +291,7 @@ def closepost():
         # if none exists, flash error
         flash('Error closing job posting')
 
-    return redirect(url_for('jobsearch'))
+    return render_template('tmkt/jobsearch.html', title="Job Search")
 
 @app.route('/tmkt/cancelapplication', methods=['POST'])
 @login_required
@@ -309,4 +309,4 @@ def cancelapplication():
         # if none exists, flash error
         flash(f'Error cancelling application {e}')
 
-    return redirect(url_for('jobsearch'))
+    return render_template('tmkt/jobsearch.html', title="Job Search")
