@@ -69,7 +69,7 @@ function listTemplate(job) {
 							<div class="clearfix">
 								<label class="float-end text-danger">Expires in ` + job.expiry_day + ` days</label>
 							</div>
-							` + (9376 == job.poster_user_id ? `
+							` + (current_user_id  == job.poster_user_id ? `
 							<div class="clearfix">
 								<a href="#" class="float-end text-decoration-underline">View applicants</a>
 							</div>
@@ -79,7 +79,7 @@ function listTemplate(job) {
 							<div class="clearfix">
 								<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
 							</div>` : '') + `
-							`+ (job.apply == 0 && 9376 != job.poster_user_id ? `
+							`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
 								<div class="clearfix">
 									<a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
 								</div>
@@ -212,12 +212,13 @@ const jobFormConfig = {
 						</span>
 					</div>
 					<div id="quill-editor" class="dhx_input"></div>
-					<span class="dhx_input__caption inValidMsg">Description is required</span>
+					<span class="dhx_input__caption invalidMsg">Description is required</span>
 				</div>
 			`
 		},
 		{
 			align: "end",
+			css: "form-btns-container",
 			cols: [
 				{
 					id: "cancel-posting-btn",
