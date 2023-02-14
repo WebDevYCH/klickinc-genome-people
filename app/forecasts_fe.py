@@ -188,8 +188,6 @@ def pf_lrcat_list():
 
     return [{"id":c.categoryname, "value":c.categoryname } for c in lrcats]
 
-
-
 ###################################################################
 ## UTILITIES
 
@@ -639,9 +637,8 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
 
         # for each source that is visible in this dataset
         for source in sources.keys():
-            # gather each data point for that source, save it in predictions, and save the equivalent 'actuals' record in actuals
-            actuals = []
-            predictions = []
+            # gather each data point for that source, save its info in the predictionsdf, and also save the equivalent 'actuals' value
+            predictionsdf = pd.DataFrame(columns=['predictionrowid','year','month','prediction','actual'])
             for row in rowdict.values():
                 if row['detail'] == 'source' and row['source'] == source:
                     actualskey = row['id'].replace(f"-{source}","-actuals")
@@ -659,17 +656,28 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                         if actualskey in rowdict:
                             actual = rowdict[actualskey][mkey]
                         if actual != None and prediction != None:
-                            actuals.append(actual)
-                            predictions.append(row[mkey])
+                            # append record to predictionsdf
+                            predictionsdf = pd.concat([predictionsdf, pd.DataFrame({
+                                'predictionrowid': [row['id']],
+                                'year': [year],
+                                'month': [m],
+                                'prediction': [prediction],
+                                'actual': [actual]
+                                })], ignore_index=True
+                            )
         
             # now calculate the score
-            if len(actuals) == 0 or len(predictions) == 0:
+            if len(predictionsdf) == 0:
                 app.logger.info(f"    for source '{source}': no data to score")
                 continue
-            rmsescore = mean_squared_error(actuals,predictions, squared=False)
-            r2score = r2_score(actuals, predictions)
-            stddev = np.std(actuals)
-            app.logger.info(f"    for source '{source}': RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score}")
+            try:
+                rmsescore = mean_squared_error(predictionsdf['actual'], predictionsdf['prediction'], squared=False)
+                r2score = r2_score(predictionsdf['actual'], predictionsdf['prediction'])
+                stddev = np.std(predictionsdf['actual'])
+                app.logger.info(f"    for source '{source}': RMSE={rmsescore} RMSE/stddev={rmsescore/stddev} R2={r2score}")
+            except Exception as e:
+                app.logger.info(f"    for source '{source}': ERROR calculating score: {e}")
+                continue
 
             newrow = rowtemplate.copy()
             sourceid = f"errorrates-{source}"
@@ -682,6 +690,10 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
             newrow['m2'] = rmsescore/stddev
             newrow['m3'] = rmsescore
             rowdict[newrow['id']] = newrow
+
+            if not clients and not csts:
+                predictionsdf.to_csv(f"../logs/predictions_{year}_{lrcat}_{source}_r2_{r2score}.csv", index=False)
+                pass
 
     app.logger.info(f"  error calculation done")
     # error calculation done

@@ -22,7 +22,7 @@ JobPostingSkill = Base.classes.job_posting_skill
 
 UserAvailable = Base.classes.user_available
 
-ApplyJob = Base.classes.apply_job
+JobPostingApplication = Base.classes.job_posting_application
 
 Base.classes.skill.__str__ = obj_name
 Skill = Base.classes.skill
