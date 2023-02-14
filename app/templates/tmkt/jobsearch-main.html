@@ -74,6 +74,7 @@
 			},
 		{% endfor %}
 	];
+	var current_user_id = '{{ current_user.userid }}';
 </script>
 <script src="{{url_for('static', filename='js/jobsearch.js')}}"></script>
 <link rel="stylesheet" href="{{ url_for('static',filename='css/tmkt.css')}}"/>
