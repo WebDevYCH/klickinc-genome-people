@@ -21,20 +21,20 @@ createJobBtn.addEventListener("click", function () {
 	openJobFormModal(0);
 });
 textSearchInput.addEventListener("keyup", function () {
-	filterList();
+	filterJobList();
 });
 jobTitleSelect.addEventListener("change", function () {
-	filterList();
+	filterJobList();
 });
 datePostedSelect.addEventListener("change", function () {
-	filterList();
+	filterJobList();
 });
 
 
 /* -------------------------------------------------------------------------- */
 /*                                  Job List                                  */
 /* -------------------------------------------------------------------------- */
-function listTemplate(job) {
+function jobListTemplate(job) {
 	let template = `
 		<div class="accordion-item  job-card mb-2">
 			<div class='card-body'> 
@@ -81,7 +81,7 @@ function listTemplate(job) {
 							</div>` : '') + `
 							`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
 								<div class="clearfix">
-									<a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
+									<a href="#" class="float-end text-decoration-underline apply_job_btn">Apply</a>
 								</div>
 							`:'') + `
 							`+ (job.apply == 1 ? `
@@ -100,12 +100,15 @@ function listTemplate(job) {
 
 const jobList = new dhx.List("jobListView", {
 	css: "dhx_widget--bg_gray job-ul-list",
-	template: listTemplate,
+	template: jobListTemplate,
 	eventHandlers: { //adds event handlers to HTML elements of a custom template
 		onclick: {
 			job_form_btn: function(event, id) {
 				jobFormMode = "Edit";
 				openJobFormModal(id);
+			},
+			apply_job_btn: function(event, id) {
+				openApplyFormModal(id);
 			},
 		},
 	}
@@ -227,7 +230,6 @@ const jobFormConfig = {
 					view: "link",
 					size: "medium",
 					color: "primary",
-					circle: true,
 				},
 				{
 					id: "submit-posting-btn",
@@ -267,7 +269,7 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 		}
 	});
 	unloading();
-	closeJobFormModal();
+	closeModal(editForm, editJobFormModal);
 });
 // Datepicker does not clear validation on focus automatically so we need to do it manually
 editForm.getItem("expiry_date").events.on("focus", () => {
@@ -276,6 +278,9 @@ editForm.getItem("expiry_date").events.on("focus", () => {
 // Datepicker does not validate automatically so we need to do it manually
 editForm.getItem("expiry_date").events.on("blur", () => {
 	editForm.getItem("expiry_date").validate();
+});
+editForm.getItem("cancel-posting-btn").events.on("click", () => {
+	closeModal(editForm, editJobFormModal);
 });
 
 // check if the description is valid and add or remove the error class manually 
@@ -298,7 +303,7 @@ function isValidDescription() {
 
 const editJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize().height,
+	height: getWindowSize(80).height,
 	title: "Edit Job Posting",
 	modal: true
 });
@@ -346,19 +351,19 @@ function openJobFormModal(id) {
 }
 
 // initializing the function that closes the editing form and clears it
-function closeJobFormModal() {
-	editForm.clear();
-	editJobFormModal.hide();
+function closeModal(form, modal) {
+	form.clear();
+	modal.hide();
 }
 
 // return the window/modal size based on the screen size
-function getWindowSize() {
+function getWindowSize(adjustHeight = 0) {
 	if (window.innerWidth < 768) {
 		return { width: window.innerWidth, height: window.innerHeight };
 	} else if (window.innerWidth < 992) {
-		return { width: 798, height: window.innerHeight- 80 };
+		return { width: 798, height: window.innerHeight - adjustHeight };
 	} else {
-		return { width: 900 , height: window.innerHeight- 80 };
+		return { width: 900 , height: window.innerHeight - adjustHeight };
 	} 
 }
 
@@ -366,12 +371,125 @@ function getWindowSize() {
 editJobFormModal.attach(editForm);
 
 /* -------------------------------------------------------------------------- */
+/*                                Apply for Job                               */
+/* -------------------------------------------------------------------------- */
+function openApplyFormModal(id) {
+	applyJobFormModal.show();
+	const item = jobList.data.getItem(id);
+	if (item) {
+		applyJobFormModal.header.data.update("title", { value: "Apply for " + item.title } );
+	}
+	applyForm.clear();
+}
+
+const applyJobFormModal = new dhx.Window({
+	width: getWindowSize().width,
+	height: getWindowSize(400).height,
+	title: "Apply",
+	modal: true
+});
+
+const applyFormConfig = {
+	padding: 0,
+	rows: [
+		{
+			id: "id",
+			type: "input",
+			name: "id",
+			hidden: true
+		},
+		{
+			type: "container", //container for HTML code
+			css: "",
+			html: `
+				<div>
+					<p>Your profile will be sent to the job poster in addition to the information you provide below.</p>
+				</div>
+			`
+		},
+		{
+			name: "comments",
+			type: "textarea",
+			label: "Provide a brief description of why you are a goof match for this job. Feel free to include any information you feel is relevant to your application.",
+			required: true,
+			labelPosition: "top",
+			height: "150px",
+			errorMessage: "Comments are required",
+			validation: function(value) {
+				return value && value != "";
+			},
+		},
+		{
+			name: "skills",
+			type: "textarea",
+			height: "150px",
+			label: "Do you have the required skills or experience outlined in the job posting? This can include work outside of Klick",
+			required: true,
+			labelPosition: "top",
+			errorMessage: "Comments are required",
+			validation: function(value) {
+				return value && value != "";
+			},
+		},
+		{
+			align: "end",
+			css: "form-btns-container",
+			cols: [
+				{
+					id: "cancel-apply-btn",
+					type: "button",
+					text: "Cancel",
+					view: "link",
+					size: "medium",
+					color: "primary",
+				},
+				{
+					id: "submit-apply-btn",
+					type: "button",
+					text: "Submit",              
+					size: "medium",
+					color: "primary",
+					submit: true,
+				}
+			]
+		}
+		
+	]
+}
+
+const applyForm = new dhx.Form(null, applyFormConfig);
+
+applyForm.getItem("submit-apply-btn").events.on("click", function () {
+	
+	if(!applyForm.validate()) return;
+	
+	var data = applyForm.getValue();
+	loading();
+	$.ajax({
+		url: "/tmkt/applyjob",
+		method: "POST",
+		data: data,
+		success: function(response) {
+			window.location.href = '/tmkt/jobsearch';
+		}
+	});
+	unloading();
+	closeModal(applyForm, applyJobFormModal);
+});
+
+applyForm.getItem("cancel-apply-btn").events.on("click", () => {
+	closeModal(applyForm, applyJobFormModal);
+});
+
+applyJobFormModal.attach(applyForm);
+
+/* -------------------------------------------------------------------------- */
 /*                              Filter Functions                              */
 /* -------------------------------------------------------------------------- */
 
 // Filter by text search for title and description
 // Filter by select for title, category and date posted
-function filterList() {
+function filterJobList() {
 	const title = jobTitleSelect.value.toLowerCase();
 	const text = textSearchInput.value.toLowerCase();
 	const datePosted = datePostedSelect.value;

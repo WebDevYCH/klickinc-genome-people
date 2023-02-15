@@ -81,7 +81,7 @@ def searchpeople():
 @app.route('/tmkt/applyjob', methods=['POST'])
 @login_required
 def applyjob():
-    job_posting_id = request.form['job_posting_id']
+    job_posting_id = request.form['id']
     try:
         apply_job = get_job_posting_application(job_posting_id, current_user.userid, True)
     except:

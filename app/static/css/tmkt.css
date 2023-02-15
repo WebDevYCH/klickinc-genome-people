@@ -68,3 +68,13 @@
 	flex: auto !important;
 	align-items: flex-end;
 }
+.form-btns-container > div{
+	margin: 3px;
+}
+
+.dhx_form-group--textarea .dhx_label {
+	min-height: auto;
+	white-space: break-spaces;
+	overflow-x: visible;
+	text-overflow: initial;
+}
