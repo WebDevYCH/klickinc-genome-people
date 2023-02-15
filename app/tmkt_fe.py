@@ -172,8 +172,8 @@ def closepost():
 @login_required
 def cancelapplication():
     # find existing job application
-    job_posting_id = request.form['postId']
-    user_id = request.form['userId']
+    job_posting_id = request.form['id']
+    user_id = current_user.userid
     job_apply = get_job_posting_application(job_posting_id, user_id, False)
     if job_apply:
         flash(cancel_job_application(job_apply))

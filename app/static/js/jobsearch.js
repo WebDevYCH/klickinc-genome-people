@@ -86,7 +86,7 @@ function jobListTemplate(job) {
 							`:'') + `
 							`+ (job.apply == 1 ? `
 							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
+								<a href="#" class="float-end text-decoration-underline cancel_application_btn">Cancel application</a>
 							</div>
 							`:'') + `
 						</div>
@@ -112,6 +112,9 @@ const jobList = new dhx.List("jobListView", {
 			},
 			close_post_btn: function(event, id) {
 				closePostConfirm(id);
+			},
+			cancel_application_btn: function(event, id) {
+				cancelApplicationConfirm(id);
 			}
 		},
 	}
@@ -371,6 +374,28 @@ function closePostConfirm(id) {
 			loading();
 			$.ajax({
 				url: "/tmkt/closepost",
+				method: "POST",
+				data: {id: id},
+				success: function(response) {
+					unloading();
+					window.location.href = '/tmkt/jobsearch';
+				}
+			})
+		 } 
+	});
+}
+
+function cancelApplicationConfirm(id) {
+	const item = jobList.data.getItem(id);
+	dhx.confirm({
+		header: "Cancel Job Application",
+		text: "Are you sure you want to cancel this job application for " + item.title + "?",
+		buttons: ["Cancel", "Proceed"],
+	}).then(function (res) {
+		 if (res) {
+			loading();
+			$.ajax({
+				url: "/tmkt/cancelapplication",
 				method: "POST",
 				data: {id: id},
 				success: function(response) {
