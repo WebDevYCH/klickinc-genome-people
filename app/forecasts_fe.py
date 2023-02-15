@@ -639,6 +639,7 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         for source in sources.keys():
             # gather each data point for that source, save its info in the predictionsdf, and also save the equivalent 'actuals' value
             predictionsdf = pd.DataFrame(columns=['predictionrowid','year','month','prediction','actual'])
+            debug_predictions = False
             for row in rowdict.values():
                 if row['detail'] == 'source' and row['source'] == source:
                     actualskey = row['id'].replace(f"-{source}","-actuals")
@@ -657,14 +658,15 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
                             actual = rowdict[actualskey][mkey]
                         if actual != None and prediction != None:
                             # append record to predictionsdf
-                            predictionsdf = pd.concat([predictionsdf, pd.DataFrame({
-                                'predictionrowid': [row['id']],
-                                'year': [year],
-                                'month': [m],
-                                'prediction': [prediction],
-                                'actual': [actual]
-                                })], ignore_index=True
-                            )
+                            if debug_predictions:
+                                predictionsdf = pd.concat([predictionsdf, pd.DataFrame({
+                                    'predictionrowid': [row['id']],
+                                    'year': [year],
+                                    'month': [m],
+                                    'prediction': [prediction],
+                                    'actual': [actual]
+                                    })], ignore_index=True
+                                )
         
             # now calculate the score
             if len(predictionsdf) == 0:

@@ -400,7 +400,7 @@ def model_blend():
                     if modelcount > 0:
                         #loglines.append(f"    {blend} {startdate} {fkey}: found {modelcount} models, {modelhours} hours --> {modelhours / modelcount} hours")
                         # calculate the average hours for the blend
-                        blendhours = modelhours / modelcount
+                        blendhours = modelhours / len(blends[blend]['models'])
                         upsert(db.session, PortfolioLRForecast, {
                             'portfolioid': fkey.split('-')[0],
                             'yearmonth': startdate,

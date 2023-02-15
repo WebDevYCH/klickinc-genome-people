@@ -180,6 +180,11 @@
         treegrid.setColumns(columns);
 
         treegrid.collapseAll();
+        // sort by name
+        treegrid.data.sort({
+            by: "name",
+            dir: "asc"
+        })
         // open the first row
         treegrid.expand('lcat');
     });
