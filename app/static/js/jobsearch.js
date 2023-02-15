@@ -374,8 +374,8 @@ function closePostConfirm(id) {
 				method: "POST",
 				data: {id: id},
 				success: function(response) {
-					window.location.href = '/tmkt/jobsearch';
 					unloading();
+					window.location.href = '/tmkt/jobsearch';
 				}
 			})
 		 } 
@@ -479,12 +479,11 @@ applyForm.getItem("submit-apply-btn").events.on("click", function () {
 		method: "POST",
 		data: data,
 		success: function(response) {
-			window.location.href = '/tmkt/jobsearch';
 			unloading();
-			closeModal(applyForm, applyJobFormModal);
+			window.location.href = '/tmkt/jobsearch';
 		}
 	});
-
+	closeModal(applyForm, applyJobFormModal);
 });
 
 applyForm.getItem("cancel-apply-btn").events.on("click", () => {
