@@ -3,6 +3,7 @@ from datetime import date
 from core import *
 from model import *
 from skills_core import *
+from flask import render_template, request
 
 ###################################################################
 ## MODEL
@@ -96,3 +97,86 @@ def get_job_posting_application(job_posting_id, user_id, include_cancelled = Fal
         return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date != None).one_or_none()
     else:
         return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date == None).one_or_none()
+
+# generic function to do job search
+def search_job_postings(categories):
+    # attempt to find existing user profile
+    try:
+        profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+    except:
+        profile = None
+        # should we redirect the user to the profile page if they don't have a profile?
+
+    today = date.today()
+    if request.method == 'POST':
+        delta = int(request.form['delta'])
+        category_id = int(request.form['category_id'])
+        title = request.form['title']
+        if(category_id == 0 and title != 'Select job title'):
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.title==title).all()
+        elif(category_id != 0 and title == 'Select job title'):
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id).all() 
+        elif(category_id == 0 and title == 'Select job title'):
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
+        else:
+            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
+    else:
+        delta = 7
+        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
+
+    #process the results of the GET or POST (same logic)
+    result = []   
+    for job in jobs:
+        job_posting_skills = db.session.query(JobPostingSkill, Skill).join(Skill, Skill.id == JobPostingSkill.skill_id).join(JobPosting, JobPostingSkill.job_posting_id == job.id).all()
+        result_posting_skill = []
+        result_job = {i:v for i, v in job.__dict__.items() if i in job.__table__.columns.keys()}
+        for category in categories:
+            data_category = {i:v for i, v in category.__dict__.items() if i in category.__table__.columns.keys()}
+            if data_category['id'] == result_job['job_posting_category_id']:
+                result_job['job_posting_category_name'] = data_category['name']
+            else:
+                continue
+        for key, r in job_posting_skills:
+            value = {i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()}
+            result_posting_skill.append(value['name'])
+        result_job['job_posting_skills'] = result_posting_skill
+        
+        apply = get_job_posting_application(job.id, current_user.userid, False)
+        result_job['apply'] = 0
+        if apply != None:
+            apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
+            if apply_value['available'] == 1: 
+                result_job['apply'] = 1
+        d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+        d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
+        # adding sort for negative number of days to expiry (so sort reverse order works correctly)
+        result_job['expiry_sort'] = (d1 - d2).days
+        result_job['expiry_day'] = abs(result_job['expiry_sort'])
+        result_job['posted_for'] = abs((today-job.posted_date).days) 
+        result_job['posted_date'] = job.posted_date.strftime("%Y-%m-%d")
+        result_job['expiry_date'] = job.expiry_date.strftime("%Y-%m-%d")
+        # add cosine similarity between job posting and user profile
+        if profile and profile.resume_vector and job.job_posting_vector:
+            result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
+        else:
+            result_job['similarity'] = 0
+        result.append(result_job)
+    
+    # sort by similarity
+    result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
+
+    return result
+
+# render job search page with all the required parameters
+def render_job_search_page():
+    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+    # skill = db.session.query(Skill).all()
+    titles = db.session.query(Title).order_by(Title.name).all()
+    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
+    csts = [row.cst for row in csts]
+    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
+    jobfunctions = [row.jobfunction for row in jobfunctions]
+
+    result = search_job_postings(categories)
+
+    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title="Job Search")
