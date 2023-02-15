@@ -122,8 +122,7 @@ def applyjob():
     apply_job.available = 1
 
     # new fields to be added once FE has been developed
-    # apply_job.brand_at_klick = request.form['brand_at_klick']
-    # apply_job.brand_before_klick = request.form['brand_before_klick']
+    # apply_job.worked_with_brand = request.form['worked_with_brand']
 
     flash(apply_job_posting(apply_job))
 
