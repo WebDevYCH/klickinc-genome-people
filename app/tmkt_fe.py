@@ -24,6 +24,18 @@ def postjob():
     job_posting.title = request.form['title']
     job_posting.description = request.form['description']
 
+    # new fields to be added once the FE has been developed
+    # job_posting.expected_hours = request.form['expected_hours']
+    # job_posting.job_start_date = request.form['job_start_date']
+    # job_posting.job_end_date = request.form['job_end_date']
+    # job_posting.client = request.form['client']
+    # job_posting.brands = request.form['brands']
+    # job_posting.project_id = request.form['project_id']
+    # job_posting.hiring_manager = request.form['hiring_manager']
+    # job_posting.job_location = request.form['job_location']
+    # job_posting.cst = request.form['cst']
+    # job_posting.job_function = request.form['job_function']
+
     # save job posting
     flash(save_job_posting(current_user, job_posting))
 
@@ -51,6 +63,18 @@ def editjob():
     job_posting.expiry_date = request.form['expiry_date']
     job_posting.title = request.form['title']
     job_posting.description = request.form['description']
+
+    # new fields to be added once the FE has been developed
+    # job_posting.expected_hours = request.form['expected_hours']
+    # job_posting.job_start_date = request.form['job_start_date']
+    # job_posting.job_end_date = request.form['job_end_date']
+    # job_posting.client = request.form['client']
+    # job_posting.brands = request.form['brands']
+    # job_posting.project_id = request.form['project_id']
+    # job_posting.hiring_manager = request.form['hiring_manager']
+    # job_posting.job_location = request.form['job_location']
+    # job_posting.cst = request.form['cst']
+    # job_posting.job_function = request.form['job_function']
 
     # save job posting
     flash(save_job_posting(current_user, job_posting))
@@ -96,6 +120,9 @@ def applyjob():
     apply_job.comments = request.form['comments']
     apply_job.skills = request.form['skills']
     apply_job.available = 1
+
+    # new fields to be added once FE has been developed
+    # apply_job.worked_with_brand = request.form['worked_with_brand']
 
     flash(apply_job_posting(apply_job))
 
