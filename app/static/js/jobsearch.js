@@ -386,11 +386,13 @@ function closePostConfirm(id) {
 /* -------------------------------------------------------------------------- */
 function openApplyFormModal(id) {
 	applyJobFormModal.show();
+	applyForm.clear();
 	const item = jobList.data.getItem(id);
+
 	if (item) {
 		applyJobFormModal.header.data.update("title", { value: "Application for " + item.title } );
+		applyForm.setValue(item);
 	}
-	applyForm.clear();
 }
 
 const applyJobFormModal = new dhx.Window({
@@ -404,7 +406,6 @@ const applyFormConfig = {
 	padding: 0,
 	rows: [
 		{
-			id: "id",
 			type: "input",
 			name: "id",
 			hidden: true
