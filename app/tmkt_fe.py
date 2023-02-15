@@ -106,14 +106,10 @@ def searchpeople():
 @login_required
 def applyjob():
     job_posting_id = request.form['id']
-    try:
-        apply_job = get_job_posting_application(job_posting_id, current_user.userid, True)
-    except:
-        apply_job = JobPostingApplication()
+    apply_job = get_job_posting_application(job_posting_id, current_user.userid, True)
 
-    if not apply_job.id:
-        apply_job.job_posting_id = job_posting_id
-        apply_job.user_id = current_user.userid
+    if not apply_job:
+        apply_job = JobPostingApplication(job_posting_id = job_posting_id, user_id = current_user.userid)
     
     apply_job.applied_date = date.today()
     apply_job.cancelled_date = None
@@ -163,16 +159,12 @@ def setusersetting():
 @login_required
 def closepost():
     # find existing job posting
-    try:
-        job_posting_id = request.form['id']
-        job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
-        if job_posting:
-            flash(close_job_posting(job_posting))
-        else:
-            flash('Error closing job posting, no job posting found')
-    except Exception as e:
-        # if none exists, flash error
-        flash(f'Error closing job posting: {e}')
+    job_posting_id = request.form['id']
+    job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
+    if job_posting:
+        flash(close_job_posting(job_posting))
+    else:
+        flash('Error closing job posting, no job posting found')
 
     return redirect(url_for('jobsearch'))
 
@@ -180,16 +172,12 @@ def closepost():
 @login_required
 def cancelapplication():
     # find existing job application
-    try:
-        job_posting_id = request.form['postId']
-        user_id = request.form['userId']
-        job_apply = get_job_posting_application(job_posting_id, user_id, False)
-        if job_apply:
-            flash(cancel_job_application(job_apply))
-        else:
-            flash('Error cancelling application, no application found')
-    except Exception as e:
-        # if none exists, flash error
-        flash(f'Error cancelling application: {e}')
+    job_posting_id = request.form['postId']
+    user_id = request.form['userId']
+    job_apply = get_job_posting_application(job_posting_id, user_id, False)
+    if job_apply:
+        flash(cancel_job_application(job_apply))
+    else:
+        flash('Error cancelling application, no application found')
 
     return redirect(url_for('jobsearch'))
