@@ -61,15 +61,23 @@
 .form-editor-container.dhx_form-group--state_error .invalidMsg {
 	display: block;
 }
-.form-editor-container {
-	height: calc(100% - 305px);
+
+#quill-editor {
+	height: 330px;
 }
+
+@media only screen and (max-width: 768px) {
+	#quill-editor {
+		height: calc(100vh - 500px);
+	}
+}
+
 .form-btns-container {
 	flex: auto !important;
 	align-items: flex-end;
 }
 .form-btns-container > div{
-	margin: 3px;
+	margin: 5px;
 }
 
 .dhx_form-group--textarea .dhx_label {

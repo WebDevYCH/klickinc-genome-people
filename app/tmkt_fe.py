@@ -137,7 +137,7 @@ def setusersetting():
 def closepost():
     # find existing job posting
     try:
-        job_posting_id = request.form['postId']
+        job_posting_id = request.form['id']
         job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
         if job_posting:
             flash(close_job_posting(job_posting))

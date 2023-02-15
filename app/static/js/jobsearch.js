@@ -77,7 +77,7 @@ function jobListTemplate(job) {
 								<a href="#" class="float-end text-decoration-underline edit-post job_form_btn">Edit post</a>
 							</div>
 							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
+								<a href="#" class="float-end text-decoration-underline close_post_btn">Close post</a>
 							</div>` : '') + `
 							`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
 								<div class="clearfix">
@@ -110,6 +110,9 @@ const jobList = new dhx.List("jobListView", {
 			apply_job_btn: function(event, id) {
 				openApplyFormModal(id);
 			},
+			close_post_btn: function(event, id) {
+				closePostConfirm(id);
+			}
 		},
 	}
 });
@@ -169,11 +172,13 @@ const jobFormConfig = {
 			css: "form-editor-container dhx_form-group--required",
 			html: `
 				<label class="dhx_label">Description</label>
-				<div class="clearfix mb-3">
+				<div class="clearfix editor-container mb-1">
 					<div id="quill-toolbar">
 						<span class="ql-formats">
-							<select class="ql-font"></select>
 							<select class="ql-size"></select>
+						</span>
+						<span class="ql-formats">
+							<select class="ql-color"></select>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-bold"></button>
@@ -182,36 +187,12 @@ const jobFormConfig = {
 							<button class="ql-strike"></button>
 						</span>
 						<span class="ql-formats">
-							<select class="ql-color"></select>
-							<select class="ql-background"></select>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-script" value="sub"></button>
-							<button class="ql-script" value="super"></button>
-						</span>
-						<span class="ql-formats">
 							<button class="ql-header" value="1"></button>
 							<button class="ql-header" value="2"></button>
-							<button class="ql-blockquote"></button>
-							<button class="ql-code-block"></button>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-list" value="ordered"></button>
 							<button class="ql-list" value="bullet"></button>
-							<button class="ql-indent" value="-1"></button>
-							<button class="ql-indent" value="+1"></button>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-direction" value="rtl"></button>
-							<select class="ql-align"></select>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-link"></button>
-							<button class="ql-image"></button>
-							<button class="ql-video"></button>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-clean"></button>
 						</span>
 					</div>
 					<div id="quill-editor" class="dhx_input"></div>
@@ -253,7 +234,7 @@ const editForm = new dhx.Form(null, jobFormConfig);
 editForm.getItem("submit-posting-btn").events.on("click", function () {
 
 	if(!(isValidDescription() && editForm.validate())) return;
-
+	loading();
 	const url = jobFormMode == "Edit" ? "/tmkt/editjob" : "/tmkt/postjob";
 	
 	var jobData = editForm.getValue();
@@ -264,11 +245,10 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 		url: url,
 		data: jobData,
 		success: function() {
-			loading();
+			unloading();
 			window.location.href = '/tmkt/jobsearch';
 		}
 	});
-	unloading();
 	closeModal(editForm, editJobFormModal);
 });
 // Datepicker does not clear validation on focus automatically so we need to do it manually
@@ -303,7 +283,7 @@ function isValidDescription() {
 
 const editJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(80).height,
+	height: getWindowSize(788).height,
 	title: "Edit Job Posting",
 	modal: true
 });
@@ -357,19 +337,50 @@ function closeModal(form, modal) {
 }
 
 // return the window/modal size based on the screen size
-function getWindowSize(adjustHeight = 0) {
-	if (window.innerWidth < 768) {
-		return { width: window.innerWidth, height: window.innerHeight };
+function getWindowSize(baseHeight = 0) {
+	let width;
+	let height;
+	if (window.innerWidth < 768) { //on mobile
+		width = window.innerWidth;
 	} else if (window.innerWidth < 992) {
-		return { width: 798, height: window.innerHeight - adjustHeight };
+		width = 798;
 	} else {
-		return { width: 900 , height: window.innerHeight - adjustHeight };
+		width = 900;
 	} 
+
+	if(window.innerHeight < baseHeight + 40 || window.innerWidth < 768){ //on mobile
+		height = window.innerHeight;
+	}else{
+		height = baseHeight + 40;
+	}
+	return { width: width , height: height };
 }
 
 // attaching Form to Window
 editJobFormModal.attach(editForm);
 
+// close/delete job posting
+function closePostConfirm(id) {
+	const item = jobList.data.getItem(id);
+	dhx.confirm({
+		header: "Close Job Posting",
+		text: "Are you sure you want to close this job posting for " + item.title + "?",
+		buttons: ["Cancel", "Proceed"],
+	}).then(function (res) {
+		 if (res) {
+			loading();
+			$.ajax({
+				url: "/tmkt/closepost",
+				method: "POST",
+				data: {id: id},
+				success: function(response) {
+					window.location.href = '/tmkt/jobsearch';
+					unloading();
+				}
+			})
+		 } 
+	});
+}
 /* -------------------------------------------------------------------------- */
 /*                                Apply for Job                               */
 /* -------------------------------------------------------------------------- */
@@ -377,14 +388,14 @@ function openApplyFormModal(id) {
 	applyJobFormModal.show();
 	const item = jobList.data.getItem(id);
 	if (item) {
-		applyJobFormModal.header.data.update("title", { value: "Apply for " + item.title } );
+		applyJobFormModal.header.data.update("title", { value: "Application for " + item.title } );
 	}
 	applyForm.clear();
 }
 
 const applyJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(400).height,
+	height: getWindowSize(500).height,
 	title: "Apply",
 	modal: true
 });
@@ -400,7 +411,6 @@ const applyFormConfig = {
 		},
 		{
 			type: "container", //container for HTML code
-			css: "",
 			html: `
 				<div>
 					<p>Your profile will be sent to the job poster in addition to the information you provide below.</p>
@@ -446,10 +456,9 @@ const applyFormConfig = {
 				{
 					id: "submit-apply-btn",
 					type: "button",
-					text: "Submit",              
+					text: "Apply",              
 					size: "medium",
 					color: "primary",
-					submit: true,
 				}
 			]
 		}
@@ -471,10 +480,11 @@ applyForm.getItem("submit-apply-btn").events.on("click", function () {
 		data: data,
 		success: function(response) {
 			window.location.href = '/tmkt/jobsearch';
+			unloading();
+			closeModal(applyForm, applyJobFormModal);
 		}
 	});
-	unloading();
-	closeModal(applyForm, applyJobFormModal);
+
 });
 
 applyForm.getItem("cancel-apply-btn").events.on("click", () => {
