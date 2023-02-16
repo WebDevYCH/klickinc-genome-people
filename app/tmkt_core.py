@@ -4,34 +4,54 @@ from core import *
 from model import *
 from skills_core import *
 from flask import render_template, request
+from prompt_core import *
 
-###################################################################
-## MODEL
+# create job_posting object from request.form
+def create_job_posting_object(request_form):
+    # find existing job posting if id is passed in request_form
+    try:
+        job_posting_id = int(request_form['id'])
+    except:
+        job_posting_id = 0
 
-Base.classes.job_posting.__str__ = obj_name
-Base.classes.job_posting.__json__ = obj_name_joined
-JobPosting = Base.classes.job_posting
+    if job_posting_id > 0:
+        job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
+    else:
+        job_posting = JobPosting()
 
-Base.classes.job_posting_category.__str__ = obj_name
-JobPostingCategory = Base.classes.job_posting_category
+    # if unable to find existing record, attempt to reinsert it using the id from the form
+    if not job_posting.id:        
+        if job_posting_id:
+            job_posting.id = job_posting_id
+        job_posting.poster_user_id = current_user.userid
+        job_posting.posted_date = date.today()
 
-UserAvailable = Base.classes.user_available
+    job_posting.job_posting_category_id = request_form['job_posting_category_id']
+    job_posting.expiry_date = request_form['expiry_date']
+    job_posting.title = request_form['title']
+    job_posting.description = request_form['description']
 
-JobPostingApplication = Base.classes.job_posting_application
+    # new fields to be added once the FE has been developed
+    # job_posting.expected_hours = request_form['expected_hours']
+    # job_posting.job_start_date = request_form['job_start_date']
+    # job_posting.job_end_date = request_form['job_end_date']
+    # job_posting.client = request_form['client']
+    # job_posting.brands = request_form['brands']
+    # job_posting.project_id = request_form['project_id']
+    # job_posting.hiring_manager = request_form['hiring_manager']
+    # job_posting.job_location = request_form['job_location']
+    # job_posting.cst = request_form['cst']
+    # job_posting.job_function = request_form['job_function']
 
-Base.classes.skill.__str__ = obj_name
-Skill = Base.classes.skill
-
-Title = Base.classes.title
+    return job_posting
 
 # save job posting function
 def save_job_posting(user, job_posting, update_skills = True):
     result_msg = None
-    process_type = "job_posting"
 
     # Get GPT3 Embedding value for resume
     category = db.session.query(JobPostingCategory).filter(JobPostingCategory.id==job_posting.job_posting_category_id).one().name or None
-    prompt = fill_prompt_for_text(process_type, user, job_posting.description, job_posting.title, job_posting.posted_date, category)
+    prompt = fill_prompt_for_text(job_posting, job_posting.description, category)
     job_posting.job_posting_vector = gpt3_embedding(prompt)
     if not isinstance(job_posting.job_posting_vector, list):
         job_posting.job_posting_vector = None
@@ -48,7 +68,7 @@ def save_job_posting(user, job_posting, update_skills = True):
 
     # extract relevant skills from job posting description
     if update_skills:
-        result = auto_fill_skill_from_text(process_type, user.userid, job_posting.description)
+        result = auto_fill_skill_from_text(job_posting)
         if not result == "success":
             result_msg = f"Skill extraction failed: {result}"
 

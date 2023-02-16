@@ -16,25 +16,8 @@ from tmkt_core import *
 @app.route('/tmkt/postjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
-    job_posting = JobPosting()
-    job_posting.job_posting_category_id = request.form['job_posting_category_id']
-    job_posting.poster_user_id = current_user.userid
-    job_posting.posted_date = date.today()
-    job_posting.expiry_date = request.form['expiry_date']
-    job_posting.title = request.form['title']
-    job_posting.description = request.form['description']
-
-    # new fields to be added once the FE has been developed
-    # job_posting.expected_hours = request.form['expected_hours']
-    # job_posting.job_start_date = request.form['job_start_date']
-    # job_posting.job_end_date = request.form['job_end_date']
-    # job_posting.client = request.form['client']
-    # job_posting.brands = request.form['brands']
-    # job_posting.project_id = request.form['project_id']
-    # job_posting.hiring_manager = request.form['hiring_manager']
-    # job_posting.job_location = request.form['job_location']
-    # job_posting.cst = request.form['cst']
-    # job_posting.job_function = request.form['job_function']
+    # create job_posting object
+    job_posting = create_job_posting_object(request.form)
 
     # save job posting
     flash(save_job_posting(current_user, job_posting))
@@ -44,37 +27,8 @@ def postjob():
 @app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
 def editjob():
-    # find existing job posting
-    job_posting_id = request.form['id']
-    try:
-        job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
-    except:
-        # if none exists, create new job posting
-        job_posting = JobPosting()
-        
-    # if unable to find existing record, attempt to reinsert it using the id from the form
-    if not job_posting.id:        
-        job_posting.id = job_posting_id
-        job_posting.poster_user_id = current_user.userid
-        job_posting.posted_date = date.today()
-
-    # fill job posting with form data
-    job_posting.job_posting_category_id = request.form['job_posting_category_id']
-    job_posting.expiry_date = request.form['expiry_date']
-    job_posting.title = request.form['title']
-    job_posting.description = request.form['description']
-
-    # new fields to be added once the FE has been developed
-    # job_posting.expected_hours = request.form['expected_hours']
-    # job_posting.job_start_date = request.form['job_start_date']
-    # job_posting.job_end_date = request.form['job_end_date']
-    # job_posting.client = request.form['client']
-    # job_posting.brands = request.form['brands']
-    # job_posting.project_id = request.form['project_id']
-    # job_posting.hiring_manager = request.form['hiring_manager']
-    # job_posting.job_location = request.form['job_location']
-    # job_posting.cst = request.form['cst']
-    # job_posting.job_function = request.form['job_function']
+    # create job_posting object
+    job_posting = create_job_posting_object(request.form)
 
     # save job posting
     flash(save_job_posting(current_user, job_posting))

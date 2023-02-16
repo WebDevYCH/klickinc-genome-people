@@ -1,13 +1,13 @@
 from core import *
 from skills_core import *
+from prompt_core import *
 
 # Resuable save resume function
 def save_resume(user, profile, update_skills = True):
     result_msg = None
-    process_type = "user_profile"
 
     # Get GPT3 Embedding value for resume
-    prompt = fill_prompt_for_text(process_type, user, profile.resume)
+    prompt = fill_prompt_for_text(user, profile.resume)
     profile.resume_vector = gpt3_embedding(prompt)
     if not isinstance(profile.resume_vector, list):
         profile.resume_vector = None
@@ -25,7 +25,7 @@ def save_resume(user, profile, update_skills = True):
 
     # extract relevant skills from resume
     if update_skills:
-        result = auto_fill_skill_from_text(process_type, user.userid, profile.resume, 1)
+        result = auto_fill_skill_from_text(profile, 1)
         if not result == "success":
             result_msg = f"Skill extraction failed: {result}"
 

@@ -64,8 +64,15 @@ def make_extract_json_string(text, threshold):
     return json_string
 
 # remove and add skills to User Profile or Job Posting
-def auto_fill_skill_from_text(type, id, description, sourceid = 1):
-    relevant_skills = extract_skills_from_text(description)
+def auto_fill_skill_from_text(object_model, sourceid = 1):
+    relevant_skills = None
+    if isinstance(object_model, JobPosting):
+        relevant_skills = extract_skills_from_text(object_model.description)
+    elif isinstance(object_model, UserProfile):
+        relevant_skills = extract_skills_from_text(object_model.resume)
+    else: 
+        return f"Invalid object model: {object_model.__class__.__name__}"
+
     # if there was no error, add skills to user
     if "message" in relevant_skills:
         return relevant_skills['message']
@@ -75,19 +82,21 @@ def auto_fill_skill_from_text(type, id, description, sourceid = 1):
         for skill in db.session.query(Skill).all():
             full_skills[skill.name] = skill.id  
 
-        # flush existing skills
-        if type == 'job_posting':
-            db.session.query(JobPostingSkill).filter(JobPostingSkill.job_posting_id == id).delete(synchronize_session="fetch")
-        else:
-            db.session.query(UserSkill).filter(UserSkill.user_id == id).delete(synchronize_session="fetch")
+        # flush existing skills (NOTE: this might be changed to only add new and not remove existing)
+        if isinstance(object_model, JobPosting):
+            db.session.query(JobPostingSkill).filter(JobPostingSkill.job_posting_id == object_model.id).delete(synchronize_session="fetch")
+        elif isinstance(object_model, UserProfile):
+            db.session.query(UserSkill).filter(UserSkill.user_id == object_model.user_id).delete(synchronize_session="fetch")
 
         # fill skills
         for skill in relevant_skills['data']:
             if skill['skill']['name'] in full_skills:
-                if type == 'job_posting':
-                    createSkill = JobPostingSkill(job_posting_id = id, skill_id = skill.id)
+                if isinstance(object_model, JobPosting):
+                    createSkill = JobPostingSkill(job_posting_id = object_model.id, skill_id = skill.id)
+                elif isinstance(object_model, UserProfile):
+                    createSkill = UserSkill(user_id = object_model.user_id, skill_id = skill.id, sourceid = sourceid)
                 else:
-                    createSkill = UserSkill(user_id = id, skill_id = skill.id, sourceid = sourceid)
+                    createSkill = None
                 
                 if (createSkill):
                     db.session.add(createSkill)
