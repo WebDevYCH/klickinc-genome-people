@@ -121,7 +121,7 @@ def search_job_postings(categories):
         else:
             jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
     else:
-        delta = 7
+        delta = 30
         jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
 
     #process the results of the GET or POST (same logic)
