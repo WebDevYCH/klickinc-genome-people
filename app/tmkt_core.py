@@ -99,7 +99,11 @@ def get_job_posting_application(job_posting_id, user_id, include_cancelled = Fal
         return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date == None).one_or_none()
 
 # generic function to do job search
-def search_job_postings(categories):
+def search_job_postings(delta = None, title = None, category_id = 0, categories = None):
+    # if categories is None, get all categories, ordered by name
+    if categories is None:
+        categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+
     # attempt to find existing user profile
     try:
         profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
@@ -108,21 +112,16 @@ def search_job_postings(categories):
         # should we redirect the user to the profile page if they don't have a profile?
 
     today = date.today()
-    if request.method == 'POST':
-        delta = int(request.form['delta'])
-        category_id = int(request.form['category_id'])
-        title = request.form['title']
-        if(category_id == 0 and title != 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.title==title).all()
-        elif(category_id != 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None, JobPosting.job_posting_category_id==category_id).all() 
-        elif(category_id == 0 and title == 'Select job title'):
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
-        else:
-            jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.job_posting_category_id==category_id, JobPosting.title==title).all()
-    else:
-        delta = 30
-        jobs = db.session.query(JobPosting).filter(today-JobPosting.posted_date<delta, JobPosting.removed_date == None).all()
+    filters = []
+    filters.append(JobPosting.removed_date == None)
+    filters.append(JobPosting.expiry_date>=today)
+    if delta:
+        filters.append(today-JobPosting.posted_date<delta)
+    if category_id > 0:
+        filters.append(JobPosting.job_posting_category_id==category_id)
+    if title:
+        filters.append(JobPosting.title==title)
+    jobs = db.session.query(JobPosting).filter(*filters).all()
 
     #process the results of the GET or POST (same logic)
     result = []   
@@ -168,15 +167,23 @@ def search_job_postings(categories):
     return result
 
 # render job search page with all the required parameters
-def render_job_search_page():
+def render_job_search_page(request = None):
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
-    # skill = db.session.query(Skill).all()
     titles = db.session.query(Title).order_by(Title.name).all()
     csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
     csts = [row.cst for row in csts]
     jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
     jobfunctions = [row.jobfunction for row in jobfunctions]
 
-    result = search_job_postings(categories)
+    # if request exists and is a POST, then process the form
+    delta = None
+    title = None
+    category_id = 0
+    if request and request.method == 'POST':
+        delta = request.form.get('delta')
+        title = request.form.get('title')
+        category_id = request.form.get('category_id')
+
+    result = search_job_postings(delta, title, category_id, categories)
 
     return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title="Job Search")

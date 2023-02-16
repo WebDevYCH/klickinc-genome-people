@@ -84,7 +84,7 @@ def editjob():
 @app.route("/tmkt/jobsearch")
 @login_required
 def jobsearch():
-    return render_job_search_page()
+    return render_job_search_page(request)
 
 @app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
