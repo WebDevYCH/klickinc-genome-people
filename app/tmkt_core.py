@@ -50,8 +50,7 @@ def save_job_posting(user, job_posting, update_skills = True):
     result_msg = None
 
     # Get GPT3 Embedding value for resume
-    category = db.session.query(JobPostingCategory).filter(JobPostingCategory.id==job_posting.job_posting_category_id).one().name or None
-    prompt = fill_prompt_for_text(job_posting, job_posting.description, category)
+    prompt = fill_prompt_for_text(job_posting, job_posting.description)
     job_posting.job_posting_vector = gpt3_embedding(prompt)
     if not isinstance(job_posting.job_posting_vector, list):
         job_posting.job_posting_vector = None

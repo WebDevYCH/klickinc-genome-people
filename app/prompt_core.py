@@ -2,7 +2,7 @@ from model import *
 from bs4 import BeautifulSoup
 
 # prompt development for GPT Embedding
-def fill_prompt_for_text(object_model, description, category = None):
+def fill_prompt_for_text(object_model, description):
     soup = BeautifulSoup(description, 'html.parser')
     clean_description = soup.get_text()
     if isinstance(object_model, User):
@@ -15,6 +15,7 @@ def fill_prompt_for_text(object_model, description, category = None):
         prompt += clean_description
     elif isinstance(object_model, JobPosting):
         # get category name from category id
+        category = db.session.query(JobPostingCategory).filter(JobPostingCategory.id==object_model.job_posting_category_id).one().name or None
         prompt = f"Job posting for {object_model.title}, posted on {object_model.posted_date}, with a {category} commitment.\n"
         prompt += f"Job description: {clean_description}"
     else:
