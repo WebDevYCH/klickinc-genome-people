@@ -817,14 +817,14 @@ def train_automl_model():
     df = rows.to_dataframe()
     df.to_csv(bq_csv_path)
 
-    # split into train and test
+    # split into train and test, keeping the most recent 3 months for test
     loglines.append(f"  splitting into train and test")
-    X_train, X_test, y_train, y_test = train_test_split(
-        df.drop("Hours", axis=1),
-        df["Hours"],
-        test_size=0.2,
-        random_state=123,
-    )
+    # split date point is yearmonth in int format
+    splitdate = int((datetime.date.today() - relativedelta(months=3)).strftime("%Y%m"))
+    X_train = df[df.YearMonth < splitdate].drop("Hours", axis=1)
+    X_test = df[df.YearMonth >= splitdate].drop("Hours", axis=1)
+    y_train = df[df.YearMonth < splitdate]["Hours"]
+    y_test = df[df.YearMonth >= splitdate]["Hours"]
     loglines.append(f"  training with rows {X_train.shape[0]} test rows {X_test.shape[0]}")
 
     # train models with Explain settings
