@@ -516,6 +516,10 @@ def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, sho
         # B: labor role -> source sum
         # C: lrcat -> portfolio -> source
         # D: lrcat -> source sum
+
+        # CHANGE to new hierarchies:
+        
+
         sourcename = sourcename_from_source(pflr.source)
         sources[pflr.source] = sourcename
 
