@@ -181,5 +181,14 @@ admin.add_link(MenuLink(name='Logout', url='/logout'))
 
 admin.add_view(UserModelView(ModelUser, db.session, category='Users/Roles'))
 admin.add_view(AdminModelView(Role, db.session, category='Users/Roles'))
-admin.add_view(AdminModelView(UserRole, db.session, category='Users/Roles'))
+
+class UserRoleModelView(AdminModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('user_admin')
+    column_searchable_list = ('user.firstname','user.lastname','role.name')
+    column_sortable_list = ('user.firstname','user.lastname','role.name')
+    #column_filters = ('role')
+    #column_editable_list = ('role')
+
+admin.add_view(UserRoleModelView(UserRole, db.session, category='Users/Roles'))
 
