@@ -49,28 +49,28 @@ function jobListTemplate(job) {
 								<span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
 								<span class="card-expiry" hidden>` +job.expiry_date + `</span>
 							</div>
-							<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>
+							` + (job.removed_date  
+								? '<span class="text-muted"><i>Deleted</i></span>'  
+								: `<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>` ) +`
 							</div>
 						<div class="card-subtitle show-on-collapse text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
-						<div class="row no-show-on-collapse">
-							<div class="d-flex align-items-center justify-content-between">
+						<div class=" no-show-on-collapse d-flex align-items-center justify-content-between">
 								<div>
-									<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>
+									` + (job.removed_date ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
 								</div>
 								<div>
 									` + (current_user_id  == job.poster_user_id ? `					
-										<button type="button" class="btn btn-primary view_applicants_btn">View Applicants</button>
-										<button type="button" class="btn btn-primary edit-post job_form_btn">Edit Post</button>
-										<button type="button" class="btn btn-primary close_post_btn">Close Post</button>
+										<button type="button" class="header-job-btn btn btn-primary view_applicants_btn">View Applicants</button>
+										<button type="button" class="header-job-btn btn btn-primary edit-post job_form_btn">Edit Post</button>
+										` + (job.removed_date ? '' : `<button type="button" class="header-job-btn btn btn-primary close_post_btn">Close Post</button>` ) +`
 									` : '') + `
 									`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
-										<button type="button" class="btn btn-primary apply_job_btn">Apply</button>
+										<button type="button" class="header-job-btn btn btn-primary apply_job_btn">Apply</button>
 									`:'') + `
 									`+ (job.apply == 1 ? `
-										<button type="button" class="btn btn-primary cancel_application_btn">Cancel Application</button>
+										<button type="button" class="header-job-btn btn btn-primary cancel_application_btn">Cancel Application</button>
 									`:'') + `
-									</div>
-							</div>
+								</div>
 						</div>
 					</div>
 				</h2>
@@ -119,11 +119,44 @@ const jobList = new dhx.List("jobListView", {
 				openApplicantsModal(id);
 			},
 		},
+		onmouseover: {
+			job_form_btn: function(event) {
+				setAccordionCollapse(event, false);
+			},
+			apply_job_btn: function(event) {
+				setAccordionCollapse(event, false);
+			},
+			close_post_btn: function(event) {
+				setAccordionCollapse(event, false);
+			},
+			cancel_application_btn: function(event) {
+				setAccordionCollapse(event, false);
+			},
+			view_applicants_btn: function(event) {
+				setAccordionCollapse(event, false);
+			},
+		},
+		onmouseout: {
+			job_form_btn: function(event) {
+				setAccordionCollapse(event, true);
+			},
+			apply_job_btn: function(event) {
+				setAccordionCollapse(event, true);
+			},
+			close_post_btn: function(event) {
+				setAccordionCollapse(event, true);
+			},
+			cancel_application_btn: function(event) {
+				setAccordionCollapse(event, true);
+			},
+			view_applicants_btn: function(event) {
+				setAccordionCollapse(event, true);
+			},
+		},
 	}
 });
 
 jobList.data.parse(jobs);
-
 
 /* -------------------------------------------------------------------------- */
 /*                         Job Posting Form and Modal                         */
@@ -240,7 +273,7 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
-	const url = jobFormMode == JOB_VIEW_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
+	const url = jobFormMode == JOB_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
 	
 	var jobData = editForm.getValue();
 	jobData.description = editor.root.innerHTML;
@@ -584,6 +617,12 @@ function getWindowSize(baseHeight = 0) {
 	return { width: width , height: height };
 }
 
+// prevent accordion from collapsing when clicking on the button
+function setAccordionCollapse(event, collapse = true) {
+	let accordionButton = event.target.closest('.accordion-button');
+	if (accordionButton && collapse) accordionButton.setAttribute('data-bs-toggle', "collapse");
+	else if (accordionButton && !collapse) accordionButton.removeAttribute('data-bs-toggle');
+}
 /* -------------------------------------------------------------------------- */
 /*                              Filter Functions                              */
 /* -------------------------------------------------------------------------- */

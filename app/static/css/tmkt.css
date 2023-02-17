@@ -98,6 +98,6 @@
 
 .accordion-button:not(.collapsed) .show-on-collapse,
 .accordion-button.collapsed .no-show-on-collapse {
-	display: none;
+	display: none !important;
 }
 
