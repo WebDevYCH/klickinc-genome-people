@@ -52,6 +52,10 @@
 	background-color: white;
 }
 
+.applicant-ul-list > .dhx_list-item:last-child {
+	border-bottom: none;
+}
+
 .dhx_input {
 	background-color: white;
 }
@@ -86,3 +90,14 @@
 	overflow-x: visible;
 	text-overflow: initial;
 }
+
+.accordion-button:not(.collapsed) .no-show-on-collapse,
+.accordion-button.collapsed .show-on-collapse{
+	display: block;
+}
+
+.accordion-button:not(.collapsed) .show-on-collapse,
+.accordion-button.collapsed .no-show-on-collapse {
+	display: none;
+}
+

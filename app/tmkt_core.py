@@ -118,7 +118,7 @@ def get_job_posting_application(job_posting_id, user_id, include_cancelled = Fal
         return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date == None).one_or_none()
 
 # generic function to do job search
-def search_job_postings(delta = None, title = None, category_id = 0, categories = None):
+def search_job_postings(categories = None, view = None):
     # if categories is None, get all categories, ordered by name
     if categories is None:
         categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
@@ -132,14 +132,15 @@ def search_job_postings(delta = None, title = None, category_id = 0, categories 
 
     today = date.today()
     filters = []
-    filters.append(JobPosting.removed_date == None)
-    filters.append(JobPosting.expiry_date>=today)
-    if delta:
-        filters.append(today-JobPosting.posted_date<delta)
-    if category_id > 0:
-        filters.append(JobPosting.job_posting_category_id==category_id)
-    if title:
-        filters.append(JobPosting.title==title)
+    
+    # if view is not specified, only show active job postings
+    # allow user to see removed and expired job postings if they are the poster/applicant
+    if view != 'applied' and view != 'posted':
+        filters.append(JobPosting.removed_date == None)
+        filters.append(JobPosting.expiry_date>=today)
+    if view == 'posted':
+        filters.append(JobPosting.poster_user_id==current_user.userid)
+  
     jobs = db.session.query(JobPosting).filter(*filters).all()
 
     #process the results of the GET or POST (same logic)
@@ -178,15 +179,19 @@ def search_job_postings(delta = None, title = None, category_id = 0, categories 
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
         else:
             result_job['similarity'] = 0
-        result.append(result_job)
-    
+        # TODO - update filter for applied jobs
+        if view == 'applied' and result_job['apply'] == 1:
+            result.append(result_job)
+        elif view == 'posted' or view == None:
+            result.append(result_job)
+   
     # sort by similarity
     result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
 
     return result
 
 # render job search page with all the required parameters
-def render_job_search_page(request = None):
+def render_job_search_page(request = None, view = None):
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
     titles = db.session.query(Title).order_by(Title.name).all()
     csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
@@ -194,15 +199,13 @@ def render_job_search_page(request = None):
     jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
     jobfunctions = [row.jobfunction for row in jobfunctions]
 
-    # if request exists and is a POST, then process the form
-    delta = None
-    title = None
-    category_id = 0
-    if request and request.method == 'POST':
-        delta = request.form.get('delta')
-        title = request.form.get('title')
-        category_id = request.form.get('category_id')
+    result = search_job_postings(categories, view = view)
+    
+    title = "Job Search"
+    if view == 'posted':
+        title = "Posted Jobs"
+    elif view == 'applied':
+        title = "Applied Jobs"
+  
 
-    result = search_job_postings(delta, title, category_id, categories)
-
-    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title="Job Search")
+    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title=title)

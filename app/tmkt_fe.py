@@ -36,9 +36,10 @@ def editjob():
     return redirect(url_for('jobsearch'))
 
 @app.route("/tmkt/jobsearch")
+@app.route("/tmkt/jobsearch/<view>")
 @login_required
-def jobsearch():
-    return render_job_search_page(request)
+def jobsearch(view = None):
+    return render_job_search_page(request, view = view)
 
 @app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
@@ -84,7 +85,7 @@ def getapplicants():
     jobpostingid = request.form['job_posting_id']
     # To be fixed for the applicants schema:
     # data = db.session.query(User).limit(5).all()
-    data = db.session.query(JobPostingApplication, User).join(User, JobPostingApplication.user_id == User.userid).filter(JobPostingApplication.job_id == jobpostingid, JobPostingApplication.cancelled_date == None).all()
+    data = db.session.query(JobPostingApplication, User).join(User, JobPostingApplication.user_id == User.userid).filter(JobPostingApplication.job_posting_id == jobpostingid, JobPostingApplication.cancelled_date == None).all()
     applicants = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for key, r in data], default=str)
     apply_data = []
     for r, key in data:
@@ -96,7 +97,7 @@ def getapplicants():
         elif abs(datetime.datetime.strptime(str(date.today()), "%Y-%m-%d") - datetime.datetime.strptime(str(dictA['applied_date']), "%Y-%m-%d")).days == 1:
             dictB['applied_date'] = 'Yesterday'
         apply_data.append(dictB)
-    return json.dumps(apply_data)
+    return apply_data
 
 @app.route('/tmkt/setusersetting', methods=['GET', 'POST'])
 @login_required

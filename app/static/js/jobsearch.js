@@ -10,14 +10,14 @@ const createJobBtn = document.querySelector("#create-job-btn");
 var editorContainer; // this.form-editor-container is set in openJobFormModal() for setting classes
 var editorInput; // this #quill-editor is set in openJobFormModal() for event listeners
 
-var jobFormMode = "Create"; // flag to determine if the form is in create or edit mode
-
+const JOB_MODE = { create: "Create", edit: "Edit" }; // job form mode
+var jobFormMode = JOB_MODE.create; // flag to determine if the form is in create or edit mode
 
 /* -------------------------------------------------------------------------- */
 /*                               Event Listeners                              */
 /* -------------------------------------------------------------------------- */
 createJobBtn.addEventListener("click", function () {
-	jobFormMode = "Create";
+	jobFormMode = JOB_MODE.create;
 	openJobFormModal(0);
 });
 textSearchInput.addEventListener("keyup", function () {
@@ -34,61 +34,55 @@ datePostedSelect.addEventListener("change", function () {
 /* -------------------------------------------------------------------------- */
 /*                                  Job List                                  */
 /* -------------------------------------------------------------------------- */
+
 function jobListTemplate(job) {
 	let template = `
 		<div class="accordion-item  job-card mb-2">
 			<div class='card-body'> 
 				<h2 class="accordion-header" id="job-header-`+ job.id +`">
-					<div class="accordion-button d-block collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#job-description-`+ job.id +`" aria-expanded="true" aria-controls="#tmkt`+ job.id +`">
+					<div class="accordion-button d-block collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#job-description-`+ job.id +`" aria-expanded="true" aria-controls="#job-description-`+ job.id +`">
 						<div class="d-flex mb-2 justify-content-between align-items-center">
 							<div class="d-flex align-items-center">
-								<span class="card-title text-primary fs-3 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
-								<span class="badge rounded-pill bg-primary card-category" category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
+								<span class="card-title text-primary fs-4 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
+								`+(job.apply == 1 ?`<span class="badge rounded-pill bg-primary">Applied</span>`:'')+`
+								<span class="badge rounded-pill bg-primary card-category" hidden category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
 								<span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
 								<span class="card-expiry" hidden>` +job.expiry_date + `</span>
 							</div>
 							<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>
+							</div>
+						<div class="card-subtitle show-on-collapse text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
+						<div class="row no-show-on-collapse">
+							<div class="d-flex align-items-center justify-content-between">
+								<div>
+									<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>
+								</div>
+								<div>
+									` + (current_user_id  == job.poster_user_id ? `					
+										<button type="button" class="btn btn-primary view_applicants_btn">View Applicants</button>
+										<button type="button" class="btn btn-primary edit-post job_form_btn">Edit Post</button>
+										<button type="button" class="btn btn-primary close_post_btn">Close Post</button>
+									` : '') + `
+									`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
+										<button type="button" class="btn btn-primary apply_job_btn">Apply</button>
+									`:'') + `
+									`+ (job.apply == 1 ? `
+										<button type="button" class="btn btn-primary cancel_application_btn">Cancel Application</button>
+									`:'') + `
+									</div>
+							</div>
 						</div>
-						<div class="card-subtitle text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
 					</div>
 				</h2>
 			</div>
 			<div id="job-description-` +  job.id + `" class="accordion-collapse collapse" aria-labelledby="job-header-`+ job.id +`" data-bs-parent="#jobListAccordion">
 				<div class="accordion-body">
 					<div class="row">
-						<div class="col-md-10">
+						<div class="col-12">
 							<div class="card-description">` +  job.description + `</div>
 							<div class="other-info">
 								`+ job.job_posting_skills.join(', ') +`
 							</div>
-						</div>
-						<div class="col-md-2">
-							<div class="clearfix">
-								`+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
-							</div>
-							<div class="clearfix">
-								<label class="float-end text-danger">Expires in ` + job.expiry_day + ` days</label>
-							</div>
-							` + (current_user_id  == job.poster_user_id ? `
-							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline">View applicants</a>
-							</div>
-							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline edit-post job_form_btn">Edit post</a>
-							</div>
-							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline close_post_btn">Close post</a>
-							</div>` : '') + `
-							`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
-								<div class="clearfix">
-									<a href="#" class="float-end text-decoration-underline apply_job_btn">Apply</a>
-								</div>
-							`:'') + `
-							`+ (job.apply == 1 ? `
-							<div class="clearfix">
-								<a href="#" class="float-end text-decoration-underline cancel_application_btn">Cancel application</a>
-							</div>
-							`:'') + `
 						</div>
 					</div>
 				</div>
@@ -101,21 +95,29 @@ function jobListTemplate(job) {
 const jobList = new dhx.List("jobListView", {
 	css: "dhx_widget--bg_gray job-ul-list",
 	template: jobListTemplate,
-	eventHandlers: { //adds event handlers to HTML elements of a custom template
+	eventHandlers: { // event handlers for job list
 		onclick: {
 			job_form_btn: function(event, id) {
-				jobFormMode = "Edit";
+				event.preventDefault(); // prevent dhtmlx scrolling to top
+				jobFormMode = JOB_MODE.edit;
 				openJobFormModal(id);
 			},
 			apply_job_btn: function(event, id) {
+				event.preventDefault();
 				openApplyFormModal(id);
 			},
 			close_post_btn: function(event, id) {
+				event.preventDefault();
 				closePostConfirm(id);
 			},
 			cancel_application_btn: function(event, id) {
+				event.preventDefault();
 				cancelApplicationConfirm(id);
-			}
+			},
+			view_applicants_btn: function(event, id) {
+				event.preventDefault();
+				openApplicantsModal(id);
+			},
 		},
 	}
 });
@@ -124,7 +126,7 @@ jobList.data.parse(jobs);
 
 
 /* -------------------------------------------------------------------------- */
-/*                              Job Posting Form                              */
+/*                         Job Posting Form and Modal                         */
 /* -------------------------------------------------------------------------- */
 const jobFormConfig = {
 	padding: 0,
@@ -171,7 +173,7 @@ const jobFormConfig = {
 			dateFormat: "%Y-%m-%d",
 		},
 		{
-			type: "container", //container for HTML code
+			type: "container",
 			css: "form-editor-container dhx_form-group--required",
 			html: `
 				<label class="dhx_label">Description</label>
@@ -238,7 +240,7 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
-	const url = jobFormMode == "Edit" ? "/tmkt/editjob" : "/tmkt/postjob";
+	const url = jobFormMode == JOB_VIEW_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
 	
 	var jobData = editForm.getValue();
 	jobData.description = editor.root.innerHTML;
@@ -280,10 +282,6 @@ function isValidDescription() {
 	}
 }
 
-/* -------------------------------------------------------------------------- */
-/*                        Modal Window For Editing Form                       */
-/* -------------------------------------------------------------------------- */
-
 const editJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
 	height: getWindowSize(788).height,
@@ -293,7 +291,6 @@ const editJobFormModal = new dhx.Window({
 
 let isEditorInitialized = false; //editor can be initialized only once
 let editor; // quill editor
-
 // initializing the function that opens the editing form 
 // and fills the form fields with the data of the item
 function openJobFormModal(id) {
@@ -333,36 +330,10 @@ function openJobFormModal(id) {
 	editorContainer.classList.remove("dhx_form-group--state_success");
 }
 
-// initializing the function that closes the editing form and clears it
-function closeModal(form, modal) {
-	form.clear();
-	modal.hide();
-}
-
-// return the window/modal size based on the screen size
-function getWindowSize(baseHeight = 0) {
-	let width;
-	let height;
-	if (window.innerWidth < 768) { //on mobile
-		width = window.innerWidth;
-	} else if (window.innerWidth < 992) {
-		width = 798;
-	} else {
-		width = 900;
-	} 
-
-	if(window.innerHeight < baseHeight + 40 || window.innerWidth < 768){ //on mobile
-		height = window.innerHeight;
-	}else{
-		height = baseHeight + 40;
-	}
-	return { width: width , height: height };
-}
-
 // attaching Form to Window
 editJobFormModal.attach(editForm);
 
-// close/delete job posting
+// close/delete job posting on .close_post_btn click
 function closePostConfirm(id) {
 	const item = jobList.data.getItem(id);
 	dhx.confirm({
@@ -385,6 +356,7 @@ function closePostConfirm(id) {
 	});
 }
 
+// cancel job application on .cancel_application_btn click
 function cancelApplicationConfirm(id) {
 	const item = jobList.data.getItem(id);
 	dhx.confirm({
@@ -398,7 +370,7 @@ function cancelApplicationConfirm(id) {
 				url: "/tmkt/cancelapplication",
 				method: "POST",
 				data: {id: id},
-				success: function(response) {
+				success: function() {
 					unloading();
 					window.location.href = '/tmkt/jobsearch';
 				}
@@ -410,7 +382,6 @@ function cancelApplicationConfirm(id) {
 /*                                Apply for Job                               */
 /* -------------------------------------------------------------------------- */
 function openApplyFormModal(id) {
-	applyJobFormModal.show();
 	applyForm.clear();
 	const item = jobList.data.getItem(id);
 
@@ -418,6 +389,7 @@ function openApplyFormModal(id) {
 		applyJobFormModal.header.data.update("title", { value: "Application for " + item.title } );
 		applyForm.setValue(item);
 	}
+	applyJobFormModal.show();
 }
 
 const applyJobFormModal = new dhx.Window({
@@ -494,8 +466,9 @@ const applyFormConfig = {
 
 const applyForm = new dhx.Form(null, applyFormConfig);
 
+// on apply button submit click
+// validate form and send data to server
 applyForm.getItem("submit-apply-btn").events.on("click", function () {
-	
 	if(!applyForm.validate()) return;
 	
 	var data = applyForm.getValue();
@@ -504,7 +477,7 @@ applyForm.getItem("submit-apply-btn").events.on("click", function () {
 		url: "/tmkt/applyjob",
 		method: "POST",
 		data: data,
-		success: function(response) {
+		success: function() {
 			unloading();
 			window.location.href = '/tmkt/jobsearch';
 		}
@@ -517,6 +490,99 @@ applyForm.getItem("cancel-apply-btn").events.on("click", () => {
 });
 
 applyJobFormModal.attach(applyForm);
+
+
+/* -------------------------------------------------------------------------- */
+/*                             View Job Applicants                            */
+/* -------------------------------------------------------------------------- */
+function viewApplicantTemplate(applicant){
+	if(applicant.title == "No applicants yet") return `<div class="row px-2">` + applicant.title + `</div>`;
+	let template = `
+		<div class="row">
+			<div class="d-flex align-items-center justify-content-between">
+				<div>
+					<span class="card-title mb-0 text-primary">`+applicant.firstname+` `+applicant.lastname+`</span>
+					<div>`+applicant.cst+` `+applicant.title+`</div>
+				</div>
+				<div>
+					<div class="d-flex justify-content-end">`+applicant.applied_date+`</div>
+					<a href="#" class="d-flex justify-content-end"">View profile</a>
+					<a href="#" class="d-flex justify-content-end">Request approval</a>
+				</div>
+			</div>
+		</div>
+	`;
+	return template;
+}
+
+const applicantList = new dhx.List(null, {
+	css:"dhx_widget--bg_white applicant-ul-list",
+	template: viewApplicantTemplate,
+});
+
+
+// on click of view applicants button
+// get applicants (or no data) for the job posting
+// and display in modal
+function openApplicantsModal(id) {
+	// viewApplicantsModal.show();
+	// applicantList.data.parse(applicants);
+	applicantList.data.parse([]); //clear data from previous view
+	$.ajax({
+		url: "/tmkt/getapplicants",
+		method: "POST",
+		data: {
+			job_posting_id: id
+		},
+		success: function(data) {
+			if(data && data.length > 0) {
+				applicantList.data.parse(data);
+			}else{
+				applicantList.data.add({ title: "No applicants yet"});
+			}
+			viewApplicantsModal.show();
+		}
+	}); 
+}
+
+const viewApplicantsModal = new dhx.Window({
+	width: getWindowSize().width,
+	height: getWindowSize(500).height,
+	title: "View Applicants",
+	modal: true
+});
+
+viewApplicantsModal.attach(applicantList);
+
+/* -------------------------------------------------------------------------- */
+/*                              Helper Functions                              */
+/* -------------------------------------------------------------------------- */
+
+// initializing the function that closes the form and clears it
+function closeModal(form, modal) {
+	form.clear();
+	modal.hide();
+}
+
+// return the window/modal size based on the screen size
+function getWindowSize(baseHeight = 0) {
+	let width;
+	let height;
+	if (window.innerWidth < 768) { //on mobile
+		width = window.innerWidth;
+	} else if (window.innerWidth < 992) {
+		width = 798;
+	} else {
+		width = 900;
+	} 
+
+	if(window.innerHeight < baseHeight + 40 || window.innerWidth < 768){ //on mobile
+		height = window.innerHeight;
+	}else{
+		height = baseHeight + 40;
+	}
+	return { width: width , height: height };
+}
 
 /* -------------------------------------------------------------------------- */
 /*                              Filter Functions                              */
@@ -543,5 +609,3 @@ function filterJobList() {
 	
 	jobList.data.parse(filteredList);
 }
-
-
