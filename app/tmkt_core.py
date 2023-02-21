@@ -135,13 +135,18 @@ def search_job_postings(categories = None, view = None):
     
     # if view is not specified, only show active job postings
     # allow user to see removed and expired job postings if they are the poster/applicant
-    if view != 'applied' and view != 'posted':
-        filters.append(JobPosting.removed_date == None)
-        filters.append(JobPosting.expiry_date>=today)
-    if view == 'posted':
-        filters.append(JobPosting.poster_user_id==current_user.userid)
-  
-    jobs = db.session.query(JobPosting).filter(*filters).all()
+    if view == 'applied':
+        # add filter on active job posting applications for the current user
+        filters.append(JobPostingApplication.user_id==current_user.userid)
+        filters.append(JobPostingApplication.cancelled_date == None)
+        jobs = db.session.query(JobPosting).join(JobPostingApplication, JobPostingApplication.job_posting_id == JobPosting.id).filter(*filters).all()
+    else:
+        if view == 'posted':
+            filters.append(JobPosting.poster_user_id==current_user.userid)
+        else:
+            filters.append(JobPosting.removed_date == None)
+            filters.append(JobPosting.expiry_date>=today)
+        jobs = db.session.query(JobPosting).filter(*filters).all()
 
     #process the results of the GET or POST (same logic)
     result = []   
@@ -160,12 +165,6 @@ def search_job_postings(categories = None, view = None):
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
-        apply = get_job_posting_application(job.id, current_user.userid, False)
-        result_job['apply'] = 0
-        if apply != None:
-            apply_value = {i:v for i, v in apply.__dict__.items() if i in apply.__table__.columns.keys()}
-            if apply_value['available'] == 1: 
-                result_job['apply'] = 1
         d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
         d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
         # adding sort for negative number of days to expiry (so sort reverse order works correctly)
@@ -179,11 +178,7 @@ def search_job_postings(categories = None, view = None):
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
         else:
             result_job['similarity'] = 0
-        # TODO - update filter for applied jobs
-        if view == 'applied' and result_job['apply'] == 1:
-            result.append(result_job)
-        elif view == 'posted' or view == None:
-            result.append(result_job)
+        result.append(result_job)
    
     # sort by similarity
     result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
