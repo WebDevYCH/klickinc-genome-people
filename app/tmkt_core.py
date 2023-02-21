@@ -21,7 +21,7 @@ def create_job_posting_object(request_form):
 
     # if unable to find existing record, attempt to reinsert it using the id from the form
     if not job_posting.id:        
-        if job_posting_id:
+        if job_posting_id > 0:
             job_posting.id = job_posting_id
         job_posting.poster_user_id = current_user.userid
         job_posting.posted_date = date.today()
@@ -33,18 +33,23 @@ def create_job_posting_object(request_form):
     job_posting.expected_hours = request_form['expected_hours']
     job_posting.job_start_date = request_form['job_start_date']
     job_posting.job_end_date = request_form['job_end_date']
-    job_posting.client = request_form['client']
-    job_posting.brands = request_form['brands']
-    job_posting.project_id = request_form['project_id']
-    job_posting.hiring_manager = request_form['hiring_manager']
-    job_posting.job_location = request_form['job_location']
     job_posting.cst = request_form['cst']
     job_posting.job_function = request_form['job_function']
+    if request_form['client']:
+        job_posting.client = request_form['client']
+    if request_form['brands']:
+        job_posting.brands = request_form['brands']
+    if request_form['project_id']:
+        job_posting.project_id = request_form['project_id']
+    if request_form['hiring_manager']:
+        job_posting.hiring_manager = request_form['hiring_manager']
+    if request_form['job_location']:
+        job_posting.job_location = request_form['job_location']
 
     return job_posting
 
 # save job posting function
-def save_job_posting(user, job_posting, update_skills = True):
+def save_job_posting(job_posting, update_skills = True):
     result_msg = None
 
     # Get GPT3 Embedding value for resume
@@ -109,11 +114,17 @@ def cancel_job_application(job_application):
     return result_msg
 
 # get job posting application function
-def get_job_posting_application(job_posting_id, user_id, include_cancelled = False):
-    if include_cancelled:
-        return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date != None).one_or_none()
-    else:
-        return db.session.query(JobPostingApplication).filter(JobPostingApplication.job_posting_id==job_posting_id, JobPostingApplication.user_id==user_id, JobPostingApplication.cancelled_date == None).one_or_none()
+def get_job_posting_application(job_posting_id=None, user_id=None, include_cancelled = False):
+    filters = []
+    if job_posting_id:
+        filters.append(JobPostingApplication.job_posting_id==job_posting_id)
+    if user_id:
+        filters.append(JobPostingApplication.user_id==user_id)
+    
+    if not include_cancelled:
+        filters.append(JobPostingApplication.cancelled_date == None)
+    
+    return db.session.query(JobPostingApplication).filter(*filters)
 
 # generic function to do job search
 def search_job_postings(categories = None, view = None):
@@ -133,6 +144,7 @@ def search_job_postings(categories = None, view = None):
     
     # if view is not specified, only show active job postings
     # allow user to see removed and expired job postings if they are the poster/applicant
+    job_applications = JobPostingApplication()
     if view == 'applied':
         # add filter on active job posting applications for the current user
         filters.append(JobPostingApplication.user_id==current_user.userid)
@@ -142,6 +154,7 @@ def search_job_postings(categories = None, view = None):
         if view == 'posted':
             filters.append(JobPosting.poster_user_id==current_user.userid)
         else:
+            job_applications = get_job_posting_application(None, current_user.userid)
             filters.append(JobPosting.removed_date == None)
             filters.append(JobPosting.expiry_date>=today)
         jobs = db.session.query(JobPosting).filter(*filters).all()
@@ -176,11 +189,17 @@ def search_job_postings(categories = None, view = None):
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
         else:
             result_job['similarity'] = 0
+        
+        # determine if the current user has applied to the jobs in the list
         if view == 'applied':
+            # all results are jobs the current user has applied to
             result_job['apply'] = 1
+        elif view == 'posted':
+            # all results are jobs the current user posted, so they can't apply to them
+            result_job['apply'] = 0
         else:
             # get job application status
-            job_application = get_job_posting_application(job_posting_id = job.id, user_id = current_user.userid)
+            job_application = job_applications.filter(JobPostingApplication.job_posting_id == job.id).one_or_none()
             if job_application:
                 result_job['apply'] = job_application.available
             else:

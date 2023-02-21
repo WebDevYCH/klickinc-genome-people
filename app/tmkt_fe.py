@@ -20,7 +20,7 @@ def postjob():
     job_posting = create_job_posting_object(request.form)
 
     # save job posting
-    flash(save_job_posting(current_user, job_posting))
+    flash(save_job_posting(job_posting))
 
     return redirect(url_for('jobsearch'))
 
@@ -31,7 +31,7 @@ def editjob():
     job_posting = create_job_posting_object(request.form)
 
     # save job posting
-    flash(save_job_posting(current_user, job_posting))
+    flash(save_job_posting(job_posting))
 
     return redirect(url_for('jobsearch'))
 
@@ -61,7 +61,7 @@ def searchpeople():
 @login_required
 def applyjob():
     job_posting_id = request.form['id']
-    apply_job = get_job_posting_application(job_posting_id, current_user.userid, True)
+    apply_job = get_job_posting_application(job_posting_id, current_user.userid, True).one_or_none()
 
     if not apply_job:
         apply_job = JobPostingApplication(job_posting_id = job_posting_id, user_id = current_user.userid)
@@ -129,7 +129,7 @@ def cancelapplication():
     # find existing job application
     job_posting_id = request.form['id']
     user_id = current_user.userid
-    job_apply = get_job_posting_application(job_posting_id, user_id, False)
+    job_apply = get_job_posting_application(job_posting_id, user_id, False).one_or_none()
     if job_apply:
         flash(cancel_job_application(job_apply))
     else:

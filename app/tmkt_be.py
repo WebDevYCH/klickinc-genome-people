@@ -235,7 +235,7 @@ def tmkt_job_postings_load_index():
             job_posting.title = row['Posting Title']
             job_posting.description = description
             
-            result_msg = save_job_posting(user, job_posting)
+            result_msg = save_job_posting(job_posting)
             # if result message doesn't start with "Successfully", then it's an error
             if not result_msg.startswith("Successfully"):
                 loglines.append(f"    ERROR: {result_msg}")
