@@ -171,6 +171,10 @@ def search_job_postings(categories = None, view = None):
         result_job['posted_for'] = abs((today-job.posted_date).days) 
         result_job['posted_date'] = job.posted_date.strftime("%Y-%m-%d")
         result_job['expiry_date'] = job.expiry_date.strftime("%Y-%m-%d")
+        if job.job_start_date:
+       		result_job['job_start_date'] = job.job_start_date.strftime("%Y-%m-%d")
+        if job.job_end_date:
+        	result_job['job_end_date'] = job.job_end_date.strftime("%Y-%m-%d")
         # add cosine similarity between job posting and user profile
         if profile and profile.resume_vector and job.job_posting_vector:
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))

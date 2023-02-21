@@ -48,17 +48,23 @@ function jobListTemplate(job) {
 						<div class="d-flex mb-2 justify-content-between align-items-center">
 							<div class="d-flex align-items-center">
 								<span class="card-title text-primary fs-4 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
-								`+(job.apply == 1 ?`<span class="badge rounded-pill bg-primary">Applied</span>`:'')+`
+								`+(job.cst ?`<span class="badge rounded-pill bg-primary me-1">`+ job.cst+`</span> `:'')+`
+								`+(job.apply == 1 ?`<span class="badge rounded-pill bg-success">Applied</span>`:'')+`
 								<span class="badge rounded-pill bg-primary card-category" hidden category-id="` +job.job_posting_category_id + `">` +job.job_posting_category_name + `</span>
 								<span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
-								<span class="card-expiry" hidden>` +job.expiry_date + `</span>
+								<span claingenomess="card-expiry" hidden>` +job.expiry_date + `</span>
 							</div>
 							` + (expiredOrRemoved 
 								? `<span class="text-muted"><i>`+ status +`</i></span>`  
 								: `<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>` ) +`
 							</div>
 						<div class="card-subtitle show-on-collapse text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
-						<div class=" no-show-on-collapse d-flex align-items-center justify-content-between">
+						<div class="text-muted no-show-on-collapse align-items-center">
+							<div>Start Date: `+new Date(job.job_start_date).toISOString().slice(0, 10)+`</div>
+							<div>End Date: `+new Date(job.job_end_date).toISOString().slice(0, 10)+`</div>
+							<div>Location: `+job.job_location+`</div>
+						<div>
+						<div class="no-show-on-collapse d-flex align-items-center justify-content-between">
 								<div>
 									` + (expiredOrRemoved ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
 								</div>
@@ -84,6 +90,26 @@ function jobListTemplate(job) {
 					<div class="row">
 						<div class="col-12">
 							<div class="card-description">` +  job.description + `</div>
+							<div class="d-flex mb-2 align-items-start justify-content-between">
+								<div>
+									<div>Start Date: `+new Date(job.job_start_date).toISOString().slice(0, 10)+`</div>
+									<div>End Date: `+new Date(job.job_end_date).toISOString().slice(0, 10)+`</div>
+									<div>Expected Hours: `+job.expected_hours+`</div>
+								</div>
+								<div>
+									<div>Location: `+job.job_location+`</div>
+									<div>CST: `+job.cst+`</div>
+									<div>Job Function: `+job.job_function+`</div>
+								</div>
+								<div>
+									<div>Client: `+job.client+`</div>
+									<div>Brands: `+job.brands+`</div>
+									<div>ProjectID: `+job.project_id+`</div>
+									<div>Hiring Manager: `+job.hiring_manager+`</div>
+								</div>
+								
+								
+							</div>
 							<div class="other-info">
 								`+ job.job_posting_skills.join(', ') +`
 							</div>
@@ -301,6 +327,11 @@ const jobFormConfig = {
 					width: "50%",
 					label: "Location",
 					placeholder: "Job location",
+					errorMessage: "Job location is required",
+					validation: function(value) {
+						return value && value != "";
+					},
+					required: true,
 				},
 				{
 					name: "expected_hours",
@@ -309,6 +340,10 @@ const jobFormConfig = {
 					inputType: "number",
 					width: "50%",
 					required: true,
+					errorMessage: "Expected hours is required",
+					validation: function(value) {
+						return value && value != "";
+					},
 					placeholder: "Total expected hours of work",
 				},
 			]
@@ -322,6 +357,11 @@ const jobFormConfig = {
 					width: "50%",
 					label: "Client",
 					placeholder: "Name of client",
+					errorMessage: "Client is required",
+					validation: function(value) {
+						return value && value != "";
+					},
+					required: true,
 				},
 				{
 					name: "brands",
@@ -329,6 +369,11 @@ const jobFormConfig = {
 					label: "Brand(s)",
 					width: "50%",
 					placeholder: "Name of brand(s)",
+					errorMessage: "Brands is required",
+					validation: function(value) {
+						return value && value != "";
+					},
+					required: true,
 				},
 			]
 		},
@@ -342,6 +387,11 @@ const jobFormConfig = {
 					padding: "0 10px 0 0",
 					label: "Project ID",
 					placeholder: "Project ID",
+					errorMessage: "Project is required",
+					validation: function(value) {
+						return value && value != "" && value > 0;
+					},
+					required: true,
 				},
 				{
 					name: "hiring_manager",
@@ -349,7 +399,12 @@ const jobFormConfig = {
 					inputType: "number",
 					width: "50%",
 					label: "Hiring Manager ID",
-					placeholder: "Manager ID",
+					placeholder: "Hiring manager ID",
+					errorMessage: "Hiring manager is required",
+					validation: function(value) {
+						return value && value != "";
+					},
+					required: true,
 				}
 			]
 		},
@@ -482,16 +537,14 @@ function openJobFormModal(id) {
 
 	const item = jobList.data.getItem(id);
 	editJobFormModal.header.data.update("title", { value: jobFormMode + " Job Posting" } );
+	editForm.clear();
 	if (item) {
 		editor.root.innerHTML = item.description;
 		editForm.setValue(item);
 		// Clear validation messages when clicking between items
-		editForm.getItem("title").clearValidate();
-		editForm.getItem("job_posting_category_id").clearValidate();
-		editForm.getItem("expiry_date").clearValidate();
+		editForm.clear("validation");
 	}else{
 		editor.root.innerHTML = "";
-		editForm.clear();
 	}
 
 	// manually remove classes on load
