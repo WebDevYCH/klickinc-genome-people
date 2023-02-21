@@ -36,6 +36,10 @@ datePostedSelect.addEventListener("change", function () {
 /* -------------------------------------------------------------------------- */
 
 function jobListTemplate(job) {
+	let expiredOrRemoved = job.removed_date || job.expiry_date < new Date().toISOString().slice(0, 10);
+	let status;
+	if (expiredOrRemoved) { status = job.removed_date ? "Posting Closed" : "Expired"; }
+
 	let template = `
 		<div class="accordion-item  job-card mb-2">
 			<div class='card-body'> 
@@ -49,20 +53,20 @@ function jobListTemplate(job) {
 								<span class="badge rounded-pill bg-primary card-similarity" hidden>` +job.similarity + `</span>
 								<span class="card-expiry" hidden>` +job.expiry_date + `</span>
 							</div>
-							` + (job.removed_date  
-								? '<span class="text-muted"><i>Deleted</i></span>'  
+							` + (expiredOrRemoved 
+								? `<span class="text-muted"><i>`+ status +`</i></span>`  
 								: `<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>` ) +`
 							</div>
 						<div class="card-subtitle show-on-collapse text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
 						<div class=" no-show-on-collapse d-flex align-items-center justify-content-between">
 								<div>
-									` + (job.removed_date ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
+									` + (expiredOrRemoved ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
 								</div>
 								<div>
 									` + (current_user_id  == job.poster_user_id ? `					
 										<button type="button" class="header-job-btn btn btn-primary view_applicants_btn">View Applicants</button>
 										<button type="button" class="header-job-btn btn btn-primary edit-post job_form_btn">Edit Post</button>
-										` + (job.removed_date ? '' : `<button type="button" class="header-job-btn btn btn-primary close_post_btn">Close Post</button>` ) +`
+										` + (expiredOrRemoved ? '' : `<button type="button" class="header-job-btn btn btn-primary close_post_btn">Close Post</button>` ) +`
 									` : '') + `
 									`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
 										<button type="button" class="header-job-btn btn btn-primary apply_job_btn">Apply</button>
@@ -183,29 +187,6 @@ const jobFormConfig = {
 			options: titles
 		},
 		{
-			name: "job_posting_category_id",
-			type: "select",
-			label: "Category",
-			labelPosition: "top",
-			errorMessage: "Job category must be selected",
-			validation: function(value) {
-				return value && value != "0";
-			},
-			required: true,
-			options: categories
-		},
-		{
-			type: "datepicker",
-			name: "expiry_date",
-			label: "Expiry Date",
-			required: true,
-			errorMessage: "Expiry date is required and must not be in the past",
-			validation: function(value) {
-				return value && new Date(value) >= new Date();
-			},
-			dateFormat: "%Y-%m-%d",
-		},
-		{
 			type: "container",
 			css: "form-editor-container dhx_form-group--required",
 			html: `
@@ -237,6 +218,140 @@ const jobFormConfig = {
 					<span class="dhx_input__caption invalidMsg">Description is required</span>
 				</div>
 			`
+		},
+		{
+			cols: [
+				{
+					name: "cst",
+					type: "combo",
+					label: "CST",
+					padding: "0 10px 0 0",
+					width: "50%",
+					itemHeight: "auto",
+					errorMessage: "CST must be selected",
+					validation: function(value) {
+						return value;
+					},
+					required: true,
+					data: csts
+				},
+				{
+					name: "job_function",
+					type: "combo",
+					width: "50%",
+					label: "Job Functions",
+					itemHeight: "auto",
+					errorMessage: "Job function must be selected",
+					validation: function(value) {
+						return value;
+					},
+					required: true,
+					data: jobfunctions
+				},
+			]
+		},
+		{
+			cols: [
+				{
+					type: "datepicker",
+					name: "job_start_date",
+					padding: "0 10px 0 0",
+					label: "Job Start Date",
+					required: true,
+					width: "35%",
+					errorMessage: "Job start date is required and must not be in the past",
+					validation: function(value) {
+						return value && new Date(value) >= new Date();
+					},
+					dateFormat: "%Y-%m-%d",
+				},
+				{
+					type: "datepicker",
+					name: "job_end_date",
+					label: "Job End Date",
+					required: true,
+					width: "35%",
+					padding: "0 10px 0 0",
+					errorMessage: "Job end date is required and must not be after the job start date",
+					validation: function(value) {
+						return value && new Date(value) >= new Date();
+					},
+					dateFormat: "%Y-%m-%d",
+				},
+				{
+					type: "datepicker",
+					name: "expiry_date",
+					label: "Posting Expiry Date",
+					width: "30%",
+					required: true,
+					errorMessage: "Expiry date is required and must not be in the past",
+					validation: function(value) {
+						return value && new Date(value) >= new Date();
+					},
+					dateFormat: "%Y-%m-%d",
+				},
+			]
+		},
+		{
+			cols: [
+				{
+					name: "job_location",
+					type: "input",
+					padding: "0 10px 0 0",
+					width: "50%",
+					label: "Location",
+					placeholder: "Job location",
+				},
+				{
+					name: "expected_hours",
+					type: "input",
+					label: "Expect Hours",
+					inputType: "number",
+					width: "50%",
+					required: true,
+					placeholder: "Total expected hours of work",
+				},
+			]
+		},
+		{
+			cols: [
+				{
+					name: "client",
+					type: "input",
+					padding: "0 10px 0 0",
+					width: "50%",
+					label: "Client",
+					placeholder: "Name of client",
+				},
+				{
+					name: "brands",
+					type: "input",
+					label: "Brand(s)",
+					width: "50%",
+					placeholder: "Name of brand(s)",
+				},
+			]
+		},
+		{
+			cols: [
+				{
+					name: "project_id",
+					type: "input",
+					inputType: "number",
+					width: "50%",
+					padding: "0 10px 0 0",
+					label: "Project ID",
+					placeholder: "Project ID",
+				},
+				{
+					name: "hiring_manager",
+					type: "input",
+					inputType: "number",
+					width: "50%",
+					label: "Hiring Manager ID",
+					placeholder: "Manager ID",
+				}
+			]
 		},
 		{
 			align: "end",
@@ -289,17 +404,35 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 	});
 	closeModal(editForm, editJobFormModal);
 });
-// Datepicker does not clear validation on focus automatically so we need to do it manually
-editForm.getItem("expiry_date").events.on("focus", () => {
-	editForm.getItem("expiry_date").clearValidate();
-});
-// Datepicker does not validate automatically so we need to do it manually
-editForm.getItem("expiry_date").events.on("blur", () => {
-	editForm.getItem("expiry_date").validate();
-});
+
 editForm.getItem("cancel-posting-btn").events.on("click", () => {
 	closeModal(editForm, editJobFormModal);
 });
+
+// start date and end date date range set up
+let startDate = editForm.getItem("job_start_date").getWidget();
+let endDate = editForm.getItem("job_end_date").getWidget();
+startDate.link(endDate)
+
+// Datepicker does not clear validation on focus automatically so we need to do it manually
+function clearDateValidateOnFocus(field) {
+	editForm.getItem(field).events.on("focus", () => {
+		editForm.getItem(field).clearValidate();
+	});
+}
+// Datepicker does not validate automatically so we need to do it manually
+function validateDateOnBlur(field) {
+	editForm.getItem(field).events.on("blur", () => {
+		editForm.getItem(field).validate();
+	});
+}
+
+clearDateValidateOnFocus("job_start_date");
+clearDateValidateOnFocus("job_end_date");
+clearDateValidateOnFocus("expiry_date");
+validateDateOnBlur("job_end_date");
+validateDateOnBlur("expiry_date");
+validateDateOnBlur("job_start_date");
 
 // check if the description is valid and add or remove the error class manually 
 // (because the dhtmlx Form does not support Quill editor)
@@ -317,7 +450,7 @@ function isValidDescription() {
 
 const editJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(788).height,
+	height: getWindowSize(920).height,
 	title: "Edit Job Posting",
 	modal: true
 });
@@ -337,7 +470,8 @@ function openJobFormModal(id) {
 				toolbar: "#quill-toolbar"
 			},
 			placeholder: "Write job description here...",
-			theme: "snow"
+			theme: "snow",
+			scrollingContainer: ".dhx_form"
 		});
 		editorContainer = document.querySelector(".form-editor-container");
 		editorInput = document.querySelector("#quill-editor");
@@ -359,6 +493,8 @@ function openJobFormModal(id) {
 		editor.root.innerHTML = "";
 		editForm.clear();
 	}
+
+	// manually remove classes on load
 	editorContainer.classList.remove("dhx_form-group--state_error");
 	editorContainer.classList.remove("dhx_form-group--state_success");
 }

@@ -26,22 +26,20 @@ def create_job_posting_object(request_form):
         job_posting.poster_user_id = current_user.userid
         job_posting.posted_date = date.today()
 
-    job_posting.job_posting_category_id = request_form['job_posting_category_id']
+    job_posting.job_posting_category_id = 1
     job_posting.expiry_date = request_form['expiry_date']
     job_posting.title = request_form['title']
     job_posting.description = request_form['description']
-
-    # new fields to be added once the FE has been developed
-    # job_posting.expected_hours = request_form['expected_hours']
-    # job_posting.job_start_date = request_form['job_start_date']
-    # job_posting.job_end_date = request_form['job_end_date']
-    # job_posting.client = request_form['client']
-    # job_posting.brands = request_form['brands']
-    # job_posting.project_id = request_form['project_id']
-    # job_posting.hiring_manager = request_form['hiring_manager']
-    # job_posting.job_location = request_form['job_location']
-    # job_posting.cst = request_form['cst']
-    # job_posting.job_function = request_form['job_function']
+    job_posting.expected_hours = request_form['expected_hours']
+    job_posting.job_start_date = request_form['job_start_date']
+    job_posting.job_end_date = request_form['job_end_date']
+    job_posting.client = request_form['client']
+    job_posting.brands = request_form['brands']
+    job_posting.project_id = request_form['project_id']
+    job_posting.hiring_manager = request_form['hiring_manager']
+    job_posting.job_location = request_form['job_location']
+    job_posting.cst = request_form['cst']
+    job_posting.job_function = request_form['job_function']
 
     return job_posting
 

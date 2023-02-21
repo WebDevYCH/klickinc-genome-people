@@ -65,15 +65,20 @@
 		{% endfor %}
 	];
 
-	var categories = [
-		{
-			value: "0",
-			content: "Select Category"
-		},
-		{% for category in categories %}
+	var csts = [
+		{% for cst in csts %}
 			{
-				value: {{ category.id }},
-				content: "{{ category.name }}"
+				value: "{{ cst }}",
+				id: "{{ cst }}"
+			},
+		{% endfor %}
+	];
+
+	var jobfunctions = [
+		{% for jobfunction in jobfunctions %}
+			{
+				value: "{{ jobfunction }}",
+				id: "{{ jobfunction }}"
 			},
 		{% endfor %}
 	];

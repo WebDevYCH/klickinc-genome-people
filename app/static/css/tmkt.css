@@ -67,12 +67,12 @@
 }
 
 #quill-editor {
-	height: 330px;
+	height: 260px;
 }
 
 @media only screen and (max-width: 768px) {
 	#quill-editor {
-		height: calc(100vh - 500px);
+		height: calc(100vh - 720px);
 	}
 }
 
@@ -101,3 +101,9 @@
 	display: none !important;
 }
 
+.dhx_window .dhx_window-header .dhx_toolbar .dhx_navbar{
+	padding: 20px 16px 0 28px;
+}
+.dhx_window-content{
+	padding-bottom: 20px;
+}
