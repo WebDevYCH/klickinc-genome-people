@@ -178,6 +178,15 @@ def search_job_postings(categories = None, view = None):
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
         else:
             result_job['similarity'] = 0
+        if view == 'applied':
+            result_job['apply'] = 1
+        else:
+            # get job application status
+            job_application = get_job_posting_application(job_posting_id = job.id, user_id = current_user.userid)
+            if job_application:
+                result_job['apply'] = job_application.available
+            else:
+                result_job['apply'] = 0
         result.append(result_job)
    
     # sort by similarity
