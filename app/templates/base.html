@@ -12,12 +12,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com">
     <link rel="shortcut icon" href="/static/img/icons/icon-48x48.png" />
 
-    <title>
-        {% if title %}
-            {{ title }}
-        {% else %}
-            Genome People
-        {% endif %}
+    <title>Genome People
+        {% block title %}
+            {% if title %}
+                 - {{ title }}
+            {% endif %}
+        {% endblock %}
     </title>
 
     {% block app_head %}{% endblock %}
@@ -121,7 +121,6 @@
                         </a>
                     </li>
 
-                    <!-- 
                     <li class="sidebar-header">
                         Job Board
                     </li>
@@ -130,7 +129,16 @@
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
-                    -->
+					<li class="sidebar-item">
+                        <a class="sidebar-link" href="/tmkt/jobsearch/posted">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Posted Jobs</span>
+                        </a>
+                    </li>
+					<li class="sidebar-item">
+                        <a class="sidebar-link" href="/tmkt/jobsearch/applied">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Applied Jobs</span>
+                        </a>
+                    </li>
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
@@ -418,12 +426,8 @@
 
                     <div class="row">
                         <div class="col-12">
-                            <div class="card">
-                                <div class="card-body">
-                                    {# application content needs to be provided in the app_content block #}
-                                    {% block app_content %}{% endblock %}
-                                </div>
-                            </div>
+							{# application content needs to be provided in the app_content block #}
+							{% block app_content %}{% endblock %}
                         </div>
                     </div>
 
@@ -463,10 +467,10 @@
     </div>
 
     <div class="loading"></div>
-    {% block script %}{% endblock %}
     <script src="/static/js/app.js"></script>
     <script src="/static/js/jquery-3.6.1.min.js"></script>
     <script src="/static/js/custom.js"></script>
+    {% block script %}{% endblock %}
 </body>
 
 </html>

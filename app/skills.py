@@ -5,7 +5,7 @@ from flask_admin import expose
 
 from core import *
 from model import *
-from skillutils import *
+from skills_core import *
 
 
 ###################################################################

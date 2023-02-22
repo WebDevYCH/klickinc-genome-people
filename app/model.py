@@ -25,7 +25,7 @@ def obj_name_user(obj):
 def obj_name_portfolio(obj):
     return f"{obj.clientname} - {obj.name}"
 def obj_name_joined(obj):
-    return ['id', 'job_or_availadble', 'job_posting_category_id', 'poster_user_id', 'posted_date', 'expiry_date', 'removed_date', 'title', 'description', 'contact_user_id', 'name']
+    return ['id', 'job_or_available', 'job_posting_category_id', 'poster_user_id', 'posted_date', 'expiry_date', 'removed_date', 'title', 'description', 'contact_user_id', 'name']
 
 # Connect directly to database to make the schema, outside of the Flask context so we can
 # initialize before the first web request
@@ -96,3 +96,23 @@ Base.classes.portfolio.__str__ = obj_name_portfolio
 Portfolio = Base.classes.portfolio
 
 LaborRoleHeadcount = Base.classes.labor_role_headcount
+
+###################################################################
+## TMKT MODELS
+
+Base.classes.job_posting.__str__ = obj_name
+Base.classes.job_posting.__json__ = obj_name_joined
+JobPosting = Base.classes.job_posting
+
+Base.classes.job_posting_category.__str__ = obj_name
+JobPostingCategory = Base.classes.job_posting_category
+
+UserAvailable = Base.classes.user_available
+
+JobPostingApplication = Base.classes.job_posting_application
+
+Base.classes.skill.__str__ = obj_name
+Skill = Base.classes.skill
+
+Title = Base.classes.title
+

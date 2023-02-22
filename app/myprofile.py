@@ -1,34 +1,44 @@
 from flask import render_template, flash, request
 from flask_login import login_required, current_user
 
-
 from core import *
 from model import *
-from skillutils import *
+from skills_core import *
+from profile_core import *
 
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
-    profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
-    my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+    # attempt to find existing profile
+    try:
+        profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+    except:
+        profile = None
 
+    result = None
     if request.method == "POST":
-        if profile:
-            profile.resume = request.form["resume"]
-            db.session.commit()
-            flash("Successfully updated your resume")
-        else:
-            user_profile = UserProfile(resume=request.form["resume"], user_id=int(current_user.userid))
-            db.session.add(user_profile)
-            db.session.commit()
-            flash("Successfully added your resume")
-        relevant_skills = extract_skills_from_text(request.form["resume"])
+        # if not profile exists, create a new model
+        if not profile:
+            profile = UserProfile(user_id=int(current_user.userid))
+        # get resume from form editor
+        profile.resume = request.form['resume']
+        # save resume to user profile
+        result = save_resume(current_user, profile)
+        # flash results message
+        if result:
+            flash(result)
 
-        if "message" in relevant_skills:
-            flash("An error happened extracting skills! Please try again.")
-        else:
-            auto_fill_user_skill_from_resume(relevant_skills['data'])
-    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills)
+    # if there is no profile, flash a message
+    if not profile:
+        flash("Unable to find an existing profile, please create one by uploading a resume")
+
+    # attempt to find existing skills
+    try:
+        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+    except:
+        my_skills = None
+
+    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills, title="Profile")
 
 @app.route('/profile/edit-skills')
 @login_required

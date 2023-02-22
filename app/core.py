@@ -12,7 +12,6 @@ from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
-from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
 import config
 import gspread
@@ -26,7 +25,6 @@ from numpy.linalg import norm
 # Create application reference
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
-Bootstrap(app)
 while app.logger.handlers:
     # something is adding an extra handler, which causes duplicate log messages
     app.logger.handlers.pop()
@@ -244,10 +242,15 @@ def upsert(session, model, constraints, values, usecache=False):
 ###################################################################
 ## OPENAI FUNCTIONS
 
+def gpt3_authorization():
+    openai.organization = app.config['OPENAI_ORGANIZATION_KEY']
+    openai.api_key = app.config['OPENAI_API_KEY']
+
 def gpt3_embedding(content, engine='text-embedding-ada-002'):
     max_retry = 10
     retry = 0
     content = content.encode(encoding='ASCII',errors='ignore').decode()
+    gpt3_authorization()
     while True:
         try:
             response = openai.Embedding.create(input=content,engine=engine)
@@ -270,6 +273,7 @@ def gpt3_completion(prompt, engine='text-davinci-003', temp=0.1, top_p=1.0, toke
     max_retry = 10
     retry = 0
     prompt = prompt.encode(encoding='ASCII',errors='ignore').decode()
+    gpt3_authorization()
     while True:
         try:
             response = openai.Completion.create(
@@ -292,5 +296,3 @@ def gpt3_completion(prompt, engine='text-davinci-003', temp=0.1, top_p=1.0, toke
                 return "GPT3 error: %s" % oops
             elif retry >= max_retry:
                 raise
-
-
