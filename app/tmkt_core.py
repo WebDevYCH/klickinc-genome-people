@@ -41,17 +41,17 @@ def create_job_posting_object(request_form):
     job_posting.hiring_manager = request_form['hiring_manager']
     job_posting.job_location = request_form['job_location']
 
+    # Get GPT3 Embedding value for job posting
+    prompt = fill_prompt_for_text(job_posting, job_posting.description)
+    job_posting.job_posting_vector = gpt3_embedding(prompt)
+    if not isinstance(job_posting.job_posting_vector, list):
+        job_posting.job_posting_vector = None
+
     return job_posting
 
 # save job posting function
 def save_job_posting(job_posting, update_skills = True):
     result_msg = None
-
-    # Get GPT3 Embedding value for resume
-    prompt = fill_prompt_for_text(job_posting, job_posting.description)
-    job_posting.job_posting_vector = gpt3_embedding(prompt)
-    if not isinstance(job_posting.job_posting_vector, list):
-        job_posting.job_posting_vector = None
 
     try:
         # if job_posting.id doesn't exist, create new job posting; otherwise, update job posting
@@ -68,43 +68,6 @@ def save_job_posting(job_posting, update_skills = True):
         result = auto_fill_skill_from_text(job_posting)
         if not result == "success":
             result_msg = f"Skill extraction failed: {result}"
-
-    return result_msg
-
-# apply job posting function
-def apply_job_posting(job_application):
-    result_msg = None
-    try:
-        if not job_application.id:
-            db.session.add(job_application)
-        db.session.commit()
-        result_msg = "Successfully applied to job posting"
-    except Exception as e:
-        result_msg = f"Error applying to job posting: {e}"
-
-    return result_msg
-
-# close job posting function
-def close_job_posting(job_posting):
-    result_msg = None
-    try:
-        job_posting.removed_date = date.today()
-        db.session.commit()
-        result_msg = "Successfully closed job posting"
-    except Exception as e:
-        result_msg = f"Error closing job posting: {e}"
-
-    return result_msg
-
-# cancel job application function
-def cancel_job_application(job_application):
-    result_msg = None
-    try:
-        job_application.cancelled_date = date.today()
-        db.session.commit()
-        result_msg = "Successfully cancelled job application"
-    except Exception as e:
-        result_msg = f"Error cancelling job application: {e}"
 
     return result_msg
 
@@ -209,23 +172,3 @@ def search_job_postings(categories = None, view = None):
     result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
 
     return result
-
-# render job search page with all the required parameters
-def render_job_search_page(request = None, view = None):
-    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
-    titles = db.session.query(Title).order_by(Title.name).all()
-    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
-    csts = [row.cst for row in csts]
-    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
-    jobfunctions = [row.jobfunction for row in jobfunctions]
-
-    result = search_job_postings(categories, view = view)
-    
-    title = "Job Search"
-    if view == 'posted':
-        title = "Posted Jobs"
-    elif view == 'applied':
-        title = "Applied Jobs"
-  
-
-    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title=title)

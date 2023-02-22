@@ -22,7 +22,7 @@ def postjob():
     # save job posting
     flash(save_job_posting(job_posting))
 
-    return redirect(url_for('jobsearch'))
+    return job_posting
 
 @app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
@@ -33,13 +33,28 @@ def editjob():
     # save job posting
     flash(save_job_posting(job_posting))
 
-    return redirect(url_for('jobsearch'))
+    return job_posting
 
 @app.route("/tmkt/jobsearch")
 @app.route("/tmkt/jobsearch/<view>")
 @login_required
 def jobsearch(view = None):
-    return render_job_search_page(request, view = view)
+    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
+    titles = db.session.query(Title).order_by(Title.name).all()
+    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
+    csts = [row.cst for row in csts]
+    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
+    jobfunctions = [row.jobfunction for row in jobfunctions]
+
+    result = search_job_postings(categories, view = view)
+    
+    title = "Job Search"
+    if view == 'posted':
+        title = "Posted Jobs"
+    elif view == 'applied':
+        title = "Applied Jobs"
+
+    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title=title)
 
 @app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
@@ -61,23 +76,29 @@ def searchpeople():
 @login_required
 def applyjob():
     job_posting_id = request.form['id']
-    apply_job = get_job_posting_application(job_posting_id, current_user.userid, True).one_or_none()
+    job_application = get_job_posting_application(job_posting_id, current_user.userid, True).one_or_none()
 
-    if not apply_job:
-        apply_job = JobPostingApplication(job_posting_id = job_posting_id, user_id = current_user.userid)
+    if not job_application:
+        job_application = JobPostingApplication(job_posting_id = job_posting_id, user_id = current_user.userid)
     
-    apply_job.applied_date = date.today()
-    apply_job.cancelled_date = None
-    apply_job.comments = request.form['comments']
-    apply_job.skills = request.form['skills']
-    apply_job.available = 1
+    job_application.applied_date = date.today()
+    job_application.cancelled_date = None
+    job_application.comments = request.form['comments']
+    job_application.skills = request.form['skills']
+    job_application.available = 1
 
     # new fields to be added once FE has been developed
     # apply_job.worked_with_brand = request.form['worked_with_brand']
 
-    flash(apply_job_posting(apply_job))
+    try:
+        if not job_application.id:
+            db.session.add(job_application)
+        db.session.commit()
+        flash("Successfully applied to job posting")
+    except Exception as e:
+        flash(f"Error applying to job posting: {e}")
 
-    return redirect(url_for('jobsearch'))
+    return job_application
 
 @app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
@@ -117,11 +138,16 @@ def closepost():
     job_posting_id = request.form['id']
     job_posting = db.session.query(JobPosting).filter(JobPosting.id==job_posting_id).one()
     if job_posting:
-        flash(close_job_posting(job_posting))
+        try:
+            job_posting.removed_date = date.today()
+            db.session.commit()
+            flash("Successfully closed job posting")
+        except Exception as e:
+            flash(f"Error closing job posting: {e}")
     else:
         flash('Error closing job posting, no job posting found')
 
-    return redirect(url_for('jobsearch'))
+    return job_posting
 
 @app.route('/tmkt/cancelapplication', methods=['POST'])
 @login_required
@@ -129,10 +155,15 @@ def cancelapplication():
     # find existing job application
     job_posting_id = request.form['id']
     user_id = current_user.userid
-    job_apply = get_job_posting_application(job_posting_id, user_id, False).one_or_none()
-    if job_apply:
-        flash(cancel_job_application(job_apply))
+    job_application = get_job_posting_application(job_posting_id, user_id, False).one_or_none()
+    if job_application:
+        try:
+            job_application.cancelled_date = date.today()
+            db.session.commit()
+            flash("Successfully cancelled job application")
+        except Exception as e:
+            flash(f"Error cancelling job application: {e}")
     else:
         flash('Error cancelling application, no application found')
 
-    return redirect(url_for('jobsearch'))
+    return job_application
