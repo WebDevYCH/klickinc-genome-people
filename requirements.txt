@@ -1,5 +1,4 @@
 Flask
-sqlalchemy<2.0
 Flask-Admin
 Flask-SQLAlchemy
 Flask-Login

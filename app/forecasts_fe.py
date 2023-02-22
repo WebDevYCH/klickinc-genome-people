@@ -109,6 +109,8 @@ def portfolio_forecasts_lr_data():
 @login_required
 def dept_lr_forecasts_data():
     year = int(request.args.get('year'))
+    clients = request.args.get('clients')
+    csts = request.args.get('csts')
     lrcat = request.args.get('lrcat')
     showportfolios = request.args.get('showportfolios') == 'true'
     showsources = request.args.get('showsources') == 'true'
@@ -117,11 +119,11 @@ def dept_lr_forecasts_data():
     showlaborroles = request.args.get('showlaborroles') == 'true'
 
     # cache the results (sorting is slow)
-    cachekey = f"dept_lr_forecasts_data_{year}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{showlaborroles}"
+    cachekey = f"dept_lr_forecasts_data_{year}_{clients}_{csts}_{lrcat}_{showportfolios}_{showsources}_{showfullyear}_{showhours}_{showlaborroles}"
     df = Cache.get(cachekey)
     if df is None:
         app.logger.info(f"dept_lr_forecasts_data cache miss, reloading")
-        df = get_dlrfs(year, lrcat, showportfolios, showsources, showfullyear, showhours, showlaborroles)
+        df = get_dlrfs(year, lrcat, clients, csts, showportfolios, showsources, showfullyear, showhours, showlaborroles)
         app.logger.info(f"dept_lr_forecasts_data size: {len(df)}")
         try:
             df.sort_values(by=['name'], inplace=True)
@@ -455,7 +457,9 @@ def get_plrfs(year, clients, csts, showsources=True):
     return bypfid
 
 # get the department labor role forecasts (in hours), returns a cached dataframe
-def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=True, showhours=False, showlaborroles=False):
+def get_dlrfs(year, lrcat, clients = None, csts = None, showportfolios=True, showsources=True, showfullyear=True, showhours=False, showlaborroles=False):
+
+    queryfilter = queryClientCst(clients, csts)
 
     if showsources:
         showfullyear = True
@@ -465,7 +469,7 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
     thisyear = datetime.date.today().year
     thismonth = datetime.date.today().month
 
-    app.logger.info(f"get_dlrfs: {year} {lrcat} {showportfolios} {showsources} {showfullyear} {showhours} {showlaborroles}")
+    app.logger.info(f"get_dlrfs: {year} {lrcat} {clients} {csts} {showportfolios} {showsources} {showfullyear} {showhours} {showlaborroles}")
 
     # working with a dictionary of dictionaries
     columns = ['id','parent','name','detail','source','hc',
@@ -477,12 +481,23 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
             PortfolioLRForecast.yearmonth >= datetime.date(year,1,1),
             PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1),
             LaborRole.categoryname == lrcat,
-            PortfolioLRForecast.forecastedhours != None
+            PortfolioLRForecast.forecastedhours != None,
+            queryfilter
         ).all()
 
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")
     rowdict = {}
     sources = {}
+
+    # C: sum of the forecasted hours for the labor cat
+    lcatmainkey = f"lcat"
+    if lcatmainkey not in rowdict:
+        newrow = rowtemplate.copy()
+        newrow['id'] = lcatmainkey
+        newrow['parent'] = None
+        newrow['name'] = f" {lrcat} (Labor Category)"
+        newrow['detail'] = 'lcat'
+        rowdict[newrow['id']] = newrow
 
     # add the rows to the dataframe
     app.logger.info(f"  adding rows to dict")
@@ -496,62 +511,98 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         if pflr.source == 'actuals' and pflr.yearmonth.year == thisyear and pflr.yearmonth.month == thismonth:
             continue
 
-        # Hierarchies:
-        # lrcat -> lr/jf -> portfolio -> source
-        # lrcat -> lr/jf -> source sum
-        # lrcat -> lr/jr -> fte
-        # cst -> lr/jf -> portfolio -> source
-        # cst -> lr/jf -> source sum
-        # cst -> lr/jf -> fte
-        # errorrates -> source
-        # also if sources are shown, display error rates
+        # we want four hierarchies:
+        # A: labor role -> portfolio -> source
+        # B: labor role -> source sum
+        # C: lrcat -> portfolio -> source
+        # D: lrcat -> source sum
 
-        # gather list of sources we found in this view
+        # CHANGE to new hierarchies:
+        
+
         sourcename = sourcename_from_source(pflr.source)
         sources[pflr.source] = sourcename
 
         if showlaborroles:
             lr_or_jf = pflr.labor_role.id
-            lr_or_jf_name = pflr.labor_role.name
         else:
             lr_or_jf = pflr.labor_role.jobfunction
-            lr_or_jf_name = pflr.labor_role.jobfunction
 
-        def fill_dr_node(rowdict, nodekey, parentkey, name, detail, source):
-            if nodekey not in rowdict:
-                newrow = rowtemplate.copy()
-                newrow['id'] = nodekey
-                newrow['parent'] = parentkey
-                newrow['name'] = name
-                newrow['detail'] = detail
-                newrow['source'] = source
-                rowdict[newrow['id']] = newrow
+        # A: labor role as a root node, if it isn't already there
+        lrmainkey = f"{lr_or_jf}"
+        if lrmainkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrmainkey
+            newrow['parent'] = lcatmainkey
+            if showlaborroles:
+                newrow['name'] = pflr.labor_role.name
+            else:
+                newrow['name'] = pflr.labor_role.jobfunction
+            rowdict[newrow['id']] = newrow
+        
+        # A: sum of the forecasted hours for the labor role by portfolio
+        lrportfoliokey = f"{pflr.portfolioid}-{lr_or_jf}"
+        if lrportfoliokey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrportfoliokey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = f" {pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['detail'] = 'portfolio'
+            rowdict[newrow['id']] = newrow
 
-        lrcat_key = f"lcat-{lrcat}"
-        lrcat_lrjf_key = f"lcat-{lrcat}-{lr_or_jf}"
-        lrcat_lrjf_portfolio_key = f"lcat-{lrcat}-{lr_or_jf}-{pflr.portfolioid}"
-        lrcat_lrjf_portfolio_source_key = f"lcat-{lrcat}-{lr_or_jf}-{pflr.portfolioid}-{pflr.source}"
-        lrcat_lrjf_sourcesum_key = f"lcat-{lrcat}-{lr_or_jf}-sourcesum"
-        lrcat_lfjr_fte_key = f"lcat-{lrcat}-{lr_or_jf}-fte"
-        cst_key = f"cst{pflr.portfolio.currbusinessunit}"
-        cst_lrjf_key = f"cst{pflr.portfolio.currbusinessunit}-{lr_or_jf}"
-        cst_lrjf_portfolio_key = f"cst{pflr.portfolio.currbusinessunit}-{lr_or_jf}-{pflr.portfolioid}"
-        cst_lrjf_portfolio_source_key = f"cst{pflr.portfolio.currbusinessunit}-{lr_or_jf}-{pflr.portfolioid}-{pflr.source}"
-        cst_lrjf_sourcesum_key = f"cst{pflr.portfolio.currbusinessunit}-{lr_or_jf}-sourcesum"
-        cst_lrjf_fte_key = f"cst{pflr.portfolio.currbusinessunit}-{lr_or_jf}-fte"
+        # A: sum of the forecasted hours for the labor role by portfolio and source
+        lrsourcekey = f"{pflr.portfolioid}-{lr_or_jf}-{pflr.source}"
+        if lrsourcekey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrsourcekey
+            newrow['parent'] = lrportfoliokey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'source'
+            rowdict[newrow['id']] = newrow
 
-        fill_dr_node(rowdict, lrcat_key, None, f" {lrcat}", 'lcat', None)
-        fill_dr_node(rowdict, lrcat_lrjf_key, lrcat_key, f"{lr_or_jf_name}", 'lrjf', None)
-        fill_dr_node(rowdict, lrcat_lrjf_portfolio_key, lrcat_lrjf_key, f"{pflr.portfolio.clientname} - {pflr.portfolio.name}", 'portfolio', None)
-        fill_dr_node(rowdict, lrcat_lrjf_portfolio_source_key, lrcat_lrjf_portfolio_key, f"{sourcename}", 'source', pflr.source)
-        fill_dr_node(rowdict, lrcat_lrjf_sourcesum_key, lrcat_lrjf_key, f"{sourcename}", 'sourcesum', None)
-        fill_dr_node(rowdict, lrcat_lfjr_fte_key, lrcat_lrjf_key, f"FTE", 'fte', None)
-        fill_dr_node(rowdict, cst_key, None, f"{pflr.portfolio.clientname}", 'cst', None)
-        fill_dr_node(rowdict, cst_lrjf_key, cst_key, f"{lr_or_jf_name}", 'lrjf', None)
-        fill_dr_node(rowdict, cst_lrjf_portfolio_key, cst_lrjf_key, f"{pflr.portfolio.clientname} - {pflr.portfolio.name}", 'portfolio', None)
-        fill_dr_node(rowdict, cst_lrjf_portfolio_source_key, cst_lrjf_portfolio_key, f"{sourcename}", 'source', pflr.source)
-        fill_dr_node(rowdict, cst_lrjf_sourcesum_key, cst_lrjf_key, f"Source Sum", 'sourcesum', None)
-        fill_dr_node(rowdict, cst_lrjf_fte_key, cst_lrjf_key, f"FTE", 'fte', None)
+        # B: sum of the forecasted hours for the labor role by source
+        lrsourcesumkey = f"{lr_or_jf}-{pflr.source}"
+        if lrsourcesumkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrsourcesumkey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'sourcesum'
+            rowdict[newrow['id']] = newrow
+
+        # C: sum of the forecasted hours for the labor cat by portfolio
+        lcatportfoliokey = f"{pflr.portfolioid}-lcat"
+        if lcatportfoliokey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatportfoliokey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = f" {pflr.portfolio.clientname} - {pflr.portfolio.name}"
+            newrow['detail'] = 'portfolio'
+            rowdict[newrow['id']] = newrow
+
+        # C: sum of the forecasted hours for the labor cat by portfolio and source
+        lcatsourcekey = f"{pflr.portfolioid}-lcat-{pflr.source}"
+        if lcatsourcekey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatsourcekey
+            newrow['parent'] = lcatportfoliokey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'source'
+            rowdict[newrow['id']] = newrow
+
+        # D: sum of the forecasted hours for the labor cat by source
+        lcatsourcesumkey = f"lcat-{pflr.source}"
+        if lcatsourcesumkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatsourcesumkey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = sourcename
+            newrow['source'] = pflr.source
+            newrow['detail'] = 'sourcesum'
+            rowdict[newrow['id']] = newrow
 
         # fill in the month columns in the source row
         mkey = f"m{pflr.yearmonth.month}"
@@ -562,20 +613,18 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
             if showhours:
                 fte = pflr.forecastedhours
 
-            # add fte/hours to the source row, and also any above them if this is the primary source
+            rowdict[lrsourcekey][mkey] = fte
+            addtocell(rowdict, lrsourcesumkey, mkey, fte)
+            addtocell(rowdict, lcatsourcesumkey, mkey, fte)
+
+            # also add to the portfolio and labor role sum rows if this is the primary source
             if pflr.source == primarysource:
-                addtocell(rowdict, lrcat_key, mkey, fte)
-                addtocell(rowdict, lrcat_lrjf_key, mkey, fte)
-                addtocell(rowdict, lrcat_lrjf_portfolio_key, mkey, fte)
-            addtocell(rowdict, lrcat_lrjf_portfolio_source_key, mkey, fte)
-            addtocell(rowdict, lrcat_lrjf_sourcesum_key, mkey, fte)
-            #addtocell(rowdict, lrcat_lfjr_fte_key, mkey, fte)
-            if pflr.source == primarysource:
-                addtocell(rowdict, cst_key, mkey, fte)
-                addtocell(rowdict, cst_lrjf_key, mkey, fte)
-                addtocell(rowdict, cst_lrjf_portfolio_key, mkey, fte)
-            addtocell(rowdict, cst_lrjf_portfolio_source_key, mkey, fte)
-            addtocell(rowdict, cst_lrjf_sourcesum_key, mkey, fte)
+                addtocell(rowdict, lrportfoliokey, mkey, fte)
+                addtocell(rowdict, lrmainkey, mkey, fte)
+                addtocell(rowdict, lcatportfoliokey, mkey, fte)
+                addtocell(rowdict, lcatmainkey, mkey, fte)
+
+    app.logger.info(f"  df processing done")
 
     # calculate the RMSE and R2 for each source in rowdict, and adds rows to the treegrid to display this
     if showsources:
@@ -648,16 +697,24 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
             newrow['m3'] = rmsescore
             rowdict[newrow['id']] = newrow
 
-            predictionsdf.to_csv(f"../logs/predictions_{year}_{lrcat}_{source}_r2_{r2score}.csv", index=False)
+            if not clients and not csts:
+                predictionsdf.to_csv(f"../logs/predictions_{year}_{lrcat}_{source}_r2_{r2score}.csv", index=False)
+                pass
 
     app.logger.info(f"  error calculation done")
     # error calculation done
 
     # add billable allocm, headcount and billed pct data
+    if csts != None and csts != "":
+        queryfilter = LaborRoleHeadcount.cstname.in_(csts.split(','))
+    else:
+        queryfilter = True
+
     lrhcs = db.session.query(LaborRoleHeadcount).join(LaborRole).filter(
             LaborRoleHeadcount.yearmonth >= datetime.date(year,1,1),
             LaborRoleHeadcount.yearmonth < datetime.date(year+1,1,1),
-            LaborRole.categoryname == lrcat
+            LaborRole.categoryname == lrcat,
+            queryfilter
         ).all()
 
     for lrhc in lrhcs:
@@ -670,46 +727,60 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         else:
             lr_or_jf = lrhc.labor_role.jobfunction
 
-        lrcat_key = f"lcat-{lrcat}"
-        lrcat_lrjf_key = f"lcat-{lrcat}-{lr_or_jf}"
-        #lrcat_lrjf_portfolio_key = f"lcat-{lrcat}-{lr_or_jf}-{pflr.portfolioid}"
-        #lrcat_lrjf_portfolio_source_key = f"lcat-{lrcat}-{lr_or_jf}-{pflr.portfolioid}-{pflr.source}"
-        lrcat_lrjf_sourcesum_key = f"lcat-{lrcat}-{lr_or_jf}-sourcesum"
-        lrcat_lfjr_fte_key = f"lcat-{lrcat}-{lr_or_jf}-fte"
-        cst_key = f"cst{lrhc.cstname}"
-        cst_lrjf_key = f"cst{lrhc.cstname}-{lr_or_jf}"
-        #cst_lrjf_portfolio_key = f"cst{lrhc.cstname}-{lr_or_jf}-{pflr.portfolioid}"
-        #cst_lrjf_portfolio_source_key = f"cst{lrhc.cstname}-{lr_or_jf}-{pflr.portfolioid}-{pflr.source}"
-        cst_lrjf_sourcesum_key = f"cst{lrhc.cstname}-{lr_or_jf}-sourcesum"
-        cst_lrjf_fte_key = f"cst{lrhc.cstname}-{lr_or_jf}-fte"
+        # labor role as a root node, in case it isn't already there from a forecast
+        lrmainkey = f"{lr_or_jf}"
+        if lrmainkey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrmainkey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = lrhc.labor_role.name
+            rowdict[lrmainkey] = newrow
+        
+        # BA for the labor role
+        lrbakey = f"{lr_or_jf}-ba"
+        if lrbakey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lrbakey
+            newrow['parent'] = lrmainkey
+            newrow['name'] = f"  Existing FTE"
+            newrow['source'] = 'headcount'
+            newrow['detail'] = 'headcount'
+            rowdict[lrbakey] = newrow
 
-        # set up FTE rows
-        fill_dr_node(rowdict, lrcat_lfjr_fte_key, lrcat_lrjf_key, f"  FTE", 'headcount', 'fte')
-        fill_dr_node(rowdict, cst_lrjf_fte_key, cst_lrjf_key, f"  FTE", 'headcount', 'fte')
+        # BA for the labor cat
+        lcatbakey = f"lcat-ba"
+        if lcatbakey not in rowdict:
+            newrow = rowtemplate.copy()
+            newrow['id'] = lcatbakey
+            newrow['parent'] = lcatmainkey
+            newrow['name'] = f"  Existing FTE"
+            newrow['source'] = 'headcount'
+            newrow['detail'] = 'headcount'
+            rowdict[lcatbakey] = newrow
 
-        # fill in the month column in the headcount rows
+        # fill in the month column in the headcount row
         mkey = f"m{lrhc.yearmonth.month}"
-        addtocell(rowdict, lrcat_lfjr_fte_key, mkey, lrhc.billablealloc_eom)
-        addtocell(rowdict, cst_lrjf_fte_key, mkey, lrhc.billablealloc_eom)
+        addtocell(rowdict, lrbakey, mkey, lrhc.billablealloc_eom)
+        addtocell(rowdict, lcatbakey, mkey, lrhc.billablealloc_eom)
 
-        # if it's this month, fill in the hc column in other rows
+        # if it's this month, fill in the hc column
         if lrhc.yearmonth == datetime.date(thisyear, thismonth, 1):
-            for key in [lrcat_key, lrcat_lrjf_key, lrcat_lrjf_sourcesum_key, lrcat_lfjr_fte_key, 
-                    cst_key, cst_lrjf_key, cst_lrjf_sourcesum_key, cst_lrjf_fte_key]:
-                addtocell(rowdict, key, "hc", lrhc.headcount_eom)
-                addtocell(rowdict, key, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lrmainkey, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lcatmainkey, "hc", lrhc.headcount_eom)
+            addtocell(rowdict, lrmainkey, "ba", lrhc.billablealloc_eom)
+            addtocell(rowdict, lcatmainkey, "ba", lrhc.billablealloc_eom)
 
         # if it's this month or the previous 2 months, save target and billable hours and calculate billed pct
-#        if lrhc.yearmonth >= datetime.date.today() - relativedelta(months=3):
-#            addtocell(rowdict, lrmainkey, f"targethours", lrhc.target_hours)
-#            addtocell(rowdict, lrmainkey, f"billedhours", lrhc.billed_hours)
-#            targethours = getfromcell(rowdict, lrmainkey, "targethours")
-#            billedhours = getfromcell(rowdict, lrmainkey, "billedhours")
-#            if targethours != None and targethours != 0:
-#                billedpct = billedhours / targethours * 100
-#                settocell(rowdict, lrmainkey, "billedpct", billedpct)
-#            else:
-#                settocell(rowdict, lrmainkey, "billedpct", None)
+        if lrhc.yearmonth >= datetime.date.today() - relativedelta(months=3):
+            addtocell(rowdict, lrmainkey, f"targethours", lrhc.target_hours)
+            addtocell(rowdict, lrmainkey, f"billedhours", lrhc.billed_hours)
+            targethours = getfromcell(rowdict, lrmainkey, "targethours")
+            billedhours = getfromcell(rowdict, lrmainkey, "billedhours")
+            if targethours != None and targethours != 0:
+                billedpct = billedhours / targethours * 100
+                settocell(rowdict, lrmainkey, "billedpct", billedpct)
+            else:
+                settocell(rowdict, lrmainkey, "billedpct", None)
 
     app.logger.info(f"  headcount processing done")
 
