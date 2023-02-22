@@ -3,7 +3,6 @@ import datetime
 import os, time
 import pickle
 import re
-import traceback
 import requests
 import redis as redislib
 from textmagic.rest import TextmagicRestClient
@@ -12,7 +11,6 @@ from flask import Flask, redirect, url_for, request
 from flask_sqlalchemy import SQLAlchemy
 import flask_admin
 from flask_admin.contrib.sqla import ModelView
-from flask_bootstrap import Bootstrap
 from flask_login import LoginManager, current_user
 import config
 import gspread
@@ -26,7 +24,6 @@ from numpy.linalg import norm
 # Create application reference
 app = config.configapp(Flask(__name__))
 app.secret_key = app.config['SECRET_KEY'] or os.urandom(24)
-Bootstrap(app)
 while app.logger.handlers:
     # something is adding an extra handler, which causes duplicate log messages
     app.logger.handlers.pop()
@@ -39,7 +36,11 @@ login_manager.session_protection = 'strong'
 # Create db reference
 app.logger.info("Initializing database")
 db = SQLAlchemy(app)
-db.init_app(app)
+# sometimes this fails due an instance already existing
+try:
+    db.init_app(app)
+except:
+    pass
 
 # filter out some sqlalchemy warnings
 import warnings
