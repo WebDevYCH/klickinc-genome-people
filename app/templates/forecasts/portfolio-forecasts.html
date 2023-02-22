@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 
 {% block app_head %}
-<script src="/static/js/dhtmlxsuite.js"></script>
-<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
+<script src="/p/static/js/dhtmlxsuite.js"></script>
+<link href="/p/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
 {% endblock %}
 
 
@@ -81,8 +81,8 @@
     {% block yearcomboonchange %}
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
-        cstcombo.data.load('/forecasts/cst-list?year='+year);
-        clientcombo.data.load('/forecasts/client-list?year='+year);
+        cstcombo.data.load('/p/forecasts/cst-list?year='+year);
+        clientcombo.data.load('/p/forecasts/client-list?year='+year);
     }
     yearcombo.events.on("change", yearcomboonchange);
     setTimeout(yearcomboonchange, 0);

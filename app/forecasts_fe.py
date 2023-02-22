@@ -22,8 +22,8 @@ mdou_pct = 1.15
 ###################################################################
 ## LABOR FORECASTS FRONTEND PAGES
 
-# GET /forecasts/portfolio-forecasts
-@app.route('/forecasts/portfolio-forecasts')
+# GET /p/forecasts/portfolio-forecasts
+@app.route('/p/forecasts/portfolio-forecasts')
 @login_required
 def portfolio_forecasts():
     thisyear = datetime.date.today().year
@@ -37,8 +37,8 @@ def portfolio_forecasts():
         title='Portfolio Forecasts', 
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
-# GET /forecasts/portfolio-lr-forecasts
-@app.route('/forecasts/portfolio-lr-forecasts')
+# GET /p/forecasts/portfolio-lr-forecasts
+@app.route('/p/forecasts/portfolio-lr-forecasts')
 @login_required
 def portfolio_lr_forecasts():
     thisyear = datetime.date.today().year
@@ -52,8 +52,8 @@ def portfolio_lr_forecasts():
         title='Labor Role Forecasts by Portfolio', 
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
-# GET /forecasts/dept-lr-forecasts
-@app.route('/forecasts/dept-lr-forecasts')
+# GET /p/forecasts/dept-lr-forecasts
+@app.route('/p/forecasts/dept-lr-forecasts')
 @login_required
 def dept_lr_forecasts():
     thisyear = datetime.date.today().year
@@ -68,7 +68,7 @@ def dept_lr_forecasts():
         startyear=startyear, endyear=endyear, thisyear=thisyear)
 
 # GET /forecasts/portfolio-forecasts-data
-@app.route('/forecasts/portfolio-forecasts-data')
+@app.route('/p/forecasts/portfolio-forecasts-data')
 @login_required
 def portfolio_forecasts_data():
     year = int(request.args.get('year'))
@@ -82,8 +82,8 @@ def portfolio_forecasts_data():
     retval.sort(key=lambda x: x['name'])
     return retval
 
-# GET /forecasts/portfolio-lr-forecasts-data
-@app.route('/forecasts/portfolio-lr-forecasts-data')
+# GET /p/forecasts/portfolio-lr-forecasts-data
+@app.route('/p/forecasts/portfolio-lr-forecasts-data')
 @login_required
 def portfolio_forecasts_lr_data():
     year = int(request.args.get('year'))
@@ -96,7 +96,6 @@ def portfolio_forecasts_lr_data():
         bypfid = get_pfs(year, clients, csts, doactuals=False, dotargets=False) | get_plrfs(year, clients, csts, showsources=False)
         app.logger.info(f"portfolio_lr_forecasts_data minimized size: {len(bypfid)}")
 
-    # TODO: incorporate headcount
     # TODO: incorporate requisitions
 
     retval = list(bypfid.values())
@@ -104,8 +103,8 @@ def portfolio_forecasts_lr_data():
 
     return retval
 
-# GET /forecasts/dept-lr-forecasts-data
-@app.route('/forecasts/dept-lr-forecasts-data')
+# GET /p/forecasts/dept-lr-forecasts-data
+@app.route('/p/forecasts/dept-lr-forecasts-data')
 @login_required
 def dept_lr_forecasts_data():
     year = int(request.args.get('year'))
@@ -141,8 +140,8 @@ def dept_lr_forecasts_data():
     return retval
 
 
-# GET /forecasts/client-list
-@app.route('/forecasts/client-list')
+# GET /p/forecasts/client-list
+@app.route('/p/forecasts/client-list')
 @login_required
 def pf_client_list():
     year = int(request.args.get('year'))
@@ -156,8 +155,8 @@ def pf_client_list():
 
     return [{"id":c.clientid, "value":c.clientname } for c in clients]
 
-# GET /forecasts/cst-list
-@app.route('/forecasts/cst-list')
+# GET /p/forecasts/cst-list
+@app.route('/p/forecasts/cst-list')
 @login_required
 def pf_cst_list():
     year = int(request.args.get('year'))
@@ -173,8 +172,8 @@ def pf_cst_list():
     retval.sort(key=lambda x: x['value'])
     return retval
 
-# GET /forecasts/lrcat-list
-@app.route('/forecasts/lrcat-list')
+# GET /p/forecasts/lrcat-list
+@app.route('/p/forecasts/lrcat-list')
 @login_required
 def pf_lrcat_list():
     year = int(request.args.get('year'))
