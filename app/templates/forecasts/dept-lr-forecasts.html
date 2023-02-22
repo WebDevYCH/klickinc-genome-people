@@ -17,16 +17,6 @@
         rows: [
             { id: "yearcombo", width: "300px" },
             { id: "lrcatcombo", width: "300px" },
-            {
-                cols: [
-                    { id: "cstcombo", width: "300px" },
-                    { id: "or", html: "<i>or</i>", padding: "30px" },
-                    { id: "clientcombo", width: "600px" },
-                    { id: "blank", gravity: 100 },
-                ],
-                height: "content",
-                align: "left",
-            },
             { id: "checkboxformcontainer", html: '<form id="form"></form>' },
             { id: "note", html: "Numbers are in FTE ('Billable Allocation'), accounts for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. Numbers include full-time and contract, not freelance.</i>" },
             { id: "treegrid" },
@@ -51,14 +41,6 @@
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
         if (year == "") return;
-        cstcombo.data.removeAll();
-        cstcombo.data.load('/forecasts/cst-list?year='+year);
-        cstcombo.disable();
-        cstcombo.setValue('');
-        clientcombo.data.removeAll();
-        clientcombo.data.load('/forecasts/client-list?year='+year);
-        clientcombo.disable();
-        clientcombo.setValue('');
         lrcatcombo.data.removeAll();
         lrcatcombo.data.load('/forecasts/lrcat-list?year='+year);
         lrcatcombo.disable();
@@ -86,34 +68,6 @@
     layout.getCell("lrcatcombo").attach(lrcatcombo);
 
     ///////////////////////////////////////////////////////////////////////
-    // CST DROPDOWN
-    const cstcombo = new dhx.Combobox(null, {
-        multiselection: true,
-        label: "CST",
-    });
-    cstcombo.events.on("change", function(id) {
-        loadgrid();
-    });
-    cstcombo.data.events.on("load", function() {
-        cstcombo.enable();
-    });
-    layout.getCell("cstcombo").attach(cstcombo);
-
-    ///////////////////////////////////////////////////////////////////////
-    // CLIENT DROPDOWN
-    const clientcombo = new dhx.Combobox(null, {
-        multiselection: true,
-        label: "Division",
-    });
-    clientcombo.events.on("change", function(id) {
-        loadgrid();
-    });
-    clientcombo.data.events.on("load", function() {
-        clientcombo.enable();
-    });
-    layout.getCell("clientcombo").attach(clientcombo);
-
-    ///////////////////////////////////////////////////////////////////////
     // THE BIG TREEGRID
     treegridcelltemplate = function(text, row, col) {
         if (text && row.id == 'lcat') {
@@ -127,7 +81,7 @@
     }
 
     const emptydata = [];
-    const treegrid = new dhx.TreeGrid("grid", {
+    const treegrid = new dhx.Grid("grid", {
         autoWidth: true,
         autoHeight: true,
         resizable: true,
@@ -143,6 +97,7 @@
         thisyear = "{{thisyear}}";
         // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
         columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
+        //columns.push({ id: "id", gravity: 4, minWidth: 150, header: [{ text: "ID" }] });
         if (year == thisyear) {
             columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
             //columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
@@ -212,8 +167,6 @@
     loadgrid = function(id) {
         var year = yearcombo.getValue();
         var lrcat = lrcatcombo.getValue();
-        var csts = cstcombo.getValue();
-        var clients = clientcombo.getValue();
         var showportfolios = form.getItem("showportfolios").getValue();
         var showsources = form.getItem("showsources").getValue();
         var showyear = form.getItem("showyear").getValue();
@@ -222,12 +175,7 @@
         if (lrcat != "") {
             treegrid.data.removeAll();
             postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours+'&showlaborroles='+showlaborroles;
-            if (csts != "")
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&csts='+csts+postfix);
-            else if (clients != "")
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+'&clients='+clients+postfix);
-            else
-                treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+postfix);
+            treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+postfix);
             loading();
         }
     }

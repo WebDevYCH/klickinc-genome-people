@@ -127,16 +127,21 @@
                     </li>
                     {% endif %}
 
-                    <!-- 
+                    {% if current_user.has_roles('tmkt_frontend') %}
                     <li class="sidebar-header">
-                        Job Board
+                        Talent Marketplace
                     </li>
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="/tmkt/jobsearch">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Job Listings</span>
                         </a>
                     </li>
-                    -->
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/profile">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">My Skills Profile</span>
+                        </a>
+                    </li>
+                    {% endif %}
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
                     <li class="sidebar-header">
