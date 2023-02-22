@@ -35,16 +35,11 @@ def create_job_posting_object(request_form):
     job_posting.job_end_date = request_form['job_end_date']
     job_posting.cst = request_form['cst']
     job_posting.job_function = request_form['job_function']
-    if request_form['client']:
-        job_posting.client = request_form['client']
-    if request_form['brands']:
-        job_posting.brands = request_form['brands']
-    if request_form['project_id']:
-        job_posting.project_id = request_form['project_id']
-    if request_form['hiring_manager']:
-        job_posting.hiring_manager = request_form['hiring_manager']
-    if request_form['job_location']:
-        job_posting.job_location = request_form['job_location']
+    job_posting.client = request_form['client']
+    job_posting.brands = request_form['brands']
+    job_posting.project_id = request_form['project_id']
+    job_posting.hiring_manager = request_form['hiring_manager']
+    job_posting.job_location = request_form['job_location']
 
     return job_posting
 
@@ -185,9 +180,9 @@ def search_job_postings(categories = None, view = None):
         result_job['posted_date'] = job.posted_date.strftime("%Y-%m-%d")
         result_job['expiry_date'] = job.expiry_date.strftime("%Y-%m-%d")
         if job.job_start_date:
-       		result_job['job_start_date'] = job.job_start_date.strftime("%Y-%m-%d")
+            result_job['job_start_date'] = job.job_start_date.strftime("%Y-%m-%d")
         if job.job_end_date:
-        	result_job['job_end_date'] = job.job_end_date.strftime("%Y-%m-%d")
+            result_job['job_end_date'] = job.job_end_date.strftime("%Y-%m-%d")
         # add cosine similarity between job posting and user profile
         if profile and profile.resume_vector and job.job_posting_vector:
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
