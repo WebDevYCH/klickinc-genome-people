@@ -81,7 +81,7 @@
     }
 
     const emptydata = [];
-    const treegrid = new dhx.Grid("grid", {
+    const treegrid = new dhx.TreeGrid("grid", {
         autoWidth: true,
         autoHeight: true,
         resizable: true,
@@ -101,7 +101,7 @@
         if (year == thisyear) {
             columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
             //columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
-            columns.push({ id: "ba", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "FTE Now" }] });
+            columns.push({ id: "fte", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "FTE Now" }] });
         }
 
         datarow = treegrid.data.getItem('lcat')
@@ -172,7 +172,7 @@
         var showyear = form.getItem("showyear").getValue();
         var showhours = form.getItem("showhours").getValue();
         var showlaborroles = form.getItem("showlaborroles").getValue();
-        if (lrcat != "") {
+        if (lrcat != "" && lrcat != null) {
             treegrid.data.removeAll();
             postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours+'&showlaborroles='+showlaborroles;
             treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+postfix);
