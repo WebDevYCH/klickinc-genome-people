@@ -82,3 +82,15 @@ def skill_remove(id):
     db.session.commit()
     flash("Successfully removed")
     return redirect(url_for('resume_skills'))
+
+# GET /users
+@app.route('/users/user-list')
+@login_required
+def users():
+    users = db.session.query(User).\
+        filter(User.enabled).\
+        filter(User.isperson).\
+        order_by(User.lastname, User.firstname).\
+        all()
+    #return list of userids and first/last names
+    return [{"id": user.userid, "value": user.firstname + " " + user.lastname} for user in users]
