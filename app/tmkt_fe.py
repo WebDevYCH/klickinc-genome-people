@@ -7,6 +7,7 @@ from core import app
 from skills_core import *
 from flask_login import current_user
 from flask import render_template, request, flash
+import jsonpickle
 
 from tmkt_core import *
 
@@ -21,8 +22,19 @@ def postjob():
 
     # save job posting
     flash(save_job_posting(job_posting))
-
-    return job_posting
+    
+    today = date.today()
+    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
+    job_posting.expiry_sort = (d1 - d2).days
+    job_posting.expiry_day = abs(job_posting.expiry_sort)
+    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
+    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
+    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
+    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
+    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
+    
+    return jsonpickle.encode(job_posting)  
 
 @app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
@@ -32,8 +44,20 @@ def editjob():
 
     # save job posting
     flash(save_job_posting(job_posting))
-
-    return job_posting
+    
+    today = date.today()
+    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
+    
+    job_posting.expiry_sort = (d1 - d2).days
+    job_posting.expiry_day = abs(job_posting.expiry_sort)
+    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
+    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
+    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
+    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
+    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
+    
+    return jsonpickle.encode(job_posting) 
 
 @app.route("/tmkt/jobsearch")
 @app.route("/tmkt/jobsearch/<view>")

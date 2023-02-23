@@ -3,15 +3,35 @@
 /*                           Selectors and Variables                          */
 /* -------------------------------------------------------------------------- */
 const textSearchInput = document.querySelector("#text_search");
-const jobTitleSelect = document.querySelector("#job-title-select");
-const datePostedSelect = document.querySelector("#date-posted-select");
+const jobTitleSelect = document.querySelector("#job_title_select");
+const datePostedSelect = document.querySelector("#date_posted_select");
 const createJobBtn = document.querySelector("#create-job-btn");
+const clientSearchInput = document.querySelector("#client_search");
+const brandsSearchInput = document.querySelector("#brands_search");
+const sortBySelect = document.querySelector("#sort_by_select");
 
 var editorContainer; // this.form-editor-container is set in openJobFormModal() for setting classes
 var editorInput; // this #quill-editor is set in openJobFormModal() for event listeners
 
 const JOB_MODE = { create: "Create", edit: "Edit" }; // job form mode
 var jobFormMode = JOB_MODE.create; // flag to determine if the form is in create or edit mode
+
+/* ----------------------- Set up comboboxes in filter ---------------------- */
+const cstFilterCombo = new dhx.Combobox("cst_filter_select", {
+    multiselection: true,
+    data: csts,
+	placeholder: "All CSTs",
+	label: "CSTs",
+	helpMessage: "Text search for CSTs (allow multiple selections)",
+});
+
+const jobFxnFilterCombo = new dhx.Combobox("job_function_select", {
+    multiselection: true,
+    data: jobfunctions,
+	label: "Job Functions",
+	helpMessage: "Text search for job function (allow multiple selections)",
+	placeholder: "All job functions",
+});
 
 /* -------------------------------------------------------------------------- */
 /*                               Event Listeners                              */
@@ -20,17 +40,26 @@ createJobBtn.addEventListener("click", function () {
 	jobFormMode = JOB_MODE.create;
 	openJobFormModal(0);
 });
-textSearchInput.addEventListener("keyup", function () {
+
+jobFxnFilterCombo.events.on("change", function () {
 	filterJobList();
 });
-jobTitleSelect.addEventListener("change", function () {
-	filterJobList();
-});
-datePostedSelect.addEventListener("change", function () {
+cstFilterCombo.events.on("change", function () {
 	filterJobList();
 });
 
-
+// handle javascript events for filter inputs and selects
+function handleFilterEvent(element, event) {
+	element.addEventListener(event, function () {
+		filterJobList();
+	});
+}
+handleFilterEvent(textSearchInput, "keyup");
+handleFilterEvent(brandsSearchInput, "keyup");
+handleFilterEvent(clientSearchInput, "keyup");
+handleFilterEvent(jobTitleSelect, "change");
+handleFilterEvent(datePostedSelect, "change");
+handleFilterEvent(sortBySelect, "change");
 /* -------------------------------------------------------------------------- */
 /*                                  Job List                                  */
 /* -------------------------------------------------------------------------- */
@@ -110,9 +139,12 @@ function jobListTemplate(job) {
 								
 								
 							</div>
-							<div class="other-info">
-								`+ job.job_posting_skills.join(', ') +`
-							</div>
+							`+ (job.job_posting_skills ?
+								`<div class="other-info">
+									`+ job.job_posting_skills.join(', ') +`
+								</div>`
+								:'') 
+							+`
 						</div>
 					</div>
 				</div>
@@ -187,6 +219,10 @@ const jobList = new dhx.List("jobListView", {
 });
 
 jobList.data.parse(jobs);
+jobList.data.sort({
+    by: "posted_date",
+    dir: "desc"
+});
 
 /* -------------------------------------------------------------------------- */
 /*                         Job Posting Form and Modal                         */
@@ -441,6 +477,7 @@ const editForm = new dhx.Form(null, jobFormConfig);
 // pressing the Submit button will get all data of the form, update data of the edited item, and close the editing form
 editForm.getItem("submit-posting-btn").events.on("click", function () {
 
+	
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
 	const url = jobFormMode == JOB_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
@@ -452,9 +489,20 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 		type: 'POST',
 		url: url,
 		data: jobData,
-		success: function() {
+		success: function(data) {
+			let parseData = JSON.parse(data)
+			parseData.id = jobData.id;
+
+			if(jobFormMode == JOB_MODE.edit) {
+				jobList.data.update(jobData.id, parseData);
+			} else {
+				jobList.data.add(parseData);
+			}
+			jobList.data.sort({
+				by: "posted_date",
+				dir: "desc"
+			});
 			unloading();
-			window.location.href = '/tmkt/jobsearch';
 		}
 	});
 	closeModal(editForm, editJobFormModal);
@@ -616,7 +664,7 @@ function openApplyFormModal(id) {
 
 const applyJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(500).height,
+	height: getWindowSize(560).height,
 	title: "Apply",
 	modal: true
 });
@@ -644,7 +692,7 @@ const applyFormConfig = {
 			required: true,
 			labelPosition: "top",
 			height: "150px",
-			errorMessage: "Comments are required",
+			errorMessage: "Brief description is required",
 			validation: function(value) {
 				return value && value != "";
 			},
@@ -656,11 +704,41 @@ const applyFormConfig = {
 			label: "Do you have the required skills or experience outlined in the job posting? This can include work outside of Klick",
 			required: true,
 			labelPosition: "top",
-			errorMessage: "Comments are required",
+			errorMessage: "Skills or experience are required",
 			validation: function(value) {
 				return value && value != "";
 			},
 		},
+		{
+            name: "worked_with_brand",
+            type: "radioGroup",
+			labelPosition: "left",
+            required: true,
+            label: "Have you worked with this brand before?",
+			errorMessage: "Please select an option",
+			validation: function(value) {
+				return value && value != "";
+			},
+            options: {
+                rows: [
+                    {
+                        type: "radioButton",
+                        text: "Yes, at Klick or Katalyst",
+                        value: "Yes, at Klick or Katalyst",
+                    },
+                    {
+                        type: "radioButton",
+                        text: "Yes, before joining Klick",
+                        value: "Yes, before joining Klick"
+                    },
+					{
+                        type: "radioButton",
+                        text: "No",
+                        value: "No"
+                    },
+                ]
+            },
+        },
 		{
 			align: "end",
 			css: "form-btns-container",
@@ -822,18 +900,50 @@ function filterJobList() {
 	const title = jobTitleSelect.value.toLowerCase();
 	const text = textSearchInput.value.toLowerCase();
 	const datePosted = datePostedSelect.value;
+	const jobFunction = jobFxnFilterCombo.getValue();
+	const cst = cstFilterCombo.getValue();
+	const client = clientSearchInput.value.toLowerCase();
+	const brand = brandsSearchInput.value.toLowerCase();
+	const sortBy = sortBySelect.value;
 
+	const today = new Date();
 	let filteredList = jobs.filter(function(item) {
-		const today = new Date();
+		
 		const timeDiff = today.getTime() - new Date(item.posted_date).getTime();
 		const diffDays = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
+		
+		// TODO: update client and brand filter because there is no null record on prod
 		return (
 			(item.title.toLowerCase().includes(text) || item.description.toLowerCase().includes(text)) &&
 			(item.title.toLowerCase().includes(title)) &&
-			(diffDays <= datePosted || datePosted == 0)
+			(diffDays <= datePosted || datePosted == 0) &&
+			(jobFunction.includes(item.job_function) || jobFunction.length == 0) &&
+			(cst.includes(item.cst) || cst.length == 0) &&
+			(item.client?.toLowerCase().includes(client) || client == "") &&
+			(item.brands?.toLowerCase().includes(brand) || brand == "")
 		);
 	});
-	
+
 	jobList.data.parse(filteredList);
+
+	// TODO: update sort by with skills match once skills are added
+	let sortByField = "posted_date";
+	let sortDir = "desc";
+	if(sortBy == "least recent"){
+		sortByField = "posted_date";
+		sortDir = "asc";
+	}else if(sortBy == "start date"){
+		jobList.data.sort({
+			rule: function (a, b) {
+				return new Date(a.job_start_date) - new Date(b.job_start_date);
+			}
+		});
+	}
+
+	if(sortBy != "start date"){
+		jobList.data.sort({
+			by: sortByField,
+			dir: sortDir
+		});
+	}
 }

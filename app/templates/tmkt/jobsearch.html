@@ -13,11 +13,20 @@
     <a href="#" class="float-end text-decoration-underline ms-3" id="create-job-btn">Create a Job</a>
     <!--<a href="#" class="float-end text-decoration-underline ms-3" id="available-people-btn" data-bs-toggle="modal" data-bs-target="#available_people_modal">View Available People</a>-->
 </p>
-
-<div class="row">
-	<div class="form-group col-lg-2 col-md-3 mb-3">
-		<label for="date-posted-select">Date Posted</label>
-		<select id="date-posted-select" class="form-select" aria-label="select date posted">
+<div class="row filter-container">
+	<div class="form-group col-lg-2 col-md-4 mb-3">
+		<label for="sort_by_select">Sort By</label>
+		<select id="sort_by_select" class="form-select" aria-label="select sort by">
+			<option value="all" selected>All</option>
+			<option value="most recent">Most recent</option>
+			<option value="least recent">Least recent</option>
+			<option value="start date">Job start date</option>
+			<!--<option value="skills match">Skills matched</option>-->
+		</select>
+	</div>
+	<div class="form-group col-lg-2 col-md-4 mb-3">
+		<label for="date_posted_select">Date Posted</label>
+		<select id="date_posted_select" class="form-select" aria-label="select date posted">
 			<option value="0" selected>All</option>
 			<option value="1">Past 24 hours</option>
 			<option value="3">Past 3 days</option>
@@ -25,20 +34,42 @@
 			<option value="30">Past 30 days</option>
 		</select>
 	</div>
-	<div class="form-group col-lg-3 col-md-3 mb-3">
-		<label for="job-title-select">Job Title</label>
-		<select id="job-title-select" class="form-select" aria-label="select job title">
+	<div class="form-group col-lg-3 col-md-4 mb-3">
+		<label for="job_title_select">Job Title</label>
+		<select id="job_title_select" class="form-select" aria-label="select job title">
 			<option value="" selected>All</option>
 			{% for title in titles %}
 			<option value={{ title.name }}>{{ title.name }}</option>
 			{% endfor %}	
 		</select>
 	</div>	
-	<div class="form-group col-lg-4 offset-lg-3 col-md-6 mb-3">
+	<div class="form-group col-lg-3 col-md-8 mb-3">
 		<label for="text_search">Search</label>
-		<input type="text" id="text_search" class="form-control" placeholder="Find in title and description" aria-label="Search">
+		<input type="text" id="text_search" class="form-control" placeholder="Search title and description" aria-label="search title and description">
 	</div>
-</div>	
+	<div class="col-lg-2 col-md-4 mb-3 d-flex align-items-end">
+		<button id="advance_search_btn" class="btn btn-primary ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#advance-search-container" aria-expanded="false" aria-controls="advance-search-container">
+			Advance Search
+	  </button>
+	</div>
+</div>
+<div class="row collapse filter-container" id="advance-search-container">
+	<div class="form-group col-lg-3 mb-3">
+		<div id="cst_filter_select" class=""></div>
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<div id="job_function_select" class=""></div>
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<label for="client_search">Client</label>
+		<input type="text" id="client_search" class="form-control" placeholder="Search client" aria-label="Search client">
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<label for="brands_search">Brands</label>
+		<input type="text" id="brands_search" class="form-control" placeholder="Search brands" aria-label="Search brands">
+	</div>
+</div>		
+
 <div class="row">
 	<div class="accordion accordion-flush col-12" id="jobListAccordion">
 		<div id="jobListView" class="col-12"></div>
