@@ -1,14 +1,14 @@
 
 {% extends "base.html" %}
 {% block app_head %}
-<script src="/static/js/dhtmlxsuite.js"></script>
-<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
+<script src="/p/static/js/dhtmlxsuite.js"></script>
+<link href="/p/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
 {% endblock %}
 {% block app_content %}
 
 <!-- Latest compiled and minified Bootstrap CSS -->
 <div class="d-flex justify-content-end">
-    <a class="text-dark float-end" href="/profile"><i class="fa fa-arrow-left"></i> Profile Page</a>
+    <a class="text-dark float-end" href="/p/profile"><i class="fa fa-arrow-left"></i> Profile Page</a>
 </div>
 <div class="skill-edit-page">
     <div class="card">
@@ -29,7 +29,7 @@
                 <tr>
                     <td>{{ skill.name }}</td>
                     <td>
-                        <a href="/profile/skill-edit/delete/{{ skill.id }}" class="btn btn-sm btn-danger">
+                        <a href="/p/profile/skill-edit/delete/{{ skill.id }}" class="btn btn-sm btn-danger">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>
@@ -52,7 +52,7 @@
     label: "Skills",
     });
     pcombo.disable()
-    pcombo.data.load('/profile/total-skills-data').then(function() {
+    pcombo.data.load('/p/profile/total-skills-data').then(function() {
         pcombo.enable()
         pcombo.focus()
     });
@@ -62,7 +62,7 @@
         if (newSkills != "") {
             $.ajax({
                 method: "POST",
-                url: "/profile/skill-add",
+                url: "/p/profile/skill-add",
                 data: {
                     newSkills
                 },

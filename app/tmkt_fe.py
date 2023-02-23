@@ -13,7 +13,7 @@ from tmkt_core import *
 ###################################################################
 ## FRONTEND
 
-@app.route('/tmkt/postjob', methods=['GET', 'POST'])
+@app.route('/p/tmkt/postjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
     title = request.form['title']
@@ -40,7 +40,7 @@ def postjob():
 
     return redirect(url_for('jobsearch'))
 
-@app.route('/tmkt/editjob', methods=['GET', 'POST'])
+@app.route('/p/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
 def editjob():
     title = request.form['title']
@@ -65,7 +65,7 @@ def editjob():
     db.session.commit()
     return redirect(url_for('jobsearch'))
 
-@app.route('/tmkt/jobsearch', methods=['GET', 'POST'])
+@app.route('/p/tmkt/jobsearch', methods=['GET', 'POST'])
 @login_required
 def jobsearch():
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
@@ -155,7 +155,7 @@ def jobsearch():
             
     return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions)
 
-@app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
+@app.route('/p/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
 def searchpeople():
     cst =  request.form['cst']
@@ -171,7 +171,7 @@ def searchpeople():
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 
-@app.route('/tmkt/applyjob', methods=['GET', 'POST'])
+@app.route('/p/tmkt/applyjob', methods=['GET', 'POST'])
 @login_required
 def applyjob():
     jobpostingid = request.form['job_posting_id']
@@ -184,7 +184,7 @@ def applyjob():
 
     return "Applied!"
 
-@app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
+@app.route('/p/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
 def getapplicants():
     jobpostingid = request.form['job_posting_id']
@@ -203,7 +203,7 @@ def getapplicants():
             dictB['applied_date'] = 'Yesterday'
         apply_data.append(dictB)
     return json.dumps(apply_data)
-@app.route('/tmkt/setusersetting', methods=['GET', 'POST'])
+@app.route('/p/tmkt/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():
     userId = request.form['userId']
@@ -214,7 +214,7 @@ def setusersetting():
     db.session.commit()
     return user_Available
 
-@app.route('/tmkt/closepost', methods=['GET', 'POST'])
+@app.route('/p/tmkt/closepost', methods=['GET', 'POST'])
 @login_required
 def closepost():
     userId = request.form['userId']
@@ -223,7 +223,7 @@ def closepost():
     db.session.commit()
     return userId
 
-@app.route('/tmkt/cancelapplication', methods=['GET', 'POST'])
+@app.route('/p/tmkt/cancelapplication', methods=['GET', 'POST'])
 @login_required
 def cancelapplication():
     userId = request.form['userId']

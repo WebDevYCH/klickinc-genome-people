@@ -33,7 +33,7 @@
                 <div class="row">
                     <div class="d-flex justify-content-between">
                         <h5 class="h6 card-title">Skills</h5>
-                        <a href="/profile/edit-skills" class="btn btn-sm btn-secondary">
+                        <a href="/p/profile/edit-skills" class="btn btn-sm btn-secondary">
                             <i class="fas fa-edit"></i>
                         </a>
                     </div>
@@ -154,7 +154,7 @@
         $("#edit_resume_modal").modal('hide')
         $.ajax({
             type: "POST",
-            url: '/profile',
+            url: '/p/profile',
             data: {
                 resume: resume
             },

@@ -441,6 +441,7 @@ def model_actuals():
 
     sourcename = 'actuals'
     startyear = datetime.date.today().year - 2
+    thismonth = datetime.date.today().month
 
     loglines.append("querying Genome BQ model")
     # query the CI-selected portfolios view in BigQuery
@@ -456,7 +457,7 @@ def model_actuals():
     inner join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.portfolio=p.portfolio
     inner join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
     inner join `genome-datalake-prod.GenomeDW.Project` pr on fact.project=pr.project
-    where year >= {startyear} and pr.Billable=true and fact.LaborRole != 'None'
+    where year >= {startyear} and month < {thismonth} and pr.Billable=true and fact.LaborRole != 'None'
     group by
     p.AccountPortfolioID, fact.LaborRole, d.Year, d.Month
     """)
