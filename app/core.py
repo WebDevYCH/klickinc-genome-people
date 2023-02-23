@@ -57,7 +57,7 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
-admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView(), url='/p/admin')
+admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView(url='/p/admin'), url='/p/admin')
 
 # Customized admin/crud interfaces ensure there's at least basic authentication and permissions
 class AdminModelView(ModelView):
