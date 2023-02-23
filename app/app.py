@@ -16,7 +16,7 @@ import forecasts_fe
 import forecasts_be
 import tmkt_fe
 import tmkt_be
-import myprofile
+import profile_fe as profile_fe
 import skills
 import survey
 import chat

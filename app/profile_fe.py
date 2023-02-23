@@ -7,13 +7,9 @@ from skills_core import *
 from profile_core import *
 
 @app.route('/profile', methods=['GET', 'POST'])
+@app.route('/profile/<selected_user_id>', methods=['GET'])
 @login_required
-def profile():
-    # attempt to find existing profile
-    try:
-        profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
-    except:
-        profile = None
+def profile(selected_user_id = None):
 
     result = None
     if request.method == "POST":
@@ -27,10 +23,24 @@ def profile():
         # flash results message
         if result:
             flash(result)
-
-    # if there is no profile, flash a message
-    if not profile:
-        flash("Unable to find an existing profile, please create one by uploading a resume")
+    else:
+        if selected_user_id:
+            # get user profile from user_id passed in url
+            try:
+                profile = db.session.query(UserProfile).filter(UserProfile.user_id==selected_user_id).one()
+            except:
+                profile = None
+                result = "Unable to find an existing profile for user id: " + selected_user_id
+        else:
+            # attempt to find current user's profile
+            try:
+                profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+            except:
+                profile = None
+                result = "Unable to find an existing profile, please create one by uploading a resume"
+        # if there is no profile, flash a message
+        if not profile:
+            flash(result)
 
     # attempt to find existing skills
     try:
