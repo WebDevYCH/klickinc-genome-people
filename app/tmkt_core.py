@@ -5,6 +5,7 @@ from model import *
 from skills_core import *
 from flask import render_template, request
 from prompt_core import *
+import jsonpickle
 
 # create job_posting object from request.form
 def create_job_posting_object(request_form):
@@ -71,18 +72,20 @@ def save_job_posting(job_posting, update_skills = True):
 
     return result_msg
 
-# get job posting application function
-def get_job_posting_application(job_posting_id=None, user_id=None, include_cancelled = False):
-    filters = []
-    if job_posting_id:
-        filters.append(JobPostingApplication.job_posting_id==job_posting_id)
-    if user_id:
-        filters.append(JobPostingApplication.user_id==user_id)
-    
-    if not include_cancelled:
-        filters.append(JobPostingApplication.cancelled_date == None)
-    
-    return db.session.query(JobPostingApplication).filter(*filters)
+# make job_posting object ready to return to FE
+def clean_job_posting_object(job_posting):
+    today = date.today()
+    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
+    job_posting.expiry_sort = (d1 - d2).days
+    job_posting.expiry_day = abs(job_posting.expiry_sort)
+    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
+    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
+    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
+    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
+    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
+
+    return jsonpickle.encode(job_posting)
 
 # generic function to do job search
 def search_job_postings(categories = None, view = None):
@@ -172,3 +175,23 @@ def search_job_postings(categories = None, view = None):
     result.sort(key=lambda x: (x.get('similarity', 0), x.get('expiry_sort', 0)), reverse=True)
 
     return result
+
+# get job posting application function
+def get_job_posting_application(job_posting_id=None, user_id=None, include_cancelled = False):
+    filters = []
+    if job_posting_id:
+        filters.append(JobPostingApplication.job_posting_id==job_posting_id)
+    if user_id:
+        filters.append(JobPostingApplication.user_id==user_id)
+    
+    if not include_cancelled:
+        filters.append(JobPostingApplication.cancelled_date == None)
+    
+    return db.session.query(JobPostingApplication).filter(*filters)
+
+# clean job_application object
+def clean_job_application(job_application):
+    job_application.applied_date = job_application.applied_date.strftime("%Y-%m-%d")
+    job_application.cancelled_date = job_application.cancelled_date.strftime("%Y-%m-%d")
+
+    return jsonpickle.encode(job_application)

@@ -7,7 +7,6 @@ from core import app
 from skills_core import *
 from flask_login import current_user
 from flask import render_template, request, flash
-import jsonpickle
 
 from tmkt_core import *
 
@@ -15,6 +14,7 @@ from tmkt_core import *
 ## FRONTEND
 
 @app.route('/tmkt/postjob', methods=['GET', 'POST'])
+@app.route('/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
     # create job_posting object
@@ -23,46 +23,7 @@ def postjob():
     # save job posting
     flash(save_job_posting(job_posting))
     
-    # TODO: need to add job_posting_skills, apply, and similarity
-    # TODO: update to return json without using jsonpickle?
-    today = date.today()
-    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
-    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
-    
-    job_posting.expiry_sort = (d1 - d2).days
-    job_posting.expiry_day = abs(job_posting.expiry_sort)
-    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
-    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
-    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
-    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
-    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
-    
-    return jsonpickle.encode(job_posting)  
-
-@app.route('/tmkt/editjob', methods=['GET', 'POST'])
-@login_required
-def editjob():
-    # create job_posting object
-    job_posting = create_job_posting_object(request.form)
-
-    # save job posting
-    flash(save_job_posting(job_posting))
-    
-    # TODO: need to add job_posting_skills, apply, and similarity
-    # TODO: update to return json without using jsonpickle?
-    today = date.today()
-    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
-    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
-    
-    job_posting.expiry_sort = (d1 - d2).days
-    job_posting.expiry_day = abs(job_posting.expiry_sort)
-    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
-    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
-    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
-    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
-    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
-    
-    return jsonpickle.encode(job_posting) 
+    return clean_job_posting_object(job_posting)
 
 @app.route("/tmkt/jobsearch")
 @app.route("/tmkt/jobsearch/<view>")
@@ -115,9 +76,7 @@ def applyjob():
     job_application.comments = request.form['comments']
     job_application.skills = request.form['skills']
     job_application.available = 1
-
-    # new fields to be added once FE has been developed
-    # apply_job.worked_with_brand = request.form['worked_with_brand']
+    job_application.worked_with_brand = request.form['worked_with_brand']
 
     try:
         if not job_application.id:
@@ -127,7 +86,7 @@ def applyjob():
     except Exception as e:
         flash(f"Error applying to job posting: {e}")
 
-    return job_application
+    return clean_job_application(job_application)
 
 @app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
@@ -176,7 +135,7 @@ def closepost():
     else:
         flash('Error closing job posting, no job posting found')
 
-    return job_posting
+    return clean_job_posting_object(job_posting)
 
 @app.route('/tmkt/cancelapplication', methods=['POST'])
 @login_required
@@ -195,4 +154,4 @@ def cancelapplication():
     else:
         flash('Error cancelling application, no application found')
 
-    return job_application
+    return clean_job_application(job_application)
