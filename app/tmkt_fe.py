@@ -23,9 +23,12 @@ def postjob():
     # save job posting
     flash(save_job_posting(job_posting))
     
+    # TODO: need to add job_posting_skills, apply, and similarity
+    # TODO: update to return json without using jsonpickle?
     today = date.today()
     d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
     d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
+    
     job_posting.expiry_sort = (d1 - d2).days
     job_posting.expiry_day = abs(job_posting.expiry_sort)
     job_posting.posted_for = abs((today-job_posting.posted_date).days) 
@@ -45,6 +48,8 @@ def editjob():
     # save job posting
     flash(save_job_posting(job_posting))
     
+    # TODO: need to add job_posting_skills, apply, and similarity
+    # TODO: update to return json without using jsonpickle?
     today = date.today()
     d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
     d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")

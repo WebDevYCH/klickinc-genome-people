@@ -67,7 +67,7 @@ handleFilterEvent(sortBySelect, "change");
 function jobListTemplate(job) {
 	let expiredOrRemoved = job.removed_date || job.expiry_date < new Date().toISOString().slice(0, 10);
 	let status;
-	if (expiredOrRemoved) { status = job.removed_date ? "Posting Closed" : "Expired"; }
+	if (expiredOrRemoved) { status = job.removed_date ? "Post closed" : "Post expired"; }
 
 	let template = `
 		<div class="accordion-item  job-card mb-2">
@@ -85,7 +85,7 @@ function jobListTemplate(job) {
 							</div>
 							` + (expiredOrRemoved 
 								? `<span class="text-muted"><i>`+ status +`</i></span>`  
-								: `<span class="text-muted"><i>`+(job.posted_for > 1 ? job.posted_for + ` Days Ago`: (job.posted_for == 0 ? `Today` : `1 Day Ago` )) +`</i></span>` ) +`
+								: `<span class="text-muted"><i>Posted `+(job.posted_for > 1 ? job.posted_for + ` days ago`: (job.posted_for == 0 ? `today` : `1 day ago` )) +`</i></span>` ) +`
 							</div>
 						<div class="card-subtitle show-on-collapse text-muted text-truncate">` + job.description.replace(/<[^>]+>/g, '') + `</div>
 						<div class="text-muted no-show-on-collapse align-items-center">
@@ -229,6 +229,7 @@ jobList.data.sort({
 /* -------------------------------------------------------------------------- */
 const jobFormConfig = {
 	padding: 0,
+	css: "job-form",
 	rows: [
 		{
 			id: "id",
@@ -301,7 +302,7 @@ const jobFormConfig = {
 					name: "job_function",
 					type: "combo",
 					width: "50%",
-					label: "Job Functions",
+					label: "Job Function",
 					itemHeight: "auto",
 					errorMessage: "Job function must be selected",
 					validation: function(value) {
@@ -477,7 +478,6 @@ const editForm = new dhx.Form(null, jobFormConfig);
 // pressing the Submit button will get all data of the form, update data of the edited item, and close the editing form
 editForm.getItem("submit-posting-btn").events.on("click", function () {
 
-	
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
 	const url = jobFormMode == JOB_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
