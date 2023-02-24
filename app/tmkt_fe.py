@@ -6,7 +6,7 @@ from model import *
 from core import app
 from skills_core import *
 from flask_login import current_user
-from flask import render_template, request, flash
+from flask import render_template, request, flash, jsonify
 
 from tmkt_core import *
 
@@ -82,11 +82,10 @@ def applyjob():
         if not job_application.id:
             db.session.add(job_application)
         db.session.commit()
-        flash("Successfully applied to job posting")
     except Exception as e:
-        flash(f"Error applying to job posting: {e}")
+        return jsonify({"message": e,}), 500
 
-    return clean_job_application(job_application)
+    return "Success", 200
 
 @app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
@@ -129,11 +128,10 @@ def closepost():
         try:
             job_posting.removed_date = date.today()
             db.session.commit()
-            flash("Successfully closed job posting")
         except Exception as e:
-            flash(f"Error closing job posting: {e}")
+            return jsonify({"message": e,}), 500
     else:
-        flash('Error closing job posting, no job posting found')
+        return jsonify({"message": "Error closing job posting, no job posting found",}), 400
 
     return clean_job_posting_object(job_posting)
 
@@ -148,10 +146,9 @@ def cancelapplication():
         try:
             job_application.cancelled_date = date.today()
             db.session.commit()
-            flash("Successfully cancelled job application")
         except Exception as e:
-            flash(f"Error cancelling job application: {e}")
+            return jsonify({"message": e,}), 500
     else:
-        flash('Error cancelling application, no application found')
+        return jsonify({"message": "Error cancelling application, no application found",}), 400
 
     return clean_job_application(job_application)

@@ -1,4 +1,3 @@
-
 /* -------------------------------------------------------------------------- */
 /*                           Selectors and Variables                          */
 /* -------------------------------------------------------------------------- */
@@ -200,19 +199,19 @@ const jobList = new dhx.List("jobListView", {
 		},
 		onmouseout: {
 			job_form_btn: function(event) {
-				setAccordionCollapse(event, true);
+				setAccordionCollapse(event);
 			},
 			apply_job_btn: function(event) {
-				setAccordionCollapse(event, true);
+				setAccordionCollapse(event);
 			},
 			close_post_btn: function(event) {
-				setAccordionCollapse(event, true);
+				setAccordionCollapse(event);
 			},
 			cancel_application_btn: function(event) {
-				setAccordionCollapse(event, true);
+				setAccordionCollapse(event);
 			},
 			view_applicants_btn: function(event) {
-				setAccordionCollapse(event, true);
+				setAccordionCollapse(event);
 			},
 		},
 	}
@@ -481,28 +480,36 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
 	const url = jobFormMode == JOB_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
-	
+
 	var jobData = editForm.getValue();
 	jobData.description = editor.root.innerHTML;
 
+	let toastMsg = "Job posting updated successfully";
+	let toastType = "success";
 	$.ajax({
 		type: 'POST',
 		url: url,
 		data: jobData,
 		success: function(data) {
-			let parseData = JSON.parse(data)
-			parseData.id = jobData.id;
-
+			let parseData = JSON.parse(data);
 			if(jobFormMode == JOB_MODE.edit) {
-				jobList.data.update(jobData.id, parseData);
+				jobList.data.update(parseData.id, parseData);
 			} else {
 				jobList.data.add(parseData);
+				toastMsg = "Job posting created successfully";
 			}
 			jobList.data.sort({
 				by: "posted_date",
 				dir: "desc"
 			});
+		},
+		error: function(err) {
+			toastType = "error";
+			toastMsg = err.responseJSON?.message || "An error occurred while posting job. Please try again later.";
+		},
+		complete: function() {
 			unloading();
+			showToast(toastType, toastMsg);
 		}
 	});
 	closeModal(editForm, editJobFormModal);
@@ -537,8 +544,11 @@ validateDateOnBlur("job_end_date");
 validateDateOnBlur("expiry_date");
 validateDateOnBlur("job_start_date");
 
-// check if the description is valid and add or remove the error class manually 
-// (because the dhtmlx Form does not support Quill editor)
+/**
+ * check if the description is valid and add or remove the error class manually 
+ * (because the dhtmlx Form does not support Quill editor)
+ * @returns {boolean} true if the description is valid, false otherwise
+ */
 function isValidDescription() {
 	if(editor.root.innerHTML == "" || editor.root.innerHTML == "<p><br></p>"){
 		editorContainer.classList.add("dhx_form-group--state_error");
@@ -553,15 +563,19 @@ function isValidDescription() {
 
 const editJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(920).height,
+	height: getWindowSize(960).height,
 	title: "Edit Job Posting",
 	modal: true
 });
 
 let isEditorInitialized = false; //editor can be initialized only once
 let editor; // quill editor
-// initializing the function that opens the editing form 
-// and fills the form fields with the data of the item
+
+/**
+ * open the editing form, clear the form, and fill the form fields with the data of the item (if the item is not null) 
+ * initialize the editor if it is not initialized yet (only once between url refresh)
+ * @param id the id of the item to be edited or 0 if the item is new
+ */
 function openJobFormModal(id) {
 	editJobFormModal.show();
 
@@ -585,7 +599,7 @@ function openJobFormModal(id) {
 
 	const item = jobList.data.getItem(id);
 	editJobFormModal.header.data.update("title", { value: jobFormMode + " Job Posting" } );
-	editForm.clear();
+	editForm.clear(); // clear the form data from cache
 	if (item) {
 		editor.root.innerHTML = item.description;
 		editForm.setValue(item);
@@ -617,9 +631,15 @@ function closePostConfirm(id) {
 				url: "/tmkt/closepost",
 				method: "POST",
 				data: {id: id},
-				success: function(response) {
+				success: function(data) {
+					let parseData = JSON.parse(data);
+					jobList.data.update(parseData.id, parseData);
 					unloading();
-					window.location.href = '/tmkt/jobsearch';
+					showToast("success", "Job posting closed successfully.");
+				},
+				error: function(err) {
+					unloading();
+					showToast("error", err.responseJSON?.message || "An error occurred while closing job posting.");
 				}
 			})
 		 } 
@@ -633,16 +653,24 @@ function cancelApplicationConfirm(id) {
 		header: "Cancel Job Application",
 		text: "Are you sure you want to cancel this job application for " + item.title + "?",
 		buttons: ["Cancel", "Proceed"],
-	}).then(function (res) {
-		 if (res) {
+	}).then(function (proceed) {
+		 if (proceed) {
 			loading();
 			$.ajax({
 				url: "/tmkt/cancelapplication",
 				method: "POST",
 				data: {id: id},
 				success: function() {
+					jobList.data.update(id, {apply: 0});
+					if(window.location.pathname.includes("/jobsearch/applied")) {
+						jobList.data.remove(id);
+					}
 					unloading();
-					window.location.href = '/tmkt/jobsearch';
+					showToast("success", "Application cancelled successfully!");
+				},
+				error: function(err) {
+					unloading();
+					showToast("error", err.responseJSON?.message || "An error occurred while cancelling the application.");
 				}
 			})
 		 } 
@@ -664,7 +692,7 @@ function openApplyFormModal(id) {
 
 const applyJobFormModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(560).height,
+	height: getWindowSize(600).height,
 	title: "Apply",
 	modal: true
 });
@@ -750,6 +778,7 @@ const applyFormConfig = {
 					view: "link",
 					size: "medium",
 					color: "primary",
+					css: "me-1"
 				},
 				{
 					id: "submit-apply-btn",
@@ -778,8 +807,13 @@ applyForm.getItem("submit-apply-btn").events.on("click", function () {
 		method: "POST",
 		data: data,
 		success: function() {
+			jobList.data.update(data.id, {apply: 1});
 			unloading();
-			window.location.href = '/tmkt/jobsearch';
+			showAlert("Your Application Has Been Submitted", "You can review all submitted applications and their status in the 'Applied Jobs' section of Job Board.");
+		},
+		error: function(err) {
+			unloading();
+			showToast("Error", err.responseJSON?.message || "An error occurred while submitting your application. Please try again later.");
 		}
 	});
 	closeModal(applyForm, applyJobFormModal);
@@ -847,7 +881,7 @@ function openApplicantsModal(id) {
 
 const viewApplicantsModal = new dhx.Window({
 	width: getWindowSize().width,
-	height: getWindowSize(500).height,
+	height: getWindowSize(540).height,
 	title: "View Applicants",
 	modal: true
 });
@@ -864,7 +898,12 @@ function closeModal(form, modal) {
 	modal.hide();
 }
 
-// return the window/modal size based on the screen size
+
+/**
+ * return the window/modal size based on the screen size
+ * @param {number} baseHeight the height of the modal including the header
+ * @returns {object} returns an object with the width and height of the modal
+ */
 function getWindowSize(baseHeight = 0) {
 	let width;
 	let height;
@@ -876,20 +915,41 @@ function getWindowSize(baseHeight = 0) {
 		width = 900;
 	} 
 
-	if(window.innerHeight < baseHeight + 40 || window.innerWidth < 768){ //on mobile
+	if(window.innerHeight < baseHeight || window.innerWidth < 768){ //on mobile
 		height = window.innerHeight;
 	}else{
-		height = baseHeight + 40;
+		height = baseHeight;
 	}
 	return { width: width , height: height };
 }
 
-// prevent accordion from collapsing when clicking on the button
+/**
+ * Prevent accordion from collapsing when clicking on the button
+ * By setting the data-bs-toggle attribute to "collapse" or removing it
+ * @param {event} event  the mouse over event.
+ * @param {boolean} collapse  true if accordion should collapse, false if not.
+ */
 function setAccordionCollapse(event, collapse = true) {
 	let accordionButton = event.target.closest('.accordion-button');
 	if (accordionButton && collapse) accordionButton.setAttribute('data-bs-toggle', "collapse");
 	else if (accordionButton && !collapse) accordionButton.removeAttribute('data-bs-toggle');
 }
+
+/**
+ * show window popup with alert message
+ * @param {string} header the header title of the alert
+ * @param {string} text the description of the alert
+ */
+function showAlert(header, text) {
+	dhx.alert({
+		header: header,
+		text: text,
+		buttonsAlignment: "center",
+		buttons: ["ok"],
+	});
+}
+
+
 /* -------------------------------------------------------------------------- */
 /*                              Filter Functions                              */
 /* -------------------------------------------------------------------------- */

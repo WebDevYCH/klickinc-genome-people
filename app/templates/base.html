@@ -29,8 +29,8 @@
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
     <link href="/static/css/custom.css" rel="stylesheet">
-
-
+	<link href="/static/css/genome-global.css" rel="stylesheet"/>
+	<script src="/static/js/helpers.js"></script>
 </head>
 <!--
   HOW TO USE: 
@@ -41,7 +41,11 @@
 -->
 
 <body data-theme="colored" data-layout="fluid" data-sidebar-position="left" data-sidebar-layout="default">
-    <div class="wrapper">
+	<!-- Stackable Toasts Notifications showToast() from helper.js -->
+	<div aria-live="polite" aria-atomic="true" class="position-relative">
+		<div class="toast-container position-fixed  top-0 end-0 p-3" id="genome-toast-container"></div>
+	</div>
+	<div class="wrapper">
         <nav id="sidebar" class="sidebar js-sidebar">
             <div class="sidebar-content js-simplebar">
                 <a class="sidebar-brand" href="/">
