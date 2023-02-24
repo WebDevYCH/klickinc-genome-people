@@ -37,7 +37,11 @@ login_manager.session_protection = 'strong'
 # Create db reference
 app.logger.info("Initializing database")
 db = SQLAlchemy(app)
-db.init_app(app)
+# sometimes this fails due an instance already existing
+try:
+    db.init_app(app)
+except:
+    pass
 
 # filter out some sqlalchemy warnings
 import warnings
