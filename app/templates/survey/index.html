@@ -1,25 +1,27 @@
-{% extends "base.html" %} 
-
-{% block app_content %}
-<p id="survey-num">There are {{ surveys|length }} surveys</p>
-<div class="row">
-  <!-- //////////////////// Job Lists ////////////////////// -->
-  <div id="survey-list" class="col-12 col-xl-9">
-
-    {% for survey in surveys %}
-    <div class="row survey-card">
-      <div class="col-md-9">
-        <div>
-          <span
-            class="card-title mb-0 text-primary fs-3"
-            survey-id="{{ survey.id }}"
-            ><a href="/p/survey/{{ survey.id }}">{{ survey.name }}</a></span
-          >
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-
-  </div>
+{% extends "base.html" %} {% block app_content %}
+<div class="card">
+	<div class="card-body">
+		<p id="survey-num">There are {{ surveys|length }} surveys</p>
+		<div class="row">
+			<!-- //////////////////// Job Lists ////////////////////// -->
+			<div id="survey-list" class="col-12 col-xl-9">
+				{% for survey in surveys %}
+				<div class="row survey-card">
+					<div class="col-md-9">
+						<div>
+							<span
+								class="card-title mb-0 text-primary fs-3"
+								survey-id="{{ survey.id }}"
+								><a href="/p/survey/{{ survey.id }}"
+									>{{ survey.name }}</a
+								></span
+							>
+						</div>
+					</div>
+				</div>
+				{% endfor %}
+			</div>
+		</div>
+	</div>
 </div>
 {% endblock %}

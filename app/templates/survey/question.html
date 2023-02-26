@@ -2,97 +2,100 @@
 
 
 {% block app_content %}
-<form id="survey" action="/p/survey/save" method="post">
-    <div class="panel-group" id="accordion">
-      {% for survey in surveys %}
-      <div class="panel panel-default">
-        <div class="panel-heading">
-          <h4 class="panel-title">
-            <a
-            >
-              <h3>{{ survey.name }}</h3>
-            </a>
-          </h4>
-        </div>
-        <div>
-          <div class="panel-body">
-            <div>
-              <ul class="nav nav-pills" id="pills-tab" role="tablist">
-                {% for category in categories %}
-                <li class="nav-item" role="questions"><a class="nav-link" data-bs-toggle="pill" data-bs-target="#tab{{loop.index}}" href="#tab{{loop.index}}">{{ category }}</a></li>
-                {% endfor %}
-              </ul>
-            </div>
-            <div class="tab-content" id="pills-tabContent">
-                <br>
-                {% for category in categories %}
-                    <div id="tab{{loop.index}}" class="tab-pane fade" role="tabpanel">
-                        <div>
-                            {% for field in form %}
-                                {% if field.description == category %}
-                                    {% if field.type == "CSRFTokenField" %}
-                                        <p>
-                                            {{ field }}
-                                        </p>
-                                    {% elif field.type == "SubmitField" %}
-                                        <p>
-                                            {{ field (class_="btn btn-primary")}}
-                                        </p>
-                                    {% elif field.type == "MultiCheckboxField" %}
-                                        <div class="input-group">
-                                            <p>
-                                                {{ field.label }}</br>
-                                                {% for value, label, _ in field.iter_choices() %}
-                                                <label class="checkbox-inline">
-                                                    <input type="checkbox" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
-                                                </label>
-                                                {% endfor %}
-                                                {% for error in field.errors %}
-                                                <span style="color: red;">[{{ error }}]</span>
-                                                {% endfor %}
-                                            </p>
-                                        </div>
-                                    {% elif field.type == "RadioField" %}
-                                        <div class="input-group">
-                                            <p>
-                                                {{ field.label }}</br>
-                                                {% for value, label, _ in field.iter_choices() %}
-                                                <label class="radio-inline">
-                                                    <input type="radio" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">
-                                                    <label for="{{field.id}}">{{ label }}</label>
-                                                </label>
-                                                {% endfor %}
-                                                {% for error in field.errors %}
-                                                <span style="color: red;">[{{ error }}]</span>
-                                                {% endfor %}
-                                            </p>
-                                        </div>
-                                    {% else %}
-                                        <div class="input-group">
-                                            <p>
-                                                {{ field.label }}
-                                                {{ field (class_="form-control")}}
-                                                {% for error in field.errors %}
-                                                <span style="color: red;">[{{ error }}]</span>
-                                                {% endfor %}
-                                            </p>
-                                        </div>
-                                    {% endif %}
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% endfor %}
-            </div>
-            </div>
-            <button class="btn btn-primary pull-right send-btn mt-3">Send</button>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-</form>
-
+<div class="card">
+	<div class="card-body">
+		<form id="survey" action="/p/survey/save" method="post">
+			<div class="panel-group" id="accordion">
+			{% for survey in surveys %}
+			<div class="panel panel-default">
+				<div class="panel-heading">
+				<h4 class="panel-title">
+					<a
+					>
+					<h3>{{ survey.name }}</h3>
+					</a>
+				</h4>
+				</div>
+				<div>
+				<div class="panel-body">
+					<div>
+					<ul class="nav nav-pills" id="pills-tab" role="tablist">
+						{% for category in categories %}
+						<li class="nav-item" role="questions"><a class="nav-link" data-bs-toggle="pill" data-bs-target="#tab{{loop.index}}" href="#tab{{loop.index}}">{{ category }}</a></li>
+						{% endfor %}
+					</ul>
+					</div>
+					<div class="tab-content" id="pills-tabContent">
+						<br>
+						{% for category in categories %}
+							<div id="tab{{loop.index}}" class="tab-pane fade" role="tabpanel">
+								<div>
+									{% for field in form %}
+										{% if field.description == category %}
+											{% if field.type == "CSRFTokenField" %}
+												<p>
+													{{ field }}
+												</p>
+											{% elif field.type == "SubmitField" %}
+												<p>
+													{{ field (class_="btn btn-primary")}}
+												</p>
+											{% elif field.type == "MultiCheckboxField" %}
+												<div class="input-group">
+													<p>
+														{{ field.label }}</br>
+														{% for value, label, _ in field.iter_choices() %}
+														<label class="checkbox-inline">
+															<input type="checkbox" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">{{ label }}
+														</label>
+														{% endfor %}
+														{% for error in field.errors %}
+														<span style="color: red;">[{{ error }}]</span>
+														{% endfor %}
+													</p>
+												</div>
+											{% elif field.type == "RadioField" %}
+												<div class="input-group">
+													<p>
+														{{ field.label }}</br>
+														{% for value, label, _ in field.iter_choices() %}
+														<label class="radio-inline">
+															<input type="radio" name="{{ field.id }}" id="{{ field.id }}" value="{{ value }}">
+															<label for="{{field.id}}">{{ label }}</label>
+														</label>
+														{% endfor %}
+														{% for error in field.errors %}
+														<span style="color: red;">[{{ error }}]</span>
+														{% endfor %}
+													</p>
+												</div>
+											{% else %}
+												<div class="input-group">
+													<p>
+														{{ field.label }}
+														{{ field (class_="form-control")}}
+														{% for error in field.errors %}
+														<span style="color: red;">[{{ error }}]</span>
+														{% endfor %}
+													</p>
+												</div>
+											{% endif %}
+										{% endif %}
+									{% endfor %}
+								</div>
+							</div>
+						{% endfor %}
+					</div>
+					</div>
+					<button class="btn btn-primary pull-right send-btn mt-3">Send</button>
+				</div>
+				</div>
+			</div>
+			{% endfor %}
+			</div>
+		</form>
+	</div>
+</div>
 <script language="javascript">
   $(".send-btn").on("click", function () {
     var formArray = $("#survey").serializeArray();

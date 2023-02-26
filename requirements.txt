@@ -21,9 +21,12 @@ db-dtypes
 ipython
 timer
 gpt_index
-pypdf2
+pypdf
 docx2txt
 gensim
 redis
 scikit-learn
 textmagic
+beautifulsoup4
+pytz
+jsonpickle

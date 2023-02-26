@@ -5,42 +5,45 @@
 <link href="/p/static/css/dhtmlxsuite.css" rel="stylesheet"></link>
 {% endblock %}
 {% block app_content %}
-
+<div class="card">
+	<div class="card-body">
 <!-- Latest compiled and minified Bootstrap CSS -->
-<div class="d-flex justify-content-end">
-    <a class="text-dark float-end" href="/p/profile"><i class="fa fa-arrow-left"></i> Profile Page</a>
-</div>
-<div class="skill-edit-page">
-    <div class="card">
-        <div class="card-header d-flex justify-content-between">
-            <div style="max-width: 600px; width: 100%;" id="pcombo"></div>
-            <span id="skills-edit-btn" class="btn btn-primary" style="height: 35px; margin:auto;">Update</span>
-        </div>
-        <div class="card-body">
-        {% if skills %}
-        <table class="table">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Actions</th>
-            </tr>
-            </thead>
-            {% for skill in skills %}
-                <tr>
-                    <td>{{ skill.name }}</td>
-                    <td>
-                        <a href="/p/profile/skill-edit/delete/{{ skill.id }}" class="btn btn-sm btn-danger">
-                            <i class="fas fa-trash"></i>
-                        </a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-            <p>There are no skills</p>
-        {% endif %}
-        </div>
-    </div>
+		<div class="d-flex justify-content-end">
+			<a class="text-dark float-end" href="/p/profile"><i class="fa fa-arrow-left"></i> Profile Page</a>
+		</div>
+		<div class="skill-edit-page">
+			<div class="card">
+				<div class="card-header d-flex justify-content-between">
+					<div style="max-width: 600px; width: 100%;" id="pcombo"></div>
+					<span id="skills-edit-btn" class="btn btn-primary" style="height: 35px; margin:auto;">Update</span>
+				</div>
+				<div class="card-body">
+				{% if skills %}
+				<table class="table">
+					<thead>
+					<tr>
+						<th>Name</th>
+						<th class="text-end">Actions</th>
+					</tr>
+					</thead>
+					{% for skill in skills %}
+						<tr>
+							<td>{{ skill.name }}</td>
+							<td class="text-end">
+								<a href="/p/profile/skill-edit/delete/{{ skill.id }}" class="btn btn-sm btn-danger">
+									<i class="fas fa-trash"></i>
+								</a>
+							</td>
+						</tr>
+					{% endfor %}
+				</table>
+				{% else %}
+					<p>There are no skills</p>
+				{% endif %}
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
   <!-- end container -->

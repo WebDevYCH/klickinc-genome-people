@@ -1,775 +1,120 @@
-{% extends "base.html" %}
+{% extends "base.html" %} 
 
 {% block app_head %}
+<script src="/static/js/dhtmlxsuite.js"></script>
+<link href="/static/css/dhtmlxsuite.css" rel="stylesheet"/>
 <link rel="canonical" href="https://demo.adminkit.io/forms-editors.html" />
-<script src="https://momentjs.com/downloads/moment.js"></script>
-<style>
-    .job-details {
-        height: 70px;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        overflow: hidden;
-    }
-    .other-info {
-        font-size: x-small;
-    }
-    #people-list {
-        height: 450px;
-        overflow: auto;
-    }
-</style>
 {% endblock %}
 
+<!-- component container -->
 {% block app_content %}
 <p class="clearfix">
-    <a href="#" class="float-end text-decoration-underline ms-3" id="personal-settings-btn" data-bs-toggle="modal" data-bs-target="#personal_settings_modal">Personal Settings</a>
-    <a href="#" class="float-end text-decoration-underline ms-3" id="create-job-btn" data-bs-toggle="modal" data-bs-target="#create_job_modal">Create a Job</a>
-    <a href="#" class="float-end text-decoration-underline ms-3" id="available-people-btn" data-bs-toggle="modal" data-bs-target="#available_people_modal">View Available People</a>
+    <!--<a href="#" class="float-end text-decoration-underline ms-3" id="personal-settings-btn" data-bs-toggle="modal" data-bs-target="#personal_settings_modal">Personal Settings</a>-->
+    <a href="#" class="float-end text-decoration-underline ms-3" id="create-job-btn">Create a Job</a>
+    <!--<a href="#" class="float-end text-decoration-underline ms-3" id="available-people-btn" data-bs-toggle="modal" data-bs-target="#available_people_modal">View Available People</a>-->
 </p>
-<p id="job-num">There are {{ jobs|length }} job postings that meet the search criteria</p>
+<div class="row filter-container">
+	<div class="form-group col-lg-2 col-md-4 mb-3">
+		<label for="sort_by_select">Sort By</label>
+		<select id="sort_by_select" class="form-select" aria-label="select sort by">
+			<option value="all" selected>All</option>
+			<option value="most recent">Most recent</option>
+			<option value="least recent">Least recent</option>
+			<option value="start date">Job start date</option>
+			<!--<option value="skills match">Skills matched</option>-->
+		</select>
+	</div>
+	<div class="form-group col-lg-2 col-md-4 mb-3">
+		<label for="date_posted_select">Date Posted</label>
+		<select id="date_posted_select" class="form-select" aria-label="select date posted">
+			<option value="0" selected>All</option>
+			<option value="1">Past 24 hours</option>
+			<option value="3">Past 3 days</option>
+			<option value="7">Past 7 days</option>
+			<option value="30">Past 30 days</option>
+		</select>
+	</div>
+	<div class="form-group col-lg-3 col-md-4 mb-3">
+		<label for="job_title_select">Job Title</label>
+		<select id="job_title_select" class="form-select" aria-label="select job title">
+			<option value="" selected>All</option>
+			{% for title in titles %}
+			<option value={{ title.name }}>{{ title.name }}</option>
+			{% endfor %}	
+		</select>
+	</div>	
+	<div class="form-group col-lg-3 col-md-8 mb-3">
+		<label for="text_search">Search</label>
+		<input type="text" id="text_search" class="form-control" placeholder="Search title and description" aria-label="search title and description">
+	</div>
+	<div class="col-lg-2 col-md-4 mb-3 d-flex align-items-end">
+		<button id="advanced_search_btn" class="btn btn-primary ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#advanced-search-container" aria-expanded="false" aria-controls="advanced-search-container">
+			Advanced Search
+	  </button>
+	</div>
+</div>
+<div class="row collapse filter-container" id="advanced-search-container">
+	<div class="form-group col-lg-3 mb-3">
+		<div id="cst_filter_select" class=""></div>
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<div id="job_function_select" class=""></div>
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<label for="client_search">Clients</label>
+		<input type="text" id="client_search" class="form-control" placeholder="Search clients" aria-label="Search client">
+	</div>
+	<div class="form-group col-lg-3 mb-3">
+		<label for="brands_search">Brands</label>
+		<input type="text" id="brands_search" class="form-control" placeholder="Search brands" aria-label="Search brands">
+	</div>
+</div>		
+
 <div class="row">
-    <!-- /////////////////////////// Search Criteria ///////////////////// -->
-    <div class="col-12 col-xl-3">
-        <form id="delta_box" class="mb-3">
-            <label class="col-form-label text-sm-end pt-sm-0">Date Posted</label>
-            <label class="form-check">
-                <input name="delta" type="radio" class="form-check-input" value="1">
-                <span class="form-check-label">Last 24 hours</span>
-            </label>
-            <label class="form-check">
-                <input name="delta" type="radio" class="form-check-input" value="3">
-                <span class="form-check-label">Last 3 days</span>
-            </label>
-            <label class="form-check">
-                <input name="delta" type="radio" class="form-check-input" value="7" checked>
-                <span class="form-check-label">Last 7 days</span>
-            </label>
-            <label class="form-check">
-                <input name="delta" type="radio" class="form-check-input" value="30">
-                <span class="form-check-label">Last 30 days</span>
-            </label>
-        </form>
-        <div class="mb-3">
-            <label class="form-label">Job Category</label>
-            <select id="job-category" class="form-control mb-3">
-                <option value="0" selected>Select job category</option>
-                {% for category in categories %}
-                <option value="{{ category.id }}">{{ category.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Job Title</label>
-            <select id="job-title" class="form-control mb-3">
-                <option selected>Select job title</option>
-                {% for title in titles %}
-                <option>{{ title.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-    </div>
-    <!-- //////////////////// Job Lists ////////////////////// -->
-    <div id="job-list" class="col-12 col-xl-9">
-        {% for job in jobs %}
-        <div class="row job-card">
-            <div class="col-md-9">
-                <div>
-                    <span class="card-title mb-0 text-primary fs-3" job-posting-id="{{ job.id }}">{{ job.title }}</span>
-                    <span class="fs-6"><i>({{ job.posted_date }} ~ <span class="card-expiry">{{ job.expiry_date }}</span>, <span class="card-category" category-id="{{ job.job_posting_category_id }}">{{ job.job_posting_category_name }}</span>)</i></span>
-                </div>
-                <div class="job-details">
-                    Description: <span class="card-description">{{ job.description | safe }}</span>
-                </div>
-                <div class="other-info">
-                    {% for skill in job.job_posting_skills %}
-                        {{ skill }},
-                    {% endfor %}
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="clearfix">
-                    <span class="float-end ms-5 text-muted">Today</span>
-                    {% if job.apply == 1 %}
-                        <span class="text-success float-end">Applied</span>
-                    {% endif %}
-                </div>
-                <div class="clearfix">
-                    <label class="float-end text-danger">Expires in {{job.expiry_day}} days</label>
-                </div>
-                {% if current_user.userid == job.poster_user_id %}
-                <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline view-applicants" data-bs-toggle="modal" data-bs-target="#applicants_modal">View applicants</a>
-                </div>
-                <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
-                </div>
-                <div class="clearfix">
-                    <a href="#" id="close_post_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
-                </div>
-                {% endif %}
-                {% if job.apply == 0 %}
-                <div class="clearfix">
-                    <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
-                </div>
-                {% endif %}
-                {% if job.apply == 1 %}
-                    <div class="clearfix">
-                        <a href="#" id="cancel_application_btn" onclick="job_id = '{{ job.id }}'" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+	<div class="accordion accordion-flush col-12" id="jobListAccordion">
+		<div id="jobListView" class="col-12"></div>
+	</div>
 </div>
 
-<!-- ///////////////////////// Create, Edit Job Modal ///////////////////////////////////////////////// -->
-<div class="modal fade" id="create_job_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Create a Job</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div class="d-flex align-items-center modal-spinner d-none">
-                    <strong>Loading...</strong>
-                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
-                </div>
-                <form>
-                    <label for="">Title</label>
-                    <span class="text-danger">*</span>
-                    <span class="text-danger d-none">This field is required!</span>
-                    <select id="modal-job-title" class="form-control mb-3" required>
-                        <option selected>Select job title</option>
-                        {% for title in titles %}
-                        <option>{{ title.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="">Category</label>
-                    <span class="text-danger">*</span>
-                    <select id="modal-job-category" class="form-control mb-3" required>
-                        <option selected>Select job posting category</option>
-                        {% for category in categories %}
-                        <option category-id="{{ category.id }}">{{ category.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <label for="">Job Description</label>
-                    <span class="text-danger">*</span>
-                    <div class="clearfix mb-3">
-                        <div id="quill-toolbar">
-                            <span class="ql-formats">
-                                <select class="ql-font"></select>
-                                <select class="ql-size"></select>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-bold"></button>
-                                <button class="ql-italic"></button>
-                                <button class="ql-underline"></button>
-                                <button class="ql-strike"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <select class="ql-color"></select>
-                                <select class="ql-background"></select>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-script" value="sub"></button>
-                                <button class="ql-script" value="super"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-header" value="1"></button>
-                                <button class="ql-header" value="2"></button>
-                                <button class="ql-blockquote"></button>
-                                <button class="ql-code-block"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-list" value="ordered"></button>
-                                <button class="ql-list" value="bullet"></button>
-                                <button class="ql-indent" value="-1"></button>
-                                <button class="ql-indent" value="+1"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-direction" value="rtl"></button>
-                                <select class="ql-align"></select>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-link"></button>
-                                <button class="ql-image"></button>
-                                <button class="ql-video"></button>
-                            </span>
-                            <span class="ql-formats">
-                                <button class="ql-clean"></button>
-                            </span>
-                        </div>
-                        <div id="quill-editor"></div>
-                    </div>
-                    <label for="">Expiry Date</label>
-                    <span class="text-danger">*</span>
-                    <input type="text" id="expiry_date" class="form-control flatpickr-minimum mb-3"  placeholder="Select expiry date..." required />
-                    <input type="hidden" id="poster_id" value="{{ current_user.userid }}">
-                    <input type="hidden" id="job_posting_id">
-                    <span id="job-post-btn" class="btn btn-primary float-end ms-3">Submit</span>
-                    <button type="button" class="btn btn-secondary float-end" data-bs-dismiss="modal">Cancel</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
 
-<!-- ////////////////// Available People Modal //////////////////////// -->
-<div class="modal fade" id="available_people_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Available People</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div class="d-flex align-items-center modal-spinner d-none">
-                    <strong>Loading...</strong>
-                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
-                </div>
-                <p id="people-num"></p>
-                <div class="row">
-                    <div class="col-12 col-xl-4">
-                        <div class="mb-3">
-                            <label class="form-label">CST</label>
-                            <select id="people-cst" class="form-control mb-3">
-                                <option selected>Select CST</option>
-                                {% for cst in csts %}
-                                <option>{{ cst }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Job Function</label>
-                            <select id="people-job-function" class="form-control mb-3">
-                                <option selected>Select job function</option>
-                                {% for jobfunction in jobfunctions %}
-                                <option>{{ jobfunction }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    <div id="people-list" class="col-12 col-xl-8">
-                        
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- //////////////////// Job Application Modal /////////////////////// -->
-<div class="modal fade" id="job_application_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Job Application</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div class="d-flex align-items-center modal-spinner d-none">
-                    <strong>Loading...</strong>
-                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
-                </div>
-                <div class="row">
-                    <div>
-                        <span class="card-title mb-0 text-primary fs-3" id="apply-modal-title" job-posting-id=""></span>
-                        <span class="fs-6"><i>(<span id="apply-modal-posted-date"></span> ~ <span id="apply-modal-expiry"></span>, <span id="apply-modal-category"></span>)</i></span>
-                    </div>
-                    <div class="job-details">
-                        Description: <span id="apply-modal-description"></span>
-                    </div>
-                    <div class="other-info mb-3">
-                        Skills: React.js, Node.js (To be fixed soon...)
-                    </div>
-                    <div class="mb-3 row">
-                        <label class="col-form-label col-sm-2 text-sm">Comments*</label>
-                        <div class="col-sm-10">
-                            <textarea id="apply-comments" class="form-control" rows="3" maxlength="5000"></textarea>
-                        </div>
-                    </div>
-                    <div class="mb-3 row">
-                        <label class="col-form-label col-sm-2 text-sm">Relevant Skills*</label>
-                        <div class="col-sm-10">
-                            <input type="text" id="apply-skills" class="form-control" maxlength="1000">
-                        </div>
-                    </div>
-                    <div class="mb-3 row">
-                        <label class="col-form-label col-sm-2 text-sm"></label>
-                        <div class="col-sm-10">
-                            <button class="btn btn-primary me-3" id="apply-btn">Apply</button>
-                            <button class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- ////////////////////// Applicants Modal ////////////////////////// -->
-<div class="modal fade" id="applicants_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Applicants</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div class="d-flex align-items-center modal-spinner d-none">
-                    <strong>Loading...</strong>
-                    <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
-                </div>
-                <div class="row" id="applicants-list">
-                    
-                </div>
-                <div class="d-flex justify-content-center">
-                    <button class="btn btn-primary" data-bs-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
+
 {% block script %}
-<!-- //////////////////// Personal Settings Modal ///////////////////// -->
-<div class="modal fade" id="personal_settings_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Personal Settings</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div>
-                    Make myself as available
-                    <input class="form-check-input" type="checkbox" id="user-available-check">
-                    <label class="font-italic" for="user-available-check">
-                        <em> This means that any Klickster can see that you are available</em>
-                    </label>
-                </div>  
 
-            </div>  
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="user-available-btn">Save</button>
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Close</button>
-            </div>    
-        </div>
-    </div>
-</div>
-
-<!-- //////////////////// Close post Modal ///////////////////// -->
-<div class="modal fade" id="close_post_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Close Post</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div>
-                    Are you sure?
-                </div>  
-
-            </div>  
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="close-post-btn">Yes</button>
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-            </div>    
-        </div>
-    </div>
-</div>
-
-<!--///////////////////// Cancel Application////////////////////-->
-<div class="modal fade" id="cancel_application_modal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Cancel Application</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body m-3">
-                <div>
-                    Are you sure?
-                </div>  
-
-            </div>  
-            <div class="modal-footer justify-content-center">
-                <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="cancel-app-btn">Yes</button>
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancel</button>
-            </div>    
-        </div>
-    </div>
-</div>
 <script>
-    var editor;
-    var category_id = 0;
-    var flag = "create";
-    var job_id = ''
+	var jobs = {{ jobs | tojson }};
+	var titles = [
+		{
+			value: "0",
+			content: "Select Job Title"
+		},
+		{% for title in titles %}
+			{
+				value: "{{ title.name }}",
+				content: "{{ title.name }}"
+			},
+		{% endfor %}
+	];
 
-    
-    //////////// Search Job Functions ////////////////
-    $("#delta_box").change(function() {
-        loading();
-        let data = {
-            title: $("#job-title").val(),
-            category_id: category_id,
-            delta: $("input[name='delta']:checked").val()
-        }
-        search_jobs(data);
-    });
-    $("#job-category").change(function() {
-        loading();
-        category_id = $(this).children(":selected").attr("value");
-        let data = {
-            title: $("#job-title").val(),
-            category_id: category_id,
-            delta: $("input[name='delta']:checked").val()
-        }
-        search_jobs(data);
-    });
-    $("#job-title").change(function() {
-        loading();
-        let data = {
-            title: $(this).val(),
-            category_id: category_id,
-            delta: $("input[name='delta']:checked").val()
-        }
-        search_jobs(data);
-    })
+	var csts = [
+		{% for cst in csts %}
+			{
+				value: "{{ cst }}",
+				id: "{{ cst }}"
+			},
+		{% endfor %}
+	];
 
-    function search_jobs(data) {
-        $.ajax({
-            url: "/p/tmkt/jobsearch",
-            method: "POST",
-            data: data,
-            success: function(res) {
-                var jobs = JSON.parse(res);
-                var data = "";
-                jobs.forEach(job => {
-                    let skill_txt = '';
-                    for (let skill in job.job_posting_skills){
-                        skill_txt += job.job_posting_skills[skill] + `,`
-                    }
-                    console.log(skill_txt)
-                    var current_user_id = "{{ current_user.userid }}";
-                    data += `<div class="row job-card">
-                                <div class="col-md-9">
-                                    <div>
-                                        <span class="card-title mb-0 text-primary fs-3" job-posting-id="`+job.id+`">`+job.title+`</span>
-                                        <span class="fs-6">(`+moment(job.posted_date).format('YYYY-MM-D')+` ~ <span class="card-expiry">`+moment(job.expiry_date).format('YYYY-MM-D')+`</span>, <span class="card-category" category-id="`+job.job_posting_category_id+`">`+job.job_posting_category_name+`</span>)</span>
-                                    </div>
-                                    <div class="job-details">
-                                        Description: <span class="card-description">`+job.description+`</span>
-                                    </div>
-                                    <div class="other-info">
-                                        Skills:`+skill_txt+`
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div>
-                                        <span class="float-end ms-5 text-muted">Today</span>
-                                        `+(job.apply == 1 ?`<span class="text-success float-end">Applied</span>`:'')+`
-                                    </div>
-                                    <div class="clearfix">
-                                        <label class="float-end text-danger">Expires in `+job.expiry_day+` days</label>
-                                    </div>
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline">View applicants</a>
-                                    </div>
-                                    ` + (current_user_id == job.poster_user_id ? `
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline edit-post" data-bs-toggle="modal" data-bs-target="#create_job_modal">Edit post</a>
-                                    </div>
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#close_post_modal">Close post</a>
-                                    </div>` : '') + `
-                                    `+ (job.apply == 0 ? `
-                                        <div class="clearfix">
-                                            <a href="#" class="float-end text-decoration-underline job-apply" data-bs-toggle="modal" data-bs-target="#job_application_modal">Apply</a>
-                                        </div>
-                                    `:'') + `
-                                    `+ (job.apply == 1 ? `
-                                    <div class="clearfix">
-                                        <a href="#" class="float-end text-decoration-underline" data-bs-toggle="modal" data-bs-target="#cancel_application_modal">Cancel application</a>
-                                    </div>
-                                    `:'') + `
-                                </div>
-                            </div>`;
-                });
-                $("#job-list").html(data);
-                $("#job-num").html("There are "+jobs.length+" job postings that meet the search criteria");
-                unloading();
-            }
-        });
-    }
-
-    ////////////// Widgets Ready ///////////////////////////
-    document.addEventListener("DOMContentLoaded", function() {
-		flatpickr(".flatpickr-minimum", {
-            minDate: "today"
-        });
-        editor = new Quill("#quill-editor", {
-            modules: {
-                toolbar: "#quill-toolbar"
-            },
-            placeholder: "Write job description here...",
-            theme: "snow"
-        });
-    });
-    //////////// Job Post, Edit Functions /////////////
-    $('#job-post-btn').on('click', function() {
-        var description = editor.root.innerHTML;
-        var title = $('#modal-job-title').val();
-        var poster_id = $("#poster_id").val();
-        var expiry_date = $("#expiry_date").val();
-        var category = $("#modal-job-category").val();
-        var job_posting_id = $("#job_posting_id").val();
-        if(title == "Select job title" || category == "Select job posting category" || description == "<p><br></p>" || expiry_date == "") {
-            alert("You must fill required fields!");
-        } else {
-            $("#create_job_modal").modal('hide');
-            if (flag == "create") {
-                var url = '{{ url_for("postjob") }}';
-            }
-            else {
-                var url = '{{ url_for("editjob") }}';
-            }
-            $.ajax({
-                type: 'POST',
-                url: url,
-                data: {
-                    title: title,
-                    category_id: category_id,
-                    description: description,
-                    poster_id: parseInt(poster_id),
-                    expiry_date: expiry_date,
-                    job_posting_id: job_posting_id
-                },
-                success: function() {
-                    loading();
-                    window.location.href = '/p/tmkt/jobsearch';
-                }
-            });
-            unloading();
-        }
-    });
-    $("#modal-job-category").change(function() {
-        category_id = $(this).children(":selected").attr("category-id");
-    });
-    $("#job-list").on("click", ".edit-post", function() {
-        flag = "edit";
-        category_id = $(this).closest('.job-card').find('.card-category').attr('category-id');
-        let title = $(this).closest('.job-card').find('.card-title').html();
-        let category = $(this).closest('.job-card').find('.card-category').html();
-        let description = $(this).closest('.job-card').find('.card-description').html();
-        let expiry = $(this).closest('.job-card').find('.card-expiry').html();
-        let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
-        $("#modal-job-title").val(title);
-        $("#modal-job-category").val(category);
-        editor.root.innerHTML = description;
-        $("#expiry_date").val(expiry);
-        $("#job_posting_id").val(job_posting_id);
-        $(".modal-title").html("Edit a Job");
-    });
-    $("#create-job-btn").click(function() {
-        console.log(poster_userid)
-        flag = "create";
-        category_id = 0;
-        $("#modal-job-title").val("Select job title");
-        $("#modal-job-category").val("Select job posting category");
-        editor.root.innerHTML = "<p><br></p>";
-        $("#expiry_date").val("");
-        $("#job_posting_id").val("");
-        $(".modal-title").html("Create a Job");
-    });
-
-    //////////////////// Available People Functions ///////////
-    $("#available-people-btn").click(function() {
-        showModalLoading();
-        let data = {
-            cst: $("#people-cst").val(),
-            jobfunction: $("#people-job-function").val()
-        }
-        searchpeople(data);
-    });
-    $("#people-cst").change(function() {
-        showModalLoading();
-        let data = {
-            cst: $(this).val(),
-            jobfunction: $("#people-job-function").val()
-        }
-        searchpeople(data);
-    });
-    
-    $("#people-job-function").change(function() {
-        showModalLoading();
-        let data = {
-            cst: $("#people-cst").val(),
-            jobfunction: $(this).val()
-        }
-        searchpeople(data);
-    });
-    function searchpeople(data) {
-        $.ajax({
-            url: "{{ url_for('searchpeople') }}",
-            method: "POST",
-            data: data,
-            success: function(response) {
-                var html_str = "";
-                var people = JSON.parse(response);
-                people.forEach(p => {
-                    html_str += `
-                        <div class="row people-card">
-                            <div class="col-12">
-                                <div>
-                                    <span class="card-title mb-0 text-primary fs-4">`+p.firstname+` `+p.lastname+`</span>
-                                </div>
-                                <div class="other-info">
-                                    `+p.cst+` `+p.jobfunction+`
-                                </div>
-                                <div class="clearfix">
-                                    <a href="#" class="float-end text-decoration-underline">View profile</a>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                if (people.length > 500)
-                    $("#people-num").html("There are at least 500 people that meet the criteria");
-                else
-                    $("#people-num").html("There are "+people.length+" people that meet the criteria");
-                $("#people-list").html(html_str);
-                hideModalLoading();
-            }
-        });
-    }
-    /////////////////////////// Job Application /////////////////////////
-    $("#job-list").on('click', '.job-apply', function() {
-        let title = $(this).closest('.job-card').find('.card-title').html();
-        let category = $(this).closest('.job-card').find('.card-category').html();
-        let description = $(this).closest('.job-card').find('.card-description').text();
-        let posted_date = $(this).closest('.job-card').find('.card-posted-date').html();
-        let expiry = $(this).closest('.job-card').find('.card-expiry').html();
-        let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
-        $('#apply-modal-title').html(title);
-        $('#apply-modal-title').attr('job-posting-id', job_posting_id);
-        $('#apply-modal-posted-date').html(posted_date);
-        $('#apply-modal-expiry').html(expiry);
-        $('#apply-modal-category').html(category);
-        $('#apply-modal-description').html(description);
-    });
-    $('#apply-btn').click(function() {
-        console.log("{{ url_for('applyjob') }}")
-        let title = $('#apply-modal-title').html();
-        let job_posting_id = $('#apply-modal-title').attr('job-posting-id');
-        let comments = $('#apply-comments').val();
-        let skills = $('#apply-skills').val();
-        $.ajax({
-            url: "{{ url_for('applyjob') }}",
-            method: "POST",
-            data: {
-                job_posting_id: job_posting_id,
-                comments: comments,
-                skills: skills,
-                userId: parseInt("{{ current_user.userid }}"),
-                message: "{{ current_user.firstname}} "+"{{current_user.lastname }}"+"has applied to the "+title+" post.",
-            },
-            success: function(response) {
-                window.location.href = '/p/tmkt/jobsearch';
-            }
-        });
-    });
-
-    ///////////////////////// Personal Setting //////////////////
-    $('#user-available-btn').click(function() {
-        var user_available = '0'
-        if ($('#user-available-check').is(":checked"))
-        {
-            user_available = '1'
-        }
-        $.ajax({
-            url: "{{ url_for('setusersetting') }}",
-            method: "POST",
-            data: {
-                userId: parseInt("{{ current_user.userid }}"),
-                userAvailable: user_available
-            },
-            success: function(response) {
-                console.log(response)
-            }
-        })
-    })    
-
-    ///////////////////////// Personal Setting //////////////////
-    $('#close-post-btn').click(function() {  
-        $.ajax({
-            url: "{{ url_for('closepost') }}",
-            method: "POST",
-            data: {
-                userId: parseInt("{{ current_user.userid }}"),
-                postId: job_id
-            },
-            success: function(response) {
-                console.log('.... ' +response)
-            }
-        })
-    })
-
-    ///////////////////////// Personal Setting //////////////////
-    $('#cancel-app-btn').click(function() {  
-        $.ajax({
-            url: "{{ url_for('cancelapplication') }}",
-            method: "POST",
-            data: {
-                userId: parseInt("{{ current_user.userid }}"),
-                postId: job_id
-            },
-            success: function(response) {
-                loading();
-                window.location.href = '/p/tmkt/jobsearch';
-            }
-        })
-    })
-
-    ////////////// View Applicants ///////////////////
-    $('#job-list').on('click', '.view-applicants', function() {
-        let job_posting_id = $(this).closest('.job-card').find('.card-title').attr('job-posting-id');
-        $.ajax({
-            url: "{{ url_for('getapplicants') }}",
-            method: "POST",
-            data: {
-                job_posting_id: job_posting_id
-            },
-            success: function(response) {
-                console.log(response)
-                var html_str = "";
-                var applicants = JSON.parse(response);
-                applicants.forEach(applicant => {
-                    html_str += `
-                        <div class="row border-bottom applicant-card p-2">
-                            <div class="col-12">
-                                <div>
-                                    <span class="card-title mb-0 text-primary fs-4">`+applicant.firstname+` `+applicant.lastname+`</span>
-                                    <div class="float-end">`+applicant.applied_date+`</div>
-                                </div>
-                                <div>
-                                    <span class="">
-                                        `+applicant.cst+` `+applicant.title+`
-                                    </span>
-                                    <div class = "clearfix float-end">
-                                        <a href="#" class="d-flex clearfix text-decoration-underline justify-content-end">View profile</a>
-                                        <a href="#" class="clearfix text-decoration-underline">Request approval</a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                $("#applicants-list").html(html_str);
-            }
-        }); 
-    });
+	var jobfunctions = [
+		{% for jobfunction in jobfunctions %}
+			{
+				value: "{{ jobfunction }}",
+				id: "{{ jobfunction }}"
+			},
+		{% endfor %}
+	];
+	var current_user_id = '{{ current_user.userid }}';
 </script>
+<script src="{{url_for('static', filename='js/jobsearch.js')}}"></script>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/tmkt.css')}}"/>
 {% endblock %}
