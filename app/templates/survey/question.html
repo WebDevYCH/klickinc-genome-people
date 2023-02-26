@@ -4,7 +4,7 @@
 {% block app_content %}
 <div class="card">
 	<div class="card-body">
-		<form id="survey" action="/survey/save" method="post">
+		<form id="survey" action="/p/survey/save" method="post">
 			<div class="panel-group" id="accordion">
 			{% for survey in surveys %}
 			<div class="panel panel-default">
@@ -102,7 +102,7 @@
     var formObject = objectifyForm(formArray);
     console.log(formObject);
     $.ajax({
-      url: "/survey/save",
+      url: "/p/survey/save",
       data: formObject,
       type: "POST",
     });

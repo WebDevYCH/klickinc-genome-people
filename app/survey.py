@@ -77,7 +77,7 @@ admin.add_view(SurveyAnswerAnalysisModelView(SurveyAnswerAnalysis, db.session, c
 ###################################################################
 ## FRONTEND
 
-@app.route('/survey', methods=['GET', 'POST'])
+@app.route('/p/survey', methods=['GET', 'POST'])
 @login_required
 def survey():
     """Route to the survey."""
@@ -86,7 +86,7 @@ def survey():
 
     return render_template('survey/index.html', title='Survey', surveys=surveys)
 
-@app.route('/survey/<id>')
+@app.route('/p/survey/<id>')
 @login_required
 def survey_detail(id):
     
@@ -102,7 +102,7 @@ def survey_detail(id):
     return render_template('survey/question.html', title='Survey', form=form, surveys=surveys, categories=categories)
 
 # route called by Ajax method
-@app.route('/survey/save', methods=['POST'])
+@app.route('/p/survey/save', methods=['POST'])
 @login_required
 def survey_save():
     # TODO: use surveyid
