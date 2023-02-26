@@ -461,10 +461,10 @@ def get_plrfs(year, clients, csts, showsources=True):
 def fill_dr_nodes(rowdict, rowtemplate, lrcat, lr_or_jf, lr_or_jf_name, portfolioid, clientname, portfolioname, source, cstname):
     # Hierarchies:
     # lrcat -> lr/jf -> portfolio -> source
-    # lrcat -> lr/jf -> source sum
+    ## lrcat -> lr/jf -> source sum
     # lrcat -> lr/jr -> fte
     # cst -> lr/jf -> portfolio -> source
-    # cst -> lr/jf -> source sum
+    ## cst -> lr/jf -> source sum
     # cst -> lr/jf -> fte
     # errorrates -> source
     # also if sources are shown, display error rates
@@ -472,44 +472,43 @@ def fill_dr_nodes(rowdict, rowtemplate, lrcat, lr_or_jf, lr_or_jf_name, portfoli
     keys = {}
     keys["lrcat"] = f"lcat"
     keys["lrcat_lrjf"] = f"lcat-{lrcat}-{lr_or_jf}"
+    keys["lrcat_lrjf_source"] = f"lcat-{lrcat}-{lr_or_jf}-{source}"
     keys["lrcat_lrjf_portfolio"] = f"lcat-{lrcat}-{lr_or_jf}-{portfolioid}"
     keys["lrcat_lrjf_portfolio_source"] = f"lcat-{lrcat}-{lr_or_jf}-{portfolioid}-{source}"
-    keys["lrcat_lrjf_sourcesum"] = f"lcat-{lrcat}-{lr_or_jf}-sourcesum"
     keys["lrcat_lfjr_fte"] = f"lcat-{lrcat}-{lr_or_jf}-fte"
     keys["cst_root"] = f"cst"
     keys["cst"] = f"cst{cstname}"
     keys["cst_lrjf"] = f"cst{cstname}-{lr_or_jf}"
+    keys["cst_lrjf_source"] = f"cst{cstname}-{lr_or_jf}-{source}"
     keys["cst_lrjf_portfolio"] = f"cst{cstname}-{lr_or_jf}-{portfolioid}"
     keys["cst_lrjf_portfolio_source"] = f"cst{cstname}-{lr_or_jf}-{portfolioid}-{source}"
-    keys["cst_lrjf_sourcesum"] = f"cst{cstname}-{lr_or_jf}-sourcesum"
     keys["cst_lrjf_fte"] = f"cst{cstname}-{lr_or_jf}-fte"
 
     sourcename = None
     sourcetype = 'source'
-    sourcesumtype = 'sourcesum'
     if source != None:
         sourcename = sourcename_from_source(source)
         if source == 'actuals':
             sourcetype = 'actuals'
-            sourcesumtype = 'actualssum'
 
     fill_dr_node(rowdict, rowtemplate, keys["lrcat"], None, f"{lrcat}", 'lcat', None)
     fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf"], keys["lrcat"], f"{lr_or_jf_name}", 'lrjf', None)
+    if source != None and sourcename != None:
+        fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf_source"], keys["lrcat_lrjf"], f"{sourcename}", sourcetype, source)
     if clientname != None and portfolioname != None:
         fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf_portfolio"], keys["lrcat_lrjf"], f"{clientname} - {portfolioname}", 'portfolio', None)
-    if source != None and sourcename != None:
-        fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf_portfolio_source"], keys["lrcat_lrjf_portfolio"], f"{sourcename}", sourcetype, source)
-    if sourcename != None:
-        fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf_sourcesum"], keys["lrcat_lrjf"], f"{sourcename}", sourcesumtype, None)
+        if source != None and sourcename != None:
+            fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf_portfolio_source"], keys["lrcat_lrjf_portfolio"], f"{sourcename}", sourcetype, source)
     fill_dr_node(rowdict, rowtemplate, keys["lrcat_lfjr_fte"], keys["lrcat_lrjf"], f"FTE", 'fte', None)
     fill_dr_node(rowdict, rowtemplate, keys["cst_root"], None, f"CST's", 'cst', None)
     fill_dr_node(rowdict, rowtemplate, keys["cst"], keys["cst_root"], f"{cstname}", 'cst', None)
     fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf"], keys["cst"], f"{lr_or_jf_name}", 'lrjf', None)
+    if source != None and sourcename != None:
+        fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_source"], keys["cst_lrjf"], f"{sourcename}", sourcetype, source)
     if clientname != None and portfolioname != None:
         fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_portfolio"], keys["cst_lrjf"], f"{clientname} - {portfolioname}", 'portfolio', None)
-    if source != None and sourcename != None:
-        fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_portfolio_source"], keys["cst_lrjf_portfolio"], f"{sourcename}", sourcetype, source)
-    fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_sourcesum"], keys["cst_lrjf"], f"Source Sum", sourcesumtype, None)
+        if source != None and sourcename != None:
+            fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_portfolio_source"], keys["cst_lrjf_portfolio"], f"{sourcename}", sourcetype, source)
     fill_dr_node(rowdict, rowtemplate, keys["cst_lrjf_fte"], keys["cst_lrjf"], f"FTE", 'fte', None)
 
     return keys
@@ -597,14 +596,13 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
                 addtocell(rowdict, keys["lrcat_lrjf"], mkey, fte)
                 addtocell(rowdict, keys["lrcat_lrjf_portfolio"], mkey, fte)
             addtocell(rowdict, keys["lrcat_lrjf_portfolio_source"], mkey, fte)
-            addtocell(rowdict, keys["lrcat_lrjf_sourcesum"], mkey, fte)
-            #addtocell(rowdict, keys["lrcat_lfjr_fte"], mkey, fte)
+            addtocell(rowdict, keys["lrcat_lrjf_source"], mkey, fte)
             if pflr.source == primarysource:
                 addtocell(rowdict, keys["cst"], mkey, fte)
                 addtocell(rowdict, keys["cst_lrjf"], mkey, fte)
                 addtocell(rowdict, keys["cst_lrjf_portfolio"], mkey, fte)
             addtocell(rowdict, keys["cst_lrjf_portfolio_source"], mkey, fte)
-            addtocell(rowdict, keys["cst_lrjf_sourcesum"], mkey, fte)
+            addtocell(rowdict, keys["lrcat_lrjf_source"], mkey, fte)
 
     # ADD FTE, HEADCOUNT, AND BILLED PCT
     app.logger.info(f"  adding fte, headcount, and billed pct data")
@@ -630,8 +628,7 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         addtocell(rowdict, keys["lrcat_lfjr_fte"], mkey, lrhc.billablealloc_eom)
         addtocell(rowdict, keys["cst_lrjf_fte"], mkey, lrhc.billablealloc_eom)
 
-        for key in [keys["lrcat"], keys["lrcat_lrjf"], keys["lrcat_lrjf_sourcesum"],
-                keys["cst"], keys["cst_lrjf"], keys["cst_lrjf_sourcesum"]]:
+        for key in [keys["lrcat"], keys["lrcat_lrjf"], keys["cst"], keys["cst_lrjf"]]:
             # if it's this month, fill in the hc column in other rows
             if lrhc.yearmonth >= datetime.date(thisyear, thismonth, 1) and lrhc.yearmonth < datetime.date(thisyear,thismonth,1) + relativedelta(months=1):
                 addtocell(rowdict, key, "hc", lrhc.headcount_eom)
@@ -663,6 +660,8 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         newrow['m2'] = 'EMSA/stddev'
         newrow['m3'] = 'EMSA'
         rowdict[newrow['id']] = newrow
+
+        app.logger.info(f"    sources={sources}")
 
         # for each source that is visible in this dataset
         for source in sources.keys():
@@ -733,15 +732,18 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         pass
     elif showportfolios and not showsources:
         df = df[df['detail'] != 'source']
-        df = df[df['detail'] != 'sourcesum']
         df = df[df['detail'] != 'errorrates']
     elif not showportfolios and showsources:
         df = df[df['detail'] != 'portfolio']
     else:
         df = df[df['detail'] != 'portfolio']
         df = df[df['detail'] != 'source']
-        df = df[df['detail'] != 'sourcesum']
         df = df[df['detail'] != 'errorrates']
+
+    # also FTE rows if this is not the full year
+    if not showfullyear:
+        df = df[df['detail'] != 'fte']
+        df = df[df['detail'] != 'actuals']
 
     # switch dataframe nulls to blank
     df = df.fillna('')

@@ -100,6 +100,7 @@
         // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
         columns = [ { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] } ]
         //columns.push({ id: "id", gravity: 4, minWidth: 150, header: [{ text: "ID" }] });
+        //columns.push({ id: "parent", gravity: 4, minWidth: 150, header: [{ text: "Parent" }] });
         if (year == thisyear) {
             columns.push({ id: "billedpct", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "BillPct 3m" }] });
             //columns.push({ id: "hc", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "HC Now" }] });
