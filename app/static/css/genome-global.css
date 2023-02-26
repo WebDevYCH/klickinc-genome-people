@@ -1,0 +1,81 @@
+body {
+	--gcr-font-family: 'Open Sans', system-ui, Helvetica, Arial, sans-serif;
+	--gcr-primary-lighter-10: #cfe4f0;
+	--gcr-primary-lighter-5: #79bfd9;
+	--gcr-primary: #2399c2;
+	--gcr-primary-darker-5: #2089ac;
+	--gcr-primary-darker-10: #1c7897;
+	--gcr-success-lighter-10: #f2f9e9;
+	--gcr-success-lighter-5: #b8de86;
+	--gcr-success: #7ec223;
+	--gcr-success-darker-5: #6da81e;
+	--gcr-success-darker-10: #5d8f1a;
+	--gcr-warning-lighter-10: #ffe7ad;
+	--gcr-warning-lighter-5: #f9c35b;
+	--gcr-warning: #f29e09;
+	--gcr-warning-darker-5: #d98e08;
+	--gcr-warning-darker-10: #bf7d07;
+	--gcr-danger-lighter-10: #fcdadb;
+	--gcr-danger-lighter-5: #dd7782;
+	--gcr-danger: #be1428;
+	--gcr-danger-darker-5: #a61123;
+	--gcr-danger-darker-10: #8c0f1e;
+	--gcr-offwhite: rgb(244, 248, 248);
+	--gcr-lightgrey: rgb(230, 230, 235);
+	--gcr-slate: #6d6e7d;
+	--gcr-eggplant: #261e37;
+	--gcr-fog: rgb(230, 230, 235);
+	--gcr-rounding-sm: 4px;
+	--gcr-rounding-md: 8px;
+	--gcr-rounding-lg: 16px;
+	--gcr-spacing-xs: 2px;
+	--gcr-spacing-sm: 4px;
+	--gcr-spacing-md: 8px;
+	--gcr-spacing-lg: 16px;
+	--gcr-size-ctrl-xxs: 16px;
+	--gcr-size-ctrl-xs: 24px;
+	--gcr-size-ctrl-sm: 32px;
+	--gcr-size-ctrl-md: 40px;
+	--gcr-size-ctrl-lg: 48px;
+	--gcr-size-ctrl-xl: 64px;
+	--gcr-size-ctrl-xxl: 128px;
+	--icon-xs: 16px;
+	--icon-sm: 24px;
+	--icon-md: 32px;
+	--icon-lg: 64px;
+	--icon-xl: 128px;
+	--text-xxs: 10px;
+	--text-xs: 12px;
+	--text-sm: 14px;
+	--text-md: 16px;
+	--text-lg: 18px;
+	--text-xl: 20px;
+	--text-xxl: 24px;
+	--line-height-xs: 18px;
+	--line-height-sm: 20px;
+	--line-height-md: 22px;
+	--line-height-lg: 24px;
+	--line-height-xl: 26px;
+}
+
+/* --------------------- Toast Notification Popup Styles -------------------- */
+.toast.success {
+	background: var(--gcr-success-lighter-10);
+    border-left: 3px solid #42be65;
+}
+.toast.error {
+	background: var(--gcr-danger-lighter-10);
+	border-left: 3px solid #fa4d56;
+}
+.toast.info {
+	background-color: var(--gcr-primary-lighter-10);
+    border-left: 3px solid var(--gcr-primary-lighter-5);
+}
+.toast.warning {
+	background: var(--gcr-warning-lighter-10);
+	border-left: 3px solid #f1c21b;
+}
+.genome-toast-header {
+	font-size: 1rem;
+    font-weight: 600;
+}
