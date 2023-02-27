@@ -148,13 +148,19 @@
     });
     layout.getCell("treegrid").attach(treegrid);
 
+    {% if current_user.has_roles('forecast_advanced') %}
+    forecast_advanced = true;
+    {% else %}
+    forecast_advanced = false;
+    {% endif %}
+
     ///////////////////////////////////////////////////////////////////////
     // CHECKBOXES
     const form = new dhx.Form("form", {
         width: "400px",
         height: "100%",
         rows: [
-            { id: "showsources", type: "checkbox", label: "Show Sources", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the source of each forecast, including test predictive models" },
+            { id: "showsources", type: "checkbox", label: "Show ML Forecasts", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: !forecast_advanced, helpMessage: "Show the source of each forecast, including test predictive models" },
             { id: "showportfolios", type: "checkbox", label: "Show Portfolios", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show portfolios under labor roles" },
             { id: "showyear", type: "checkbox", label: "Show Full Year", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show the full year instead of just the next 3 months" },
             { id: "showhours", type: "checkbox", label: "Show Hours Instead of FTE", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show unmodified hours instead of FTE" },

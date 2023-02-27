@@ -218,21 +218,21 @@ def queryClientCst(clients, csts):
 def sourcename_from_source(source):
     sourcename = f"'{source}' Source",
     if source == 'actuals':
-        sourcename = ' Actuals'
+        sourcename = 'Actuals'
     elif source == 'linear':
-        sourcename = ' Linear Forecast'
+        sourcename = 'Linear Forecast'
     elif source.startswith('linear'):
-        sourcename = f' Linear Forecast ({source[6:]}m lookback)'
+        sourcename = f'Linear Forecast ({source[6:]}m lookback)'
     elif source == 'cilinear':
-        sourcename = ' Linear Forecast by CI Tags'
+        sourcename = 'Linear Forecast by CI Tags'
     elif source == 'linreg':
-        sourcename = ' Linear Regression Forecast'
+        sourcename = 'Linear Regression Forecast'
     elif source.startswith('linreg'):
-        sourcename = f' Linear Regression Forecast ({source[6:]}m lookback)'
+        sourcename = f'Linear Regression Forecast ({source[6:]}m lookback)'
     elif source == 'gsheet':
-        sourcename = ' PM Line of Sight Forecast'
+        sourcename = 'PM Line of Sight Forecast'
     elif source == 'mljar':
-        sourcename = ' AutoML Forecast'
+        sourcename = 'AutoML Forecast'
     return sourcename
 
 def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
@@ -490,6 +490,8 @@ def fill_dr_nodes(rowdict, rowtemplate, lrcat, lr_or_jf, lr_or_jf_name, portfoli
         sourcename = sourcename_from_source(source)
         if source == 'actuals':
             sourcetype = 'actuals'
+        if source == 'gsheet':
+            sourcetype = 'gsheet'
 
     fill_dr_node(rowdict, rowtemplate, keys["lrcat"], None, f"{lrcat}", 'lcat', None)
     fill_dr_node(rowdict, rowtemplate, keys["lrcat_lrjf"], keys["lrcat"], f"{lr_or_jf_name}", 'lrjf', None)
@@ -595,14 +597,14 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
                 addtocell(rowdict, keys["lrcat"], mkey, fte)
                 addtocell(rowdict, keys["lrcat_lrjf"], mkey, fte)
                 addtocell(rowdict, keys["lrcat_lrjf_portfolio"], mkey, fte)
-            addtocell(rowdict, keys["lrcat_lrjf_portfolio_source"], mkey, fte)
-            addtocell(rowdict, keys["lrcat_lrjf_source"], mkey, fte)
-            if pflr.source == primarysource:
                 addtocell(rowdict, keys["cst"], mkey, fte)
                 addtocell(rowdict, keys["cst_lrjf"], mkey, fte)
                 addtocell(rowdict, keys["cst_lrjf_portfolio"], mkey, fte)
-            addtocell(rowdict, keys["cst_lrjf_portfolio_source"], mkey, fte)
+
+            addtocell(rowdict, keys["lrcat_lrjf_portfolio_source"], mkey, fte)
             addtocell(rowdict, keys["lrcat_lrjf_source"], mkey, fte)
+            addtocell(rowdict, keys["cst_lrjf_portfolio_source"], mkey, fte)
+            addtocell(rowdict, keys["cst_lrjf_source"], mkey, fte)
 
     # ADD FTE, HEADCOUNT, AND BILLED PCT
     app.logger.info(f"  adding fte, headcount, and billed pct data")
@@ -618,8 +620,10 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
 
         if showlaborroles:
             lr_or_jf = lrhc.labor_role.id
+            lr_or_jf_name = lrhc.labor_role.name
         else:
             lr_or_jf = lrhc.labor_role.jobfunction
+            lr_or_jf_name = lrhc.labor_role.jobfunction
 
         keys = fill_dr_nodes(rowdict, rowtemplate, lrcat, lr_or_jf, lr_or_jf_name, None, None, None, None, lrhc.cstname)
 

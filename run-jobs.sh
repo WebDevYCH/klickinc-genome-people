@@ -16,8 +16,9 @@ jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 
 jobs_skills="replicate_skills"
 
-jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar model_blend replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
-jobs_forecast_train="model_mljar_train"
+jobs_forecast_core="model_actuals model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
+jobs_forecast_ml="model_linear model_linreg model_cilinear model_blend"
+jobs_forecast_train="model_mljar_train model_mljar"
 
 jobs_tmkt=""
 jobs_tmkt_train="tmkt_people_gptindex tmkt_chatdb_train tmkt_resumes_load_index tmkt_job_postings_load_index"
