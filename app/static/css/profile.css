@@ -1,0 +1,6 @@
+.skill-list .badge {
+	white-space: nowrap;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    overflow-x: hidden;
+}

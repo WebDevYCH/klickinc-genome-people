@@ -39,7 +39,6 @@
 		</button>
 	</div>
 </div> -->
-
 <div class="profile-page row">
 	<div class="col-md-4 col-xl-3 col-3">
 		<div class="card mb-3">
@@ -47,24 +46,24 @@
 				<h5 class="card-title mb-0">Profile Details</h5>
 			</div>
 			<div class="card-body text-center">
-				{% if current_user.photourl %}
+				{% if user.photourl %}
 				<img
-					src="{{ current_user.photourl }}"
+					src="{{ user.photourl }}"
 					class="img-fluid rounded-circle mb-2"
 					width="128"
 					height="128"
-					alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+					alt="{{ user.firstname }} {{ user.lastname }}" />
 				{% else %}
 				<img
 					src="img/avatars/avatar.jpg"
-					alt="{{ current_user.firstname }} {{ current_user.lastname }}"
+					alt="{{ user.firstname }} {{ user.lastname }}"
 					class="img-fluid rounded-circle mb-2"
 					width="128"
 					height="128" />
 				{% endif %}
 
 				<h5 class="card-title mb-0">{{ user }}</h5>
-				<div class="text-muted mb-2">{{ current_user.title }}</div>
+				<div class="text-muted mb-2">{{ user.title }}</div>
 			</div>
 			<hr class="my-0" />
 			<div class="card-body">
@@ -80,20 +79,21 @@
 					</div>
 				</div>
 				{% for skill in skills %}
-				<div class="dropdown position-relative">
+				<span class="dropdown position-relative skill-list">
 					<a
 						href="#"
 						class="badge bg-primary me-1 my-1"
 						data-bs-toggle="dropdown"
 						data-bs-display="static"
+						title="{{ skill.name }}"
 						>{{ skill.name }}</a
 					>
-					<div
+					<span
 						class="dropdown-menu dropdown-menu-right text-center"
 						style="background-color: #90baeb; font-style: italic">
 						<span>{{ skill.description }}</span>
-					</div>
-				</div>
+				</span>
+				</span>
 				{% endfor %}
 			</div>
 		</div>
@@ -103,15 +103,17 @@
 			<div class="card-header">
 				<div class="d-flex justify-content-between">
 					<h5 class="card-title mb-0">Resume</h5>
-					<a
-						href="#"
-						class="btn btn-sm btn-primary"
-						id="upload-resume-btn"
-						data-bs-toggle="modal"
-						data-bs-target="#edit_resume_modal">
-						<i class="fas fa-edit"></i>
-						{{ "Edit Resume" if profile.resume else "Upload Resume"}}
-					</a>
+					{% if profile.user_id == current_user.userid %}
+						<a
+							href="#"
+							class="btn btn-sm btn-primary"
+							id="upload-resume-btn"
+							data-bs-toggle="modal"
+							data-bs-target="#edit_resume_modal">
+							<i class="fas fa-edit"></i>
+							{{ "Edit Resume" if profile.resume else "Upload Resume"}}
+						</a>
+					{% endif %}
 				</div>
 			</div>
 			<div class="card-body h-100" id="resume-panel">
@@ -149,8 +151,10 @@
 						<div class="clearfix mb-3">
 							<div id="quill-toolbar">
 								<span class="ql-formats">
-									<select class="ql-font"></select>
 									<select class="ql-size"></select>
+								</span>
+								<span class="ql-formats">
+									<select class="ql-color"></select>
 								</span>
 								<span class="ql-formats">
 									<button class="ql-bold"></button>
@@ -159,54 +163,12 @@
 									<button class="ql-strike"></button>
 								</span>
 								<span class="ql-formats">
-									<select class="ql-color"></select>
-									<select class="ql-background"></select>
+									<button class="ql-header" value="1"></button>
+									<button class="ql-header" value="2"></button>
 								</span>
 								<span class="ql-formats">
-									<button
-										class="ql-script"
-										value="sub"></button>
-									<button
-										class="ql-script"
-										value="super"></button>
-								</span>
-								<span class="ql-formats">
-									<button
-										class="ql-header"
-										value="1"></button>
-									<button
-										class="ql-header"
-										value="2"></button>
-									<button class="ql-blockquote"></button>
-									<button class="ql-code-block"></button>
-								</span>
-								<span class="ql-formats">
-									<button
-										class="ql-list"
-										value="ordered"></button>
-									<button
-										class="ql-list"
-										value="bullet"></button>
-									<button
-										class="ql-indent"
-										value="-1"></button>
-									<button
-										class="ql-indent"
-										value="+1"></button>
-								</span>
-								<span class="ql-formats">
-									<button
-										class="ql-direction"
-										value="rtl"></button>
-									<select class="ql-align"></select>
-								</span>
-								<span class="ql-formats">
-									<button class="ql-link"></button>
-									<button class="ql-image"></button>
-									<button class="ql-video"></button>
-								</span>
-								<span class="ql-formats">
-									<button class="ql-clean"></button>
+									<button class="ql-list" value="ordered"></button>
+									<button class="ql-list" value="bullet"></button>
 								</span>
 							</div>
 							<div id="quill-editor"></div>
@@ -227,50 +189,51 @@
 			</div>
 		</div>
 	</div>
-	<!-- end container -->
-	{% endblock %} 
-	
-	<!-- script block -->
-	{% block script %}
-	<script>
-		document.addEventListener('DOMContentLoaded', function () {
-			flatpickr('.flatpickr-minimum', {
-				minDate: 'today',
-			});
-			editor = new Quill('#quill-editor', {
-				modules: {
-					toolbar: '#quill-toolbar',
-				},
-				placeholder: 'Write resume description here...',
-				theme: 'snow',
-			});
-		});
-		let flag = 'Create';
-		const resume = $('#resume-panel').html().trim();
-		if (resume) flag = 'Edit';
-		$('#upload-resume-btn').on('click', function () {
-			if (flag === 'Create') {
-				$('.modal-title').html('Create your resume');
-			} else {
-				editor.root.innerHTML = resume;
-			}
-		});
-		$('#resume-edit-btn').on('click', function () {
-			var resume = editor.root.innerHTML;
-			$('#edit_resume_modal').modal('hide');
-			$.ajax({
-				type: 'POST',
-				url: '/profile',
-				data: {
-					resume: resume,
-				},
-				success: function () {
-					loading();
-					location.reload(true);
-				},
-			});
-			unloading();
-		});
-	</script>
-	{% endblock %}
 </div>
+<!-- end app_content -->
+{% endblock %} 
+	
+<!-- script block -->
+{% block script %}
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+		flatpickr('.flatpickr-minimum', {
+			minDate: 'today',
+		});
+		editor = new Quill('#quill-editor', {
+			modules: {
+				toolbar: '#quill-toolbar',
+			},
+			placeholder: 'Write resume description here...',
+			theme: 'snow',
+		});
+	});
+	let flag = 'Create';
+	const resume = $('#resume-panel').html().trim();
+	if (resume) flag = 'Edit';
+	$('#upload-resume-btn').on('click', function () {
+		if (flag === 'Create') {
+			$('.modal-title').html('Create your resume');
+		} else {
+			editor.root.innerHTML = resume;
+		}
+	});
+	$('#resume-edit-btn').on('click', function () {
+		var resume = editor.root.innerHTML;
+		$('#edit_resume_modal').modal('hide');
+		$.ajax({
+			type: 'POST',
+			url: '/profile',
+			data: {
+				resume: resume,
+			},
+			success: function () {
+				loading();
+				location.reload(true);
+			},
+		});
+		unloading();
+	});
+</script>
+<link rel="stylesheet" href="{{ url_for('static',filename='css/profile.css')}}"/>
+{% endblock %}

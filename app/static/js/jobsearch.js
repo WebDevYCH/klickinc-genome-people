@@ -840,7 +840,7 @@ function viewApplicantTemplate(applicant){
 				</div>
 				<div>
 					<div class="d-flex justify-content-end">`+applicant.applied_date+`</div>
-					<a href="#" class="d-flex justify-content-end"">View profile</a>
+					<a href="/profile/`+ applicant.userid +`" class="d-flex justify-content-end"">View profile</a>
 					<a href="#" class="d-flex justify-content-end">Request approval</a>
 				</div>
 			</div>

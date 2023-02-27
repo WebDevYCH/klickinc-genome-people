@@ -28,6 +28,8 @@ def profile(selected_user_id = None):
             # get user profile from user_id passed in url
             try:
                 profile = db.session.query(UserProfile).filter(UserProfile.user_id==selected_user_id).one()
+                user = db.session.query(User).filter(User.userid==selected_user_id).first()
+                title = user.firstname + " " + user.lastname + "'s Profile"
             except:
                 profile = None
                 result = "Unable to find an existing profile for user id: " + selected_user_id
@@ -35,6 +37,8 @@ def profile(selected_user_id = None):
             # attempt to find current user's profile
             try:
                 profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+                user = current_user
+                title = "Your Profile"
             except:
                 profile = None
                 result = "Unable to find an existing profile, please create one by uploading a resume"
@@ -44,11 +48,14 @@ def profile(selected_user_id = None):
 
     # attempt to find existing skills
     try:
-        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+        if selected_user_id:
+        	my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == selected_user_id).order_by(Skill.name).all()
+        else:
+            my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
     except:
         my_skills = None
 
-    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills, title="Profile")
+    return render_template('profile/index.html', profile=profile, user=user, skills=my_skills, title=title)
 
 @app.route('/profile/edit-skills')
 @login_required
