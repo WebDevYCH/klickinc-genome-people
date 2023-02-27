@@ -657,44 +657,39 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
         newrow = rowtemplate.copy()
         newrow['id'] = 'errorrates'
         newrow['parent'] = None
-        newrow['name'] = '-- Model error rates'
+        newrow['name'] = 'Source error rates'
         newrow['source'] = 'errorrates'
         newrow['detail'] = 'errorrates'
-        newrow['m1'] = 'R2'
-        newrow['m2'] = 'EMSA/stddev'
-        newrow['m3'] = 'EMSA'
+        newrow['m1'] = 'R2*100'
+        newrow['m2'] = 'EMSA/stddev*100'
+        newrow['m3'] = 'EMSA*100'
         rowdict[newrow['id']] = newrow
 
         app.logger.info(f"    sources={sources}")
 
         # for each source that is visible in this dataset
         for source in sources.keys():
+            if source == 'actuals':
+                continue
             # gather each data point for that source, save its info in the predictionsdf, and also save the equivalent 'actuals' value
             predictionsdf = pd.DataFrame(columns=['predictionrowid','year','month','prediction','actual'])
-            debug_predictions = False
             for row in rowdict.values():
-                if row['detail'] == 'source' and row['source'] == source:
+                if row['source'] == source:
+                    # find actuals by morphing the current key to an actuals key
                     actualskey = row['id'].replace(f"-{source}","-actuals")
+                    if actualskey not in rowdict:
+                        continue
                     #app.logger.info(f"    for source '{source}': row={row} and actualskey={actualskey}")
                     for m in range(1,13):
-                        # skip this month and future months
-                        if year == thisyear and m >= thismonth:
-                            continue
-                        elif year > thisyear:
-                            continue
                         mkey = f"m{m}"
                         prediction = row[mkey]
-                        actual = None
-                        # find actuals by morphing the current key to an actuals key
-                        if actualskey in rowdict:
-                            actual = rowdict[actualskey][mkey]
+                        actual = rowdict[actualskey][mkey]
                         if actual != None and prediction != None:
                             # append record to predictionsdf
-                            if debug_predictions:
                                 predictionsdf = pd.concat([predictionsdf, pd.DataFrame({
-                                    'predictionrowid': [row['id']],
-                                    'year': [year],
-                                    'month': [m],
+                                    #'predictionrowid': [row['id']],
+                                    #'year': [year],
+                                    #'month': [m],
                                     'prediction': [prediction],
                                     'actual': [actual]
                                     })], ignore_index=True
@@ -720,9 +715,9 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
             newrow['name'] = sourcename_from_source(source)
             newrow['source'] = 'errorrates'
             newrow['detail'] = 'errorrates'
-            newrow['m1'] = r2score
-            newrow['m2'] = rmsescore/stddev
-            newrow['m3'] = rmsescore
+            newrow['m1'] = r2score*100
+            newrow['m2'] = rmsescore/stddev*100
+            newrow['m3'] = rmsescore*100
             rowdict[newrow['id']] = newrow
 
             predictionsdf.to_csv(f"../logs/predictions_{year}_{lrcat}_{source}_r2_{r2score}.csv", index=False)
