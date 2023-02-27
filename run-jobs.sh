@@ -26,7 +26,7 @@ jobs_tmkt_test="tmkt_people_gptindex_test tmkt_people_gptindex_test_interactive 
 
 jobs_chat="chat_test chat_core"
 
-sections="core_often core_daily skills forecast forecast_train tmkt tmkt_train tmkt_test chat"
+sections="core_often core_daily skills forecast_core forecast_ml forecast_train tmkt tmkt_train tmkt_test chat"
 
 
 if [ "$1" = "" ]; then
@@ -42,7 +42,7 @@ elif [ "$1" = "job" ]; then
 
 else
 
-    for section in core_often core_daily skills forecast tmkt tmkt_test tmkt_test_train chat; do
+    for section in core_often core_daily skills forecast_core forecast_ml forecast_train tmkt tmkt_test tmkt_test_train chat; do
         if [ "$1" = "$section" ]; then
             eval "sectionlist=\$jobs_$section"
             for function in `echo $sectionlist`; do

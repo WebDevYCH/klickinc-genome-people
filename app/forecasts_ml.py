@@ -7,9 +7,11 @@ try:
 except:
     pass
 
-from sklearn.ensemble import RandomForestClassifier
+from collections import OrderedDict
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import SGDClassifier
 from sklearn import svm
+from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV
 import xgboost as xgb
 
@@ -19,37 +21,381 @@ import matplotlib.pyplot as plt
 import talib as ta
 from IPython.display import display
 import pandas as pd
+import seaborn as sns 
+
+from google.cloud import bigquery
+from core import *
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-if len(sys.argv) < 2:
-    print("Usage: " + sys.argv[0] + "")
+if len(sys.argv) < 3:
+    print("Usage: " + sys.argv[0] + " [jobfunction] [clientname]")
     print()
     quit()
 
-plt.close('all')
-
-from core import *
-
-
 # query parameters
-laborcat = None
-laborrole = None
-jobfunction = None
+# try with "Quality Assurance" and "Takeda NSBU"
+jobfunction = sys.argv[1]
+clientname = sys.argv[2]
+
+# pick up args of the format arg=value
+def getarg(argname, default):
+    for arg in sys.argv:
+        if arg.startswith(argname + '='):
+            if type(default) is int:
+                return int(arg.split('=')[1])
+            elif type(default) is float:
+                return float(arg.split('=')[1])
+            elif type(default) is bool:
+                return arg.split('=')[1].lower() == 'true' or arg.split('=')[1].lower() == '1' or arg.split('=')[1].lower() == 'yes'
+            else:
+                return arg.split('=')[1]
+    return default
 
 # parameters
-data_years = 7
-lookback_years = 1
-technique = 'xgboost'
-wfosteps = 4
+hyperoptonly = getarg("hyperoptonly", False)
+predictonly = getarg("predictonly", False)
+doplot = getarg("doplot", True)
+
+data_years = getarg("data_years", 10)
+lookback_years = getarg("lookback_years", 1)
+technique = getarg("technique", 'xgboost')
+wfosteps = getarg("wfosteps", 4)
 
 # hyperparameters
-n_estimators = 100
-max_depth = 10
-learning_rate = 0.1
-min_child_weight = 1
-gamma = 0.1
-subsample = 0.8
-colsample_bytree = 0.8
-reg_alpha = 0.1
-reg_lambda = 0.1
+estimators = getarg("estimators", 250)
+maxdepth = getarg("maxdepth", 10)
+learning_rate = getarg("learning_rate", 0.3)
+min_child_weight = getarg("min_child_weight", 1)
+colsample_bytree = getarg("colsample_bytree", 0.8)
+reg_alpha = getarg("reg_alpha", 0.1)
+reg_lambda = getarg("reg_lambda", 0.1)
+
+
+# LOAD DATA
+
+print("Loading data...")
+start_year = datetime.date.today().year - data_years
+
+# bigquery sql (load up for each combination of job function and division)
+query = f"""
+select 
+d.ActualDate as Date,
+sum(Hours) as Hours
+from `genome-datalake-prod.GenomeDW.F_Actuals` fact
+join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
+join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
+join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+join `genome-datalake-prod.GenomeDW.JobFunction` jf on fact.JobFunction=jf.JobFunction
+where pr.Billable=true
+and d.ActualDate >= '{start_year}-01-01'
+and jf.Name='{jobfunction}' and p.ClientName='{clientname}'
+group by 
+d.ActualDate
+"""
+
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../keys/google-key.json"
+bqresult = bigquery.Client().query(query)
+# convert to dataframe with date as index
+df = bqresult.to_dataframe()
+df['Date'] = pd.to_datetime(df['Date'])
+df = df.set_index('Date')
+df = df.sort_index()
+display(df)
+
+# take out weekends
+df = df[df.index.dayofweek < 5]
+
+# ADD FEATURES
+print("Adding features...")
+
+def zscore(src, timeperiod):
+    avg = ta.SMA(src, timeperiod = timeperiod)
+    std = ta.STDDEV(src, timeperiod = timeperiod)
+    zscore = (src - avg)/std
+    return zscore
+
+df['rsi_2']     = ta.RSI(df['Hours'], timeperiod = 2)
+df['rsi_3']     = ta.RSI(df['Hours'], timeperiod = 3)
+df['rsi_5']     = ta.RSI(df['Hours'], timeperiod = 5)
+#df['rsi_8']     = ta.RSI(df['Hours'], timeperiod = 8)
+df['rsi_14']    = ta.RSI(df['Hours'], timeperiod = 14)
+df['rsi_20']    = ta.RSI(df['Hours'], timeperiod = 20)
+
+df['zscore_4']  = zscore(df['Hours'], timeperiod = 4)
+df['zscore_8']  = zscore(df['Hours'], timeperiod = 8)
+df['zscore_17'] = zscore(df['Hours'], timeperiod = 17)
+#df['zscore_20'] = zscore(df['Hours'], timeperiod = 20)
+
+df['sma_10']   = ta.SMA(df['Hours'], timeperiod = 100)
+df['sma_20']   = ta.SMA(df['Hours'], timeperiod = 100)
+#df['sma_50']   = ta.SMA(df['Hours'], timeperiod = 100)
+df['sma_100']   = ta.SMA(df['Hours'], timeperiod = 100)
+df['sma_150']   = ta.SMA(df['Hours'], timeperiod = 150)
+df['sma_200']   = ta.SMA(df['Hours'], timeperiod = 200)
+df['ema_200']   = ta.EMA(df['Hours'], timeperiod = 200)
+
+df['dayofweek'] = df.index.dayofweek
+df['month']     = df.index.month
+
+display(df)
+
+print("TRAINING MODEL")
+
+def make_model():
+    # Select a model to fit and test
+    if technique == 'forest':
+        model = RandomForestRegressor(n_estimators=estimators, max_depth=maxdepth, min_samples_split=50, n_jobs=-1, random_state=42)
+    elif technique == 'svm':
+        model = svm.SVC(kernel = 'linear', probability=True)
+    elif technique == 'sgd':
+        model = SGDClassifier(loss='log_loss', penalty='l1', alpha=0.00005, max_iter=1000, tol=0.001, n_jobs=-1, random_state=42)
+    elif technique == 'xgboost':
+        model = xgb.XGBRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, min_child_weight=50, n_jobs=-1, random_state=42)
+    elif technique == 'tensorflow':
+        model = skflow.TensorFlowLinearClassifier(n_classes=2, batch_size=128, steps=1000, learning_rate=0.05)
+    else:
+        print(f"ERROR: Unknown technique: {technique}")
+        exit()
+    return model
+
+# set up NextHours, representing the next day's hours
+df['NextHours'] = df['Hours'].shift(-1)
+
+# set up prediction target variable NextHours, representing the next 20 days' hours summed up
+#df['NextHours'] = df['Hours'].rolling(window=20, min_periods=1).sum().shift(-20)
+
+
+# replace infinte values with NaNs and drop any rows with NaN (but keep the last line for prediction)
+lastline = df.tail(1)
+df = df[:-1]
+df.replace([np.inf, -np.inf], np.nan, inplace = True)
+df.dropna(inplace = True)
+df = pd.concat([df, lastline])
+
+# predictors are all columns except the one called 'NextHours'
+predictors = df.columns.tolist()
+predictors.remove('NextHours')
+print("predictors = ", predictors)
+
+#df.to_csv('logs/testfullinputs.csv', date_format='%Y-%m-%d') 
+
+# train is everything in df before 1 year ago, based on the date column
+pivot_date = datetime.date.today() - datetime.timedelta(days = int(365))
+length = len(df)
+train = df.loc[: pivot_date]
+# test is from pivot_date to all but the last record of df
+test = df.loc[pivot_date :].drop(df.tail(1).index)
+# predict is just the last record, for final prediction purposes after pre-live optimization
+predict = df.tail(1)
+# if the last train record and first test record overlap, drop the train record
+if train.index[-1] == test.index[0]:
+    train = train.drop(train.tail(1).index)
+
+if hyperoptonly:
+    print(f"Hyperparameter optimization only; len(train)={len(train)}, len(test)={len(test)}")
+    model = make_model()
+    param_grid = {}
+    if technique == 'forest':
+        param_grid['n_estimators'] = [250, 500, 1000, 2000, 4000, 5000],
+        param_grid['max_depth'] = [2, 3, 4, 5, 10, 20, 40],
+        param_grid['min_samples_split'] = [2, 5, 10, 20, 50, 100]
+    elif technique == 'xgboost':
+        param_grid['n_estimators'] = [250, 500, 1000, 2000, 4000, 5000],
+        param_grid['max_depth'] = [2, 3, 4, 5, 10, 20, 40],
+        param_grid['learning_rate'] =  [0.01, 0.05, 0.1, 0.2, 0.5, 1.0]
+        param_grid['min_child_weight'] = [1, 5, 10, 20, 50, 100]
+        param_grid['lambda'] = [0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+        param_grid['alpha'] = [0, 0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+        param_grid['colsample_bytree'] = [0.1, 0.2, 0.5, 0.7, 1.0]
+    elif technique == 'sgd':
+        param_grid['loss'] = ['modified_huber', 'hinge', 'perceptron', 'squared_hinge', 'log_loss', 'squared_epsilon_insensitive', 'epsilon_insensitive', 'squared_error', 'huber']
+        param_grid['penalty'] = ['l2', 'l1', 'elasticnet']
+        param_grid['alpha'] = [0.0001, 0.001, 0.01, 0.1, 1.0]
+        param_grid['max_iter'] = [100, 1000, 10000]
+        param_grid['tol'] = [0.0001, 0.001, 0.01, 0.1, 1.0]
+    grid_search = GridSearchCV(model, param_grid, n_jobs=-1, verbose=1)
+    grid_search.fit(df.head(-1)[predictors], df.head(-1)["NextHours"])
+    print(f"Best parameters: {grid_search.best_params_}")
+    #print(f"Best estimator: {grid_search.best_estimator_}")
+    exit()
+
+
+if not predictonly:
+    # train/test loops based on splitting the test set into wfosteps chunks
+    wfolength = int(len(test) / wfosteps)
+    print(f"Training+predicting WFO with {wfosteps} steps of {wfolength} data points each (last step may be shorter); len(training)={len(train)}, len(test)={len(test)}")
+    train["NextHoursPredicted"] = np.nan
+    test["NextHoursPredicted"] = np.nan
+    for wfostep in range(0, wfosteps):
+
+        trainstartpos = wfostep * wfolength
+        trainendpos = (wfostep * wfolength) - 1 # how much of the main test set to use for training
+        teststartpos = trainstartpos
+        testendpos = min(teststartpos + wfolength, len(test))
+        if wfostep == wfosteps - 1:
+            testendpos = len(test) # sometimes rounding errors mean we wouldn't normally predict the last record or two
+        model = make_model()
+
+        if trainendpos != -1:
+            print(f"Training+predicting WFO round {wfostep+1}/{wfosteps} thistrain=train[{trainstartpos}:]+test[:{trainendpos}] thistest=test[{teststartpos}:{testendpos}]")
+            thistrain = pd.concat([train[trainstartpos:], test[:trainendpos]])
+        else:
+            print(f"Training+predicting WFO round {wfostep+1}/{wfosteps} thistrain=train[{trainstartpos}:] thistest=test[{teststartpos}:{testendpos}]")
+            thistrain = train[trainstartpos:]
+        thistest = test[teststartpos:testendpos]
+
+        # train the model on the subset
+        model.fit(thistrain[predictors], thistrain["NextHours"])
+
+        # predict the training subset
+        thistrain['NextHoursPredicted'] = model.predict(thistrain[predictors])
+        train.update(thistrain[['NextHoursPredicted']])
+
+        # predict the test subset
+        thistest['NextHoursPredicted'] = model.predict(thistest[predictors])
+        test.update(thistest[['NextHoursPredicted']])
+
+# predict the last record
+model = make_model()
+trainstartpos = len(test)
+thistrain = pd.concat([train[trainstartpos:], test])
+print(f"Training+predicting most recent record")
+# train the model on the subset
+model.fit(thistrain[predictors], thistrain["NextHours"])
+# now predict
+predict['NextHoursPredicted'] = model.predict(predict[predictors])
+# Determine predictions based on long and short thresholds
+def shortlong(x, shortthreshold, longthreshold):
+    if x > longthreshold: return 1
+    elif x < shortthreshold: return -1
+    else: return 0
+predicted_next = predict['NextHoursPredicted'][0]
+print(f"Predicted next day after {predict.index[0]} is {predicted_next}")
+
+if predictonly:
+    exit()
+
+print("RESULTS SUMMARY")
+
+train_r2_error = r2_score(train['NextHours'], train['NextHoursPredicted'])
+print(f"prediction accuracy in training data: {train_r2_error}")
+test_r2_error = r2_score(test['NextHours'], test['NextHoursPredicted'])
+print(f"prediction accuracy in test data: {test_r2_error}")
+
+# Make predictions on the training set, report on error rate in training set
+#train['NCPredictedDirection'] = (train['NextHoursPredicted'] > 0.5).astype(int)
+#error = abs(train['NextHours'] - train['NCPredictedDirection'])
+#error_pcnt = sum(error) / len(error) * 100.0
+#print(f"binary prediction accuracy in training data: {round(100-error_pcnt,1)}%")
+
+# Make probabilistic predictions on the test set and report on error rate
+#test['NCPredictedDirection'] = (test['NextHoursPredicted'] > 0.5).astype(int)
+#error = abs(test['NextHours'] - test['NCPredictedDirection'])
+#error.dropna(inplace=True)
+#error_pcnt = sum(error) / len(error) * 100.0
+#print(f"binary prediction accuracy in test data: {round(100-error_pcnt,1)}%")
+
+print()
+
+# transform training set into predictions set by removing predictor columns
+#testcolsdrop = predictors
+#testcolsdrop.remove('NextHours')
+#test = test.drop(columns=testcolsdrop)
+
+print("SPECIFIC PREDICTIONS FOR TEST SET")
+
+display(test)
+print()
+
+# descriptive statistics
+stats = OrderedDict()
+# add row count column to test df
+test['row'] = range(1, len(test) + 1)
+
+thisyear = datetime.date.today().year
+
+stats['** PARAMETERS'] = '--'
+stats['data_years'] = data_years
+stats['technique'] = technique
+stats['estimators'] = estimators
+stats['maxdepth'] = maxdepth
+stats['learning_rate'] = learning_rate
+stats['colsample_bytree'] = colsample_bytree
+stats['wfosteps'] = wfosteps
+
+stats['** RESULTS'] = '--'
+stats['train_r2_error'] = train_r2_error
+stats['test_r2_error'] = test_r2_error
+stats['test_bars'] = len(test)
+stats['train_bars'] = len(train)
+
+stats['** RISK MANAGEMENT'] = '--'
+
+stats['** NEXT ACTION'] = '--'
+stats['predictiondate'] = test.index[-1]
+stats['nexthourspredicted'] = test['NextHoursPredicted'].iloc[-1]
+
+summary = "SUMMARY: "
+for key, value in stats.items():
+    summary += f"{key}={value}, "
+print(summary)
+print()
+
+print("SUMMARY TABLE")
+summarytable = pd.DataFrame.from_dict(stats, orient='index', columns=['value'])
+display(summarytable)
+
+# write pandas dataframe test to an excel file
+#test.to_csv('logs/testprediction.csv', date_format='%Y-%m-%d') 
+
+def plot_feature_importance(importance,names,model_type):
+
+    #Create arrays from feature importance and feature names
+    feature_importance = np.array(importance)
+    feature_names = np.array(names)
+
+    print(f"feature_importance={feature_importance} (len {len(feature_importance)})")
+    print(f"feature_names={feature_names} (len {len(feature_names)})")
+
+    #Create a DataFrame using a Dictionary
+    data={'feature_names':feature_names,'feature_importance':feature_importance}
+    fi_df = pd.DataFrame(data)
+
+    #Sort the DataFrame in order decreasing feature importance
+    fi_df.sort_values(by=['feature_importance'], ascending=False,inplace=True)
+
+    #Plot Searborn bar chart
+    sns.barplot(x=fi_df['feature_importance'], y=fi_df['feature_names'])
+    #Add chart labels
+    plt.title(model_type + 'Feature Importance')
+    plt.xlabel('Feature Importance')
+    plt.ylabel('Feature Name')
+
+
+if doplot:
+    # setting plotting parameters
+
+    #plt.style.use('fivethirtyeight')
+    #plt.rcParams.update({'font.size': 13})
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    # add legend, with first datapoint NextHours and second NextHoursPredicted
+
+    plt.subplot(3, 1, 1, title='Predicted vs Actual')
+    plt.plot(test['NextHours'], label='next hours')
+    plt.plot(test['NextHoursPredicted'], label='next hours predicted')
+    plt.legend()
+
+    plt.subplot(3, 1, 2, title='Predicted vs Actual Cumulative')
+    plt.plot(test['NextHours'].cumsum(), label='next hours')
+    plt.plot(test['NextHoursPredicted'].cumsum(), label='next hours predicted')
+    plt.text(0.98, 0.5, summarytable.to_string(), horizontalalignment='right', verticalalignment='center', transform=plt.gca().transAxes, fontsize=8, color='red')
+    plt.legend()
+
+    plt.subplot(3, 1, 3, title='Feature Importance')
+    plot_feature_importance(model.feature_importances_,predictors,technique)
+
+    plt.show()
+
