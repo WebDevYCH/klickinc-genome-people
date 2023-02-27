@@ -479,7 +479,7 @@ editForm.getItem("submit-posting-btn").events.on("click", function () {
 
 	if(!(isValidDescription() && editForm.validate())) return;
 	loading();
-	const url = jobFormMode == JOB_MODE.edit ? "/tmkt/editjob" : "/tmkt/postjob";
+	const url = jobFormMode == JOB_MODE.edit ? "/p/tmkt/editjob" : "/p/tmkt/postjob";
 
 	var jobData = editForm.getValue();
 	jobData.description = editor.root.innerHTML;
@@ -628,7 +628,7 @@ function closePostConfirm(id) {
 		 if (res) {
 			loading();
 			$.ajax({
-				url: "/tmkt/closepost",
+				url: "/p/tmkt/closepost",
 				method: "POST",
 				data: {id: id},
 				success: function(data) {
@@ -657,7 +657,7 @@ function cancelApplicationConfirm(id) {
 		 if (proceed) {
 			loading();
 			$.ajax({
-				url: "/tmkt/cancelapplication",
+				url: "/p/tmkt/cancelapplication",
 				method: "POST",
 				data: {id: id},
 				success: function() {
@@ -803,7 +803,7 @@ applyForm.getItem("submit-apply-btn").events.on("click", function () {
 	var data = applyForm.getValue();
 	loading();
 	$.ajax({
-		url: "/tmkt/applyjob",
+		url: "/p/tmkt/applyjob",
 		method: "POST",
 		data: data,
 		success: function() {
@@ -863,7 +863,7 @@ function openApplicantsModal(id) {
 	// applicantList.data.parse(applicants);
 	applicantList.data.parse([]); //clear data from previous view
 	$.ajax({
-		url: "/tmkt/getapplicants",
+		url: "/p/tmkt/getapplicants",
 		method: "POST",
 		data: {
 			job_posting_id: id

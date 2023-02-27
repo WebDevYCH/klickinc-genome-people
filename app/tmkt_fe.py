@@ -13,8 +13,8 @@ from tmkt_core import *
 ###################################################################
 ## FRONTEND
 
-@app.route('/tmkt/postjob', methods=['GET', 'POST'])
-@app.route('/tmkt/editjob', methods=['GET', 'POST'])
+@app.route('/p/tmkt/postjob', methods=['GET', 'POST'])
+@app.route('/p/tmkt/editjob', methods=['GET', 'POST'])
 @login_required
 def postjob():
     # create job_posting object
@@ -25,8 +25,8 @@ def postjob():
     
     return clean_job_posting_object(job_posting)
 
-@app.route("/tmkt/jobsearch")
-@app.route("/tmkt/jobsearch/<view>")
+@app.route("/p/tmkt/jobsearch")
+@app.route("/p/tmkt/jobsearch/<view>")
 @login_required
 def jobsearch(view = None):
     categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
@@ -46,7 +46,7 @@ def jobsearch(view = None):
 
     return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title=title)
 
-@app.route('/tmkt/searchpeople', methods=['GET', 'POST'])
+@app.route('/p/tmkt/searchpeople', methods=['GET', 'POST'])
 @login_required
 def searchpeople():
     cst =  request.form['cst']
@@ -62,7 +62,7 @@ def searchpeople():
     people = json.dumps([{i:v for i, v in r.__dict__.items() if i in r.__table__.columns.keys()} for r in data], default=str)
     return people
 
-@app.route('/tmkt/applyjob', methods=['POST'])
+@app.route('/p/tmkt/applyjob', methods=['POST'])
 @login_required
 def applyjob():
     job_posting_id = request.form['id']
@@ -87,7 +87,7 @@ def applyjob():
 
     return "Success", 200
 
-@app.route('/tmkt/getapplicants', methods=['GET', 'POST'])
+@app.route('/p/tmkt/getapplicants', methods=['GET', 'POST'])
 @login_required
 def getapplicants():
     jobpostingid = request.form['job_posting_id']
@@ -107,7 +107,7 @@ def getapplicants():
         apply_data.append(dictB)
     return apply_data
 
-@app.route('/tmkt/setusersetting', methods=['GET', 'POST'])
+@app.route('/p/tmkt/setusersetting', methods=['GET', 'POST'])
 @login_required
 def setusersetting():
     userId = request.form['userId']
@@ -118,7 +118,7 @@ def setusersetting():
     db.session.commit()
     return user_Available
 
-@app.route('/tmkt/closepost', methods=['POST'])
+@app.route('/p/tmkt/closepost', methods=['POST'])
 @login_required
 def closepost():
     # find existing job posting
@@ -135,7 +135,7 @@ def closepost():
 
     return clean_job_posting_object(job_posting)
 
-@app.route('/tmkt/cancelapplication', methods=['POST'])
+@app.route('/p/tmkt/cancelapplication', methods=['POST'])
 @login_required
 def cancelapplication():
     # find existing job application

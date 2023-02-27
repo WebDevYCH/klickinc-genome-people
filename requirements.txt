@@ -28,3 +28,4 @@ scikit-learn
 textmagic
 beautifulsoup4
 pytz
+jsonpickle
