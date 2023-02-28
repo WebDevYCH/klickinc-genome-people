@@ -8,12 +8,14 @@ except:
     pass
 
 from collections import OrderedDict
+from re import A
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import SGDClassifier
 from sklearn import svm
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV
 import xgboost as xgb
+import lightgbm as lgb
 
 import sys
 import numpy as np
@@ -29,14 +31,28 @@ from core import *
 pd.options.mode.chained_assignment = None  # default='warn'
 
 if len(sys.argv) < 3:
-    print("Usage: " + sys.argv[0] + " [jobfunction] [clientname]")
+    print("Usage: " + sys.argv[0] + " [jobfunction] [clientname=xx or employeecst=xx] [opt args]")
+    print("  opt arguments:")
+    print("    hyperoptonly=true|false")
+    print("    predictonly=true|false")
+    print("    doplot=true|false")
+    print("    data_years=10")
+    print("    lookback_years=1")
+    print("    technique=lgb|xgboost")
+    print("    wfosteps=4")
+    print("    estimators=250")
+    print("    maxdepth=10")
+    print("    learning_rate=0.3")
+    print("    min_child_weight=1")
+    print("    colsample_bytree=0.8")
+    print("    reg_alpha=0.1")
+    print("    reg_lambda=0.1")
+    print()
+
     print()
     quit()
 
-# query parameters
-# try with "Quality Assurance" and "Takeda NSBU"
 jobfunction = sys.argv[1]
-clientname = sys.argv[2]
 
 # pick up args of the format arg=value
 def getarg(argname, default):
@@ -49,17 +65,21 @@ def getarg(argname, default):
             elif type(default) is bool:
                 return arg.split('=')[1].lower() == 'true' or arg.split('=')[1].lower() == '1' or arg.split('=')[1].lower() == 'yes'
             else:
-                return arg.split('=')[1]
+                return arg.split('=')[1].replace("'", "")
     return default
 
+
 # parameters
+clientname = getarg("clientname", None)
+employeecst = getarg("employeecst", None)
 hyperoptonly = getarg("hyperoptonly", False)
 predictonly = getarg("predictonly", False)
 doplot = getarg("doplot", True)
 
 data_years = getarg("data_years", 10)
 lookback_years = getarg("lookback_years", 1)
-technique = getarg("technique", 'xgboost')
+lookforward_days = getarg("lookforward_days", 120)
+technique = getarg("technique", 'lgb')
 wfosteps = getarg("wfosteps", 4)
 
 # hyperparameters
@@ -71,13 +91,18 @@ colsample_bytree = getarg("colsample_bytree", 0.8)
 reg_alpha = getarg("reg_alpha", 0.1)
 reg_lambda = getarg("reg_lambda", 0.1)
 
-
 # LOAD DATA
 
 print("Loading data...")
 start_year = datetime.date.today().year - data_years
 
 # bigquery sql (load up for each combination of job function and division)
+clientcstclause = ""
+if clientname is not None:
+    clientcstclause = f"and p.ClientName like '%{clientname}%' "
+if employeecst is not None:
+    clientcstclause = f"and fact.EmployeeBusinessUnit like '%{employeecst}%' "
+
 query = f"""
 select 
 d.ActualDate as Date,
@@ -90,7 +115,8 @@ join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
 join `genome-datalake-prod.GenomeDW.JobFunction` jf on fact.JobFunction=jf.JobFunction
 where pr.Billable=true
 and d.ActualDate >= '{start_year}-01-01'
-and jf.Name='{jobfunction}' and p.ClientName='{clientname}'
+and jf.Name like '%{jobfunction}%' 
+{clientcstclause}
 group by 
 d.ActualDate
 """
@@ -138,6 +164,7 @@ df['ema_200']   = ta.EMA(df['Hours'], timeperiod = 200)
 
 df['dayofweek'] = df.index.dayofweek
 df['month']     = df.index.month
+df['dayofmonth']= df.index.day
 
 display(df)
 
@@ -147,12 +174,26 @@ def make_model():
     # Select a model to fit and test
     if technique == 'forest':
         model = RandomForestRegressor(n_estimators=estimators, max_depth=maxdepth, min_samples_split=50, n_jobs=-1, random_state=42)
+    elif technique == 'xgboost':
+        model = xgb.XGBRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
+                                    min_child_weight=50, n_jobs=-1, random_state=42)
+    elif technique == 'lgb':
+        # can't use the sklearn API because it doesn't support linear_tree
+        model = {
+            "n_estimators": estimators, 
+            "max_depth": maxdepth, 
+            "learning_rate": learning_rate, 
+            "colsample_bytree": colsample_bytree, 
+            "min_child_weight": 50, 
+            "n_jobs": -1, 
+            "random_state": 42, 
+        }
+        #model = lgb.LGBMRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
+        #                          min_child_weight=50, n_jobs=-1, random_state=42, linear_tree=True)
     elif technique == 'svm':
         model = svm.SVC(kernel = 'linear', probability=True)
     elif technique == 'sgd':
         model = SGDClassifier(loss='log_loss', penalty='l1', alpha=0.00005, max_iter=1000, tol=0.001, n_jobs=-1, random_state=42)
-    elif technique == 'xgboost':
-        model = xgb.XGBRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, min_child_weight=50, n_jobs=-1, random_state=42)
     elif technique == 'tensorflow':
         model = skflow.TensorFlowLinearClassifier(n_classes=2, batch_size=128, steps=1000, learning_rate=0.05)
     else:
@@ -187,11 +228,20 @@ length = len(df)
 train = df.loc[: pivot_date]
 # test is from pivot_date to all but the last record of df
 test = df.loc[pivot_date :].drop(df.tail(1).index)
-# predict is just the last record, for final prediction purposes after pre-live optimization
-predict = df.tail(1)
 # if the last train record and first test record overlap, drop the train record
 if train.index[-1] == test.index[0]:
     train = train.drop(train.tail(1).index)
+
+# pre-fill predict dataframe with the next 120 days, and the structure of the train dataframe
+predict = pd.DataFrame(index=pd.date_range(start=datetime.date.today(), periods=120, freq='D'), columns=train.columns)
+# then insert the last record of df into the first row of predict
+predict = pd.concat([df.tail(1), predict])
+# then fill in predictor columns where possible
+predict['dayofweek'] = predict.index.dayofweek
+predict['month']     = predict.index.month
+predict['dayofmonth'] = predict.index.day
+# remove weekends
+predict = predict[predict['dayofweek'] < 5]
 
 if hyperoptonly:
     print(f"Hyperparameter optimization only; len(train)={len(train)}, len(test)={len(test)}")
@@ -247,32 +297,45 @@ if not predictonly:
         thistest = test[teststartpos:testendpos]
 
         # train the model on the subset
-        model.fit(thistrain[predictors], thistrain["NextHours"])
+        if technique == 'lgb':
+            train_data = lgb.Dataset(thistrain[predictors], label=thistrain["NextHours"], params={'linear_tree':True})
+            model_trained = lgb.train(model, train_data)
 
-        # predict the training subset
-        thistrain['NextHoursPredicted'] = model.predict(thistrain[predictors])
-        train.update(thistrain[['NextHoursPredicted']])
+            # predict the training subset
+            thistrain['NextHoursPredicted'] = model_trained.predict(thistrain[predictors], num_iteration=model_trained.best_iteration)
+            train.update(thistrain[['NextHoursPredicted']])
 
-        # predict the test subset
-        thistest['NextHoursPredicted'] = model.predict(thistest[predictors])
-        test.update(thistest[['NextHoursPredicted']])
+            # predict the test subset
+            thistest['NextHoursPredicted'] = model_trained.predict(thistest[predictors], num_iteration=model_trained.best_iteration)
+            test.update(thistest[['NextHoursPredicted']])
+        else:
+            model.fit(thistrain[predictors], thistrain["NextHours"])
 
-# predict the last record
+            # predict the training subset
+            thistrain['NextHoursPredicted'] = model.predict(thistrain[predictors])
+            train.update(thistrain[['NextHoursPredicted']])
+
+            # predict the test subset
+            thistest['NextHoursPredicted'] = model.predict(thistest[predictors])
+            test.update(thistest[['NextHoursPredicted']])
+
+# predict the next 120 days
 model = make_model()
 trainstartpos = len(test)
 thistrain = pd.concat([train[trainstartpos:], test])
-print(f"Training+predicting most recent record")
+print(f"Training on train+test set for extrapolation")
 # train the model on the subset
-model.fit(thistrain[predictors], thistrain["NextHours"])
-# now predict
-predict['NextHoursPredicted'] = model.predict(predict[predictors])
-# Determine predictions based on long and short thresholds
-def shortlong(x, shortthreshold, longthreshold):
-    if x > longthreshold: return 1
-    elif x < shortthreshold: return -1
-    else: return 0
-predicted_next = predict['NextHoursPredicted'][0]
-print(f"Predicted next day after {predict.index[0]} is {predicted_next}")
+if technique == 'lgb':
+    train_data = lgb.Dataset(thistrain[predictors], label=thistrain["NextHours"], params={'linear_tree':True})
+    model_trained = lgb.train(model, train_data)
+    # now predict
+    print(f"Predicting extrapolation for {lookforward_days} days")
+    predict['NextHoursPredicted'] = model_trained.predict(predict[predictors], num_iteration=model_trained.best_iteration)
+else:
+    model.fit(thistrain[predictors], thistrain["NextHours"])
+    # now predict
+    print(f"Predicting extrapolation for {lookforward_days} days")
+    predict['NextHoursPredicted'] = model.predict(predict[predictors])
 
 if predictonly:
     exit()
@@ -284,25 +347,9 @@ print(f"prediction accuracy in training data: {train_r2_error}")
 test_r2_error = r2_score(test['NextHours'], test['NextHoursPredicted'])
 print(f"prediction accuracy in test data: {test_r2_error}")
 
-# Make predictions on the training set, report on error rate in training set
-#train['NCPredictedDirection'] = (train['NextHoursPredicted'] > 0.5).astype(int)
-#error = abs(train['NextHours'] - train['NCPredictedDirection'])
-#error_pcnt = sum(error) / len(error) * 100.0
-#print(f"binary prediction accuracy in training data: {round(100-error_pcnt,1)}%")
-
-# Make probabilistic predictions on the test set and report on error rate
-#test['NCPredictedDirection'] = (test['NextHoursPredicted'] > 0.5).astype(int)
-#error = abs(test['NextHours'] - test['NCPredictedDirection'])
-#error.dropna(inplace=True)
-#error_pcnt = sum(error) / len(error) * 100.0
-#print(f"binary prediction accuracy in test data: {round(100-error_pcnt,1)}%")
-
 print()
 
-# transform training set into predictions set by removing predictor columns
-#testcolsdrop = predictors
-#testcolsdrop.remove('NextHours')
-#test = test.drop(columns=testcolsdrop)
+testpredict = pd.concat([test, predict])
 
 print("SPECIFIC PREDICTIONS FOR TEST SET")
 
@@ -311,12 +358,13 @@ print()
 
 # descriptive statistics
 stats = OrderedDict()
-# add row count column to test df
-test['row'] = range(1, len(test) + 1)
 
 thisyear = datetime.date.today().year
 
 stats['** PARAMETERS'] = '--'
+stats['jobfunction'] = jobfunction
+stats['clientname'] = clientname
+stats['employeecst'] = employeecst
 stats['data_years'] = data_years
 stats['technique'] = technique
 stats['estimators'] = estimators
@@ -330,12 +378,6 @@ stats['train_r2_error'] = train_r2_error
 stats['test_r2_error'] = test_r2_error
 stats['test_bars'] = len(test)
 stats['train_bars'] = len(train)
-
-stats['** RISK MANAGEMENT'] = '--'
-
-stats['** NEXT ACTION'] = '--'
-stats['predictiondate'] = test.index[-1]
-stats['nexthourspredicted'] = test['NextHoursPredicted'].iloc[-1]
 
 summary = "SUMMARY: "
 for key, value in stats.items():
@@ -356,8 +398,8 @@ def plot_feature_importance(importance,names,model_type):
     feature_importance = np.array(importance)
     feature_names = np.array(names)
 
-    print(f"feature_importance={feature_importance} (len {len(feature_importance)})")
-    print(f"feature_names={feature_names} (len {len(feature_names)})")
+    #print(f"feature_importance={feature_importance} (len {len(feature_importance)})")
+    #print(f"feature_names={feature_names} (len {len(feature_names)})")
 
     #Create a DataFrame using a Dictionary
     data={'feature_names':feature_names,'feature_importance':feature_importance}
@@ -384,18 +426,20 @@ if doplot:
     # add legend, with first datapoint NextHours and second NextHoursPredicted
 
     plt.subplot(3, 1, 1, title='Predicted vs Actual')
-    plt.plot(test['NextHours'], label='next hours')
-    plt.plot(test['NextHoursPredicted'], label='next hours predicted')
+    plt.plot(test['NextHours'], label='hours')
+    plt.plot(testpredict['NextHoursPredicted'], label='hours extrapolated')
+    plt.plot(test['NextHoursPredicted'], label='hours predicted')
     plt.legend()
 
     plt.subplot(3, 1, 2, title='Predicted vs Actual Cumulative')
-    plt.plot(test['NextHours'].cumsum(), label='next hours')
-    plt.plot(test['NextHoursPredicted'].cumsum(), label='next hours predicted')
+    plt.plot(test['NextHours'].cumsum(), label='hours')
+    plt.plot(testpredict['NextHoursPredicted'].cumsum(), label='hours extrapolated')
+    plt.plot(test['NextHoursPredicted'].cumsum(), label='hours predicted')
     plt.text(0.98, 0.5, summarytable.to_string(), horizontalalignment='right', verticalalignment='center', transform=plt.gca().transAxes, fontsize=8, color='red')
     plt.legend()
 
     plt.subplot(3, 1, 3, title='Feature Importance')
-    plot_feature_importance(model.feature_importances_,predictors,technique)
+    #plot_feature_importance(model.feature_importances_,predictors,technique)
 
     plt.show()
 
