@@ -230,7 +230,7 @@ def sourcename_from_source(source):
     elif source.startswith('linreg'):
         sourcename = f'Linear Regression Forecast ({source[6:]}m lookback)'
     elif source == 'gsheet':
-        sourcename = 'PM Line of Sight Forecast'
+        sourcename = 'Line of Sight Forecast'
     elif source == 'mljar':
         sourcename = 'AutoML Forecast'
     return sourcename
@@ -287,7 +287,7 @@ def monthly_hours_to_fte(hours, yearmonth, laborroleid, cst, source):
         # TODO: gather portfolio-specific MDOU% targets and apply them here
         hours *= mdou_pct
 
-        # simplistic model, as PM forecasts are simplistic
+        # simplistic model, as LoS forecasts are simplistic
         business_days = 249/12 # PM's are not accounting for shorter months in their forecasts
         business_hours_per_day = 7.26
         fte = hours / (business_days * business_hours_per_day)

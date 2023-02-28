@@ -133,6 +133,8 @@ display(df)
 # take out weekends
 df = df[df.index.dayofweek < 5]
 
+display(df)
+
 # ADD FEATURES
 print("Adding features...")
 
@@ -162,7 +164,7 @@ df['sma_150']   = ta.SMA(df['Hours'], timeperiod = 150)
 df['sma_200']   = ta.SMA(df['Hours'], timeperiod = 200)
 df['ema_200']   = ta.EMA(df['Hours'], timeperiod = 200)
 
-df['dayofweek'] = df.index.dayofweek
+#df['dayofweek'] = df.index.dayofweek
 df['month']     = df.index.month
 df['dayofmonth']= df.index.day
 
@@ -178,18 +180,9 @@ def make_model():
         model = xgb.XGBRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
                                     min_child_weight=50, n_jobs=-1, random_state=42)
     elif technique == 'lgb':
-        # can't use the sklearn API because it doesn't support linear_tree
-        model = {
-            "n_estimators": estimators, 
-            "max_depth": maxdepth, 
-            "learning_rate": learning_rate, 
-            "colsample_bytree": colsample_bytree, 
-            "min_child_weight": 50, 
-            "n_jobs": -1, 
-            "random_state": 42, 
-        }
-        #model = lgb.LGBMRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
-        #                          min_child_weight=50, n_jobs=-1, random_state=42, linear_tree=True)
+        model = lgb.LGBMRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
+                                  min_child_weight=50, n_jobs=-1, random_state=42, linear_tree=True)
+        model.set_params(linear_tree=True)
     elif technique == 'svm':
         model = svm.SVC(kernel = 'linear', probability=True)
     elif technique == 'sgd':
@@ -232,8 +225,8 @@ test = df.loc[pivot_date :].drop(df.tail(1).index)
 if train.index[-1] == test.index[0]:
     train = train.drop(train.tail(1).index)
 
-# pre-fill predict dataframe with the next 120 days, and the structure of the train dataframe
-predict = pd.DataFrame(index=pd.date_range(start=datetime.date.today(), periods=120, freq='D'), columns=train.columns)
+# pre-fill predict dataframe with the next 120 days, and the structure of the test dataframe
+predict = pd.DataFrame(index=pd.date_range(start=datetime.date.today(), periods=120, freq='D'), columns=test.columns)
 # then insert the last record of df into the first row of predict
 predict = pd.concat([df.tail(1), predict])
 # then fill in predictor columns where possible
@@ -296,28 +289,15 @@ if not predictonly:
             thistrain = train[trainstartpos:]
         thistest = test[teststartpos:testendpos]
 
-        # train the model on the subset
-        if technique == 'lgb':
-            train_data = lgb.Dataset(thistrain[predictors], label=thistrain["NextHours"], params={'linear_tree':True})
-            model_trained = lgb.train(model, train_data)
+        model.fit(thistrain[predictors], thistrain["NextHours"])
 
-            # predict the training subset
-            thistrain['NextHoursPredicted'] = model_trained.predict(thistrain[predictors], num_iteration=model_trained.best_iteration)
-            train.update(thistrain[['NextHoursPredicted']])
+        # predict the training subset
+        thistrain['NextHoursPredicted'] = model.predict(thistrain[predictors])
+        train.update(thistrain[['NextHoursPredicted']])
 
-            # predict the test subset
-            thistest['NextHoursPredicted'] = model_trained.predict(thistest[predictors], num_iteration=model_trained.best_iteration)
-            test.update(thistest[['NextHoursPredicted']])
-        else:
-            model.fit(thistrain[predictors], thistrain["NextHours"])
-
-            # predict the training subset
-            thistrain['NextHoursPredicted'] = model.predict(thistrain[predictors])
-            train.update(thistrain[['NextHoursPredicted']])
-
-            # predict the test subset
-            thistest['NextHoursPredicted'] = model.predict(thistest[predictors])
-            test.update(thistest[['NextHoursPredicted']])
+        # predict the test subset
+        thistest['NextHoursPredicted'] = model.predict(thistest[predictors])
+        test.update(thistest[['NextHoursPredicted']])
 
 # predict the next 120 days
 model = make_model()
@@ -325,17 +305,10 @@ trainstartpos = len(test)
 thistrain = pd.concat([train[trainstartpos:], test])
 print(f"Training on train+test set for extrapolation")
 # train the model on the subset
-if technique == 'lgb':
-    train_data = lgb.Dataset(thistrain[predictors], label=thistrain["NextHours"], params={'linear_tree':True})
-    model_trained = lgb.train(model, train_data)
-    # now predict
-    print(f"Predicting extrapolation for {lookforward_days} days")
-    predict['NextHoursPredicted'] = model_trained.predict(predict[predictors], num_iteration=model_trained.best_iteration)
-else:
-    model.fit(thistrain[predictors], thistrain["NextHours"])
-    # now predict
-    print(f"Predicting extrapolation for {lookforward_days} days")
-    predict['NextHoursPredicted'] = model.predict(predict[predictors])
+model.fit(thistrain[predictors], thistrain["NextHours"])
+# now predict
+print(f"Predicting extrapolation for {lookforward_days} days")
+predict['NextHoursPredicted'] = model.predict(predict[predictors])
 
 if predictonly:
     exit()
@@ -349,9 +322,8 @@ print(f"prediction accuracy in test data: {test_r2_error}")
 
 print()
 
-testpredict = pd.concat([test, predict])
-
 print("SPECIFIC PREDICTIONS FOR TEST SET")
+testpredict = pd.concat([test, predict])
 
 display(test)
 print()
@@ -439,7 +411,6 @@ if doplot:
     plt.legend()
 
     plt.subplot(3, 1, 3, title='Feature Importance')
-    #plot_feature_importance(model.feature_importances_,predictors,technique)
+    plot_feature_importance(model.feature_importances_,predictors,technique)
 
     plt.show()
-
