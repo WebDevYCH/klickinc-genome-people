@@ -38,7 +38,7 @@ if len(sys.argv) < 3:
     print("    doplot=true|false")
     print("    data_years=10")
     print("    lookback_years=1")
-    print("    technique=lgb|xgboost")
+    print("    technique=lgb|xgboost|forest")
     print("    wfosteps=4")
     print("    estimators=250")
     print("    maxdepth=10")
@@ -180,15 +180,18 @@ def make_model():
         model = xgb.XGBRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
                                     min_child_weight=50, n_jobs=-1, random_state=42)
     elif technique == 'lgb':
-        model = lgb.LGBMRegressor(n_estimators=estimators, max_depth=maxdepth, learning_rate=learning_rate, colsample_bytree=colsample_bytree, 
-                                  min_child_weight=50, n_jobs=-1, random_state=42, linear_tree=True)
-        model.set_params(linear_tree=True)
-    elif technique == 'svm':
-        model = svm.SVC(kernel = 'linear', probability=True)
-    elif technique == 'sgd':
-        model = SGDClassifier(loss='log_loss', penalty='l1', alpha=0.00005, max_iter=1000, tol=0.001, n_jobs=-1, random_state=42)
-    elif technique == 'tensorflow':
-        model = skflow.TensorFlowLinearClassifier(n_classes=2, batch_size=128, steps=1000, learning_rate=0.05)
+        params = {
+            'objective': 'regression',
+            'n_estimators': estimators,
+            'max_depth': maxdepth,
+            'learning_rate': learning_rate,
+            'colsample_bytree': colsample_bytree,
+            'min_child_weight': 50,
+            'n_jobs': -1,
+            'random_state': 42,
+            #'linear_tree': True,
+        }
+        model = lgb.LGBMRegressor(**params)
     else:
         print(f"ERROR: Unknown technique: {technique}")
         exit()
@@ -215,8 +218,8 @@ print("predictors = ", predictors)
 
 #df.to_csv('logs/testfullinputs.csv', date_format='%Y-%m-%d') 
 
-# train is everything in df before 1 year ago, based on the date column
-pivot_date = datetime.date.today() - datetime.timedelta(days = int(365))
+# train is everything in df before X year ago, based on the date column
+pivot_date = datetime.date.today() - datetime.timedelta(days = int(365*lookback_years))
 length = len(df)
 train = df.loc[: pivot_date]
 # test is from pivot_date to all but the last record of df
