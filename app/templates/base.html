@@ -23,13 +23,14 @@
     {% block app_head %}{% endblock %}
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
+	<link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
     <!-- Choose your prefered color scheme -->
     <link href="/p/static/css/light.css" rel="stylesheet">
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
     <link href="/p/static/css/custom.css" rel="stylesheet">
-	<link href="/p/static/css/genome-global.css" rel="stylesheet"/>
+	<link href="/p/static/css/genome-styles.css" rel="stylesheet"/>
+	<link href="/p/static/css/genome-p.css" rel="stylesheet"/>
 	<script src="/p/static/js/helpers.js"></script>
 </head>
 <!--
@@ -48,17 +49,9 @@
 	<div class="wrapper">
         <nav id="sidebar" class="sidebar js-sidebar">
             <div class="sidebar-content js-simplebar">
-                <a class="sidebar-brand" href="/p/">
-                    <span class="sidebar-brand-text align-middle">
-                        Genome
-                        <sup><small class="badge bg-primary text-uppercase">People</small></sup>
-                    </span>
-                    <svg class="sidebar-brand-icon align-middle" width="32px" height="32px" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5"
-                        stroke-linecap="square" stroke-linejoin="miter" color="#FFFFFF" style="margin-left: -3px">
-                        <path d="M12 4L20 8.00004L12 12L4 8.00004L12 4Z"></path>
-                        <path d="M20 12L12 16L4 12"></path>
-                        <path d="M20 16L12 20L4 16"></path>
-                    </svg>
+                <a class="sidebar-brand topbar-logo" href="/p/">
+					<img src="https://genome.klick.com/assets/img/logo.svg">
+					<sup><small class="badge bg-light text-uppercase">People</small></sup>
                 </a>
 
                 {% if current_user.is_authenticated %}
@@ -66,9 +59,9 @@
                     <div class="d-flex justify-content-center">
                         <div class="flex-shrink-0">
                             {% if current_user.photourl %}
-                            <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="{{ current_user.photourl }}" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% else %}
-                            <img src="/p/static/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="/p/static/img/avatars/avatar.jpg" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-2">
@@ -107,58 +100,33 @@
                         </a>
                     </li>
                     -->
-
-                    {% if current_user.has_roles('forecast_frontend') %}
-                    <li class="sidebar-header">
-                        Portfolio and Labor Forecasts
-                    </li>
-                    {% if current_user.has_roles('forecast_frontend') %}
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/forecasts/portfolio-forecasts">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Portfolio Forecasts</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    <!-- 
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/forecasts/portfolio-lr-forecasts">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Portfolio Labor Forecasts</span>
-                        </a>
-                    </li>
-                    -->
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/forecasts/dept-lr-forecasts">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Dept Labor Forecasts</span>
-                        </a>
-                    </li>
-                    {% endif %}
-
-                    <li class="sidebar-header">
-                        Job Board
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/tmkt/jobsearch">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
-                        </a>
-                    </li>
+					{% if current_user.has_roles('forecast_frontend') %}
 					<li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/tmkt/jobsearch/posted">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Posted Jobs</span>
-                        </a>
-                    </li>
-					<li class="sidebar-item">
-                        <a class="sidebar-link" href="/p/tmkt/jobsearch/applied">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Applied Jobs</span>
-                        </a>
-                    </li>
+						<a data-bs-target="#sidebar-pf-forecast" data-bs-toggle="collapse" class="sidebar-link collapsed" aria-expanded="false">
+							<i class="fas fa-chart-line"></i> <span class="align-middle">Forecasts</span>
+						</a>
+						<ul id="sidebar-pf-forecast" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+							<li class="sidebar-item"><a class="sidebar-link" href="/p/forecasts/portfolio-forecasts">Portfolio </a></li>
+							<!--<li class="sidebar-item"><a class="sidebar-link" href="/p/forecasts/portfolio-lr-forecasts">Portfolio Labor</a></li>-->
+							<li class="sidebar-item"><a class="sidebar-link" href="/p/forecasts/dept-lr-forecasts">Dept Labor</a></li>
+						</ul>
+					</li>
+					{% endif %}
+                    <li class="sidebar-item">
+						<a data-bs-target="#sidebar-job-board" data-bs-toggle="collapse" class="sidebar-link collapsed" aria-expanded="false">
+							<i class="align-middle" data-feather="briefcase"></i> <span class="align-middle">Job Board</span>
+						</a>
+						<ul id="sidebar-job-board" class="sidebar-dropdown list-unstyled collapse" data-bs-parent="#sidebar">
+							<li class="sidebar-item"><a class="sidebar-link" href="/p/tmkt/jobsearch">Search Jobs</a></li>
+							<li class="sidebar-item"><a class="sidebar-link" href="/p/tmkt/jobsearch/posted">Posted Jobs</a></li>
+							<li class="sidebar-item"><a class="sidebar-link"  href="/p/tmkt/jobsearch/applied">Applied Jobs</a></li>
+						</ul>
+                    </li>	
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
-                    <li class="sidebar-header">
-                        Admin
-                    </li>
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="/p/admin">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Admin Home</span>
+                            <i class="align-middle" data-feather="server"></i> <span class="align-middle">Admin Home</span>
                         </a>
                     </li>
                     {% endif %}
@@ -484,14 +452,4 @@
     <script src="/p/static/js/custom.js"></script>
     {% block script %}{% endblock %}
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-

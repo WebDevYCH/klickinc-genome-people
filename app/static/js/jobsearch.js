@@ -96,11 +96,11 @@ function jobListTemplate(job) {
 							<div>
 								` + (expiredOrRemoved ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
 							</div>
-							<div>
+							<div class="d-flex">
 								` + (current_user_id  == job.poster_user_id ? `
-									<button type="button" class="header-job-btn btn btn-primary view_applicants_btn">View Applicants</button>
+									<button type="button" class="header-job-btn btn btn-primary me-1 view_applicants_btn">View Applicants</button>
 									<button type="button" class="header-job-btn btn btn-primary edit-post job_form_btn">Edit Post</button>
-									` + (expiredOrRemoved ? '' : `<button type="button" class="header-job-btn btn btn-primary close_post_btn">Close Post</button>` ) +`
+									` + (expiredOrRemoved ? '' : `<button type="button" class="header-job-btn btn btn-primary ms-1 close_post_btn">Close Post</button>` ) +`
 								` : '') + `
 								`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
 									<button type="button" class="header-job-btn btn btn-primary apply_job_btn">Apply</button>
@@ -636,7 +636,7 @@ function closePostConfirm(id) {
 				},
 				error: function(err) {
 					unloading();
-					showToast("error", err.responseJSON?.message || "An error occurred while closing job posting.");
+					showToast("error", err.responseJSON?.message || "An error occurred while closing job posting. Please try again later.");
 				}
 			})
 		 } 
@@ -667,7 +667,7 @@ function cancelApplicationConfirm(id) {
 				},
 				error: function(err) {
 					unloading();
-					showToast("error", err.responseJSON?.message || "An error occurred while cancelling the application.");
+					showToast("error", err.responseJSON?.message || "An error occurred while cancelling the application. Please try again later.");
 				}
 			})
 		 } 
