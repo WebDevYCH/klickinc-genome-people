@@ -257,16 +257,13 @@ const jobFormConfig = {
 					<div id="quill-toolbar">
 						<span class="ql-formats">
 							<select class="ql-size"></select>
+							<select class="ql-header"></select>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-bold"></button>
 							<button class="ql-italic"></button>
 							<button class="ql-underline"></button>
 							<button class="ql-strike"></button>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-header" value="1"></button>
-							<button class="ql-header" value="2"></button>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-list" value="ordered"></button>
