@@ -6,10 +6,11 @@ from fbprophet import Prophet
 from fbprophet.plot import plot_plotly, plot_components_plotly
 import orbit
 from orbit.utils.dataset import load_iclaims
-from orbit.models import ETS
+from orbit.models import ETS, DLT, LGT
 from orbit.diagnostics.plot import plot_predicted_data
 
 import sys
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import display
@@ -31,12 +32,19 @@ if len(sys.argv) > 1 and sys.argv[1] in ['help', '-h', '--h', '--help']:
     print("    clientname=xx")
     print("    employeecst=xx")
     print("    metric=Hours|ExternalValueDollars")
-    print("    technique=prophet|orbit")
+    print("    technique=prophet|orbitets|orbitlgt|orbitdlt")
+    print("    growth=linear|logistic")
+    print("    changepoint_range=0.8")
+    print("    changepoint_prior_scale=0.05")
+    print("    seasonality_mode=additive|multiplicative")
     print("    hyperoptonly=true|false")
     print("    predictonly=true|false")
     print("    doplot=true|false")
     print("    data_years=10")
-    print("    lookback_years=1")
+    print("    report_days=730")
+    print("    forecast_days=365")
+    print("    wfosteps=6")
+    print("    wfodaysperstep=90")
 
     print()
     quit()
@@ -60,11 +68,16 @@ def getarg(argname, default):
 jobfunction = getarg("jobfunction", None)
 clientname = getarg("clientname", None)
 employeecst = getarg("employeecst", None)
+metric = getarg("metric", "Hours")
+technique = getarg("technique", "prophet")
+growth = getarg("growth", "linear")
+changepoint_range = getarg("changepoint_range", 0.8)
+changepoint_prior_scale = getarg("changepoint_prior_scale", 0.05)
+seasonality_mode = getarg("seasonality_mode", "additive")
 predictonly = getarg("predictonly", False)
 doplot = getarg("doplot", True)
-technique = getarg("technique", "prophet")
 data_years = getarg("data_years", 8)
-report_days = getarg("report_days", 1200)
+report_days = getarg("report_days", 365*2)
 forecast_days = getarg("forecast_days", 365)
 wfosteps = getarg("wfosteps", 6)
 wfodaysperstep = getarg("wfodaysperstep", 90)
@@ -85,8 +98,8 @@ if employeecst is not None:
 
 query = f"""
 select 
-d.ActualDate as Date,
-sum(Hours) as Hours
+d.ActualDate as ds,
+sum({metric}) as y
 from `genome-datalake-prod.GenomeDW.F_Actuals` fact
 join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
 join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
@@ -104,34 +117,60 @@ os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../keys/google-key.json"
 bqresult = bigquery.Client().query(query)
 # convert to dataframe with date as index
 df = bqresult.to_dataframe()
-df['Date'] = pd.to_datetime(df['Date'])
-df = df.set_index('Date')
+df['ds'] = pd.to_datetime(df['ds'])
+df = df.set_index('ds')
 df = df.sort_index()
-
-# rename Date to DS and Hours to Y
 df['ds'] = df.index
-df['y'] = df['Hours']
 df['yhat'] = np.nan
-df['yhat_lower'] = np.nan
 df['yhat_upper'] = np.nan
+df['yhat_lower'] = np.nan
+df['floor'] = 0
 display(df)
 print()
 
 def create_model():
     if technique == 'prophet':
-        model = Prophet()
+        model = Prophet(
+            growth=growth,
+            changepoint_range=changepoint_range,
+            changepoint_prior_scale=changepoint_prior_scale,
+            seasonality_mode=seasonality_mode,
+        )
         model.add_country_holidays(country_name='CA')
-    elif technique == 'orbit':
+    elif technique == 'orbitets':
         model = ETS(
             response_col='y',
             date_col='ds',
-            seasonality=7,
+            seasonality=365,
+            seed=42,
+        )
+    elif technique == 'orbitlgt':
+        model = LGT(
+            response_col='y',
+            date_col='ds',
+            seasonality=365,
+            seed=42,
+            estimator='pyro-svi',
+        )
+    elif technique == 'orbitdlt':
+        model = DLT(
+            response_col='y',
+            date_col='ds',
+            seasonality=365,
             seed=42,
         )
     return model
 
 # walk forward optimization (really evaluation)
 print("Walk forward optimization...")
+def normalize_forecast(forecast):
+    if 'prediction' in forecast.columns:
+        forecast['yhat'] = forecast['prediction']
+    if 'prediction_95' in forecast.columns:
+        forecast['yhat_upper'] = forecast['prediction_95']
+    if 'prediction_5' in forecast.columns:
+        forecast['yhat_lower'] = forecast['prediction_5']
+
 for wfostep in range(0, wfosteps):
     pivot = len(df) - (wfodaysperstep*(wfosteps-wfostep))
     print(f"  step {wfostep}... training on df[:{pivot}] and testing on df[{pivot+1}:{pivot+wfodaysperstep}]]")
@@ -146,6 +185,9 @@ for wfostep in range(0, wfosteps):
     forecast = model.predict(test)
     # set index to ds
     forecast = forecast.set_index('ds')
+    # normalize prediction results to fbprophet format
+    display(forecast)
+    normalize_forecast(forecast)
     # save back to df
     df.update(forecast[['yhat','yhat_lower','yhat_upper']])
 
@@ -156,22 +198,42 @@ r2df = df[['y','yhat']]
 r2df.replace([np.inf, -np.inf], np.nan, inplace = True)
 r2df.dropna(inplace = True)
 # calculate r2
-r2_error = r2_score(r2df['y'], r2df['yhat'])
-print(f"prediction accuracy in WFO: {r2_error}")
+wfo_r2 = r2_score(r2df['y'], r2df['yhat'])
+print(f"prediction accuracy in WFO: {wfo_r2}")
 
 print("Training full model...")
 model = create_model()
 model.fit(df)
 
-
+# fill a dataframe with the next forecast_days days
 print("Predicting...")
-forecast = model.predict(model.make_future_dataframe(periods=forecast_days))
+if technique == 'prophet':
+    forecast = model.predict(model.make_future_dataframe(periods=forecast_days))
+else:
+    forecast = model.predict(
+        pd.DataFrame({'ds': pd.date_range(start=datetime.date.today() - datetime.timedelta(days=report_days), periods=forecast_days+report_days, freq='D')})
+    )
+normalize_forecast(forecast)
+# put 'y' back into the forecast dataframe
+if 'y' not in forecast.columns:
+    forecast['y'] = np.nan
+    forecast.update(df[['y']])
 # make ds the index, but also a column
 forecast = forecast.set_index('ds')
 forecast['ds'] = forecast.index
 display(forecast)
+forecast.to_csv(f"../logs/prophet-forecast.csv")
 
-#forecast.to_csv(f"../logs/prophet-forecast.csv")
+
+r2df = forecast[['y','yhat']]
+# clear NaN and Inf values
+r2df.replace([np.inf, -np.inf], np.nan, inplace = True)
+r2df.dropna(inplace = True)
+forecast_r2 = None
+# calculate r2
+if len(r2df) > 0:
+    forecast_r2 = r2_score(r2df['y'], r2df['yhat'])
+print(f"prediction accuracy in forecast: {forecast_r2}")
 
 # descriptive statistics
 stats = OrderedDict()
@@ -182,14 +244,22 @@ stats['** PARAMETERS'] = '--'
 stats['jobfunction'] = jobfunction
 stats['clientname'] = clientname
 stats['employeecst'] = employeecst
+stats['metric'] = metric
 stats['data_years'] = data_years
 stats['report_days'] = report_days
 stats['forecast_days'] = forecast_days
 stats['wfosteps'] = wfosteps
 stats['wfodaysperstep'] = wfodaysperstep
+stats['** MODEL PARAMETERS'] = '--'
+stats['technique'] = technique
+stats['growth'] = growth
+stats['changepoint_range'] = changepoint_range
+stats['changepoint_prior_scale'] = changepoint_prior_scale
+stats['seasonality_mode'] = seasonality_mode
 
 stats['** RESULTS'] = '--'
-stats['r2_error'] = r2_error
+stats['wfo_r2'] = wfo_r2
+stats['forecast_r2'] = forecast_r2
 
 summary = "SUMMARY: "
 for key, value in stats.items():
@@ -228,29 +298,21 @@ def plot_feature_importance(importance,names,model_type):
 # PLOT
 if doplot:
     print("Plotting...")
-    #fig = model.plot(forecast)
-    #plt.show()
-    #fig = model.plot_components(forecast)
-    #plt.show()
-
     # setting plotting parameters
 
     #plt.style.use('fivethirtyeight')
     #plt.rcParams.update({'font.size': 13})
     fig, ax = plt.subplots(figsize=(10, 10))
 
-    # add legend, with first datapoint NextHours and second NextHoursPredicted
-
     plt.subplot(2, 1, 1, title='Predicted+Forecasts vs Actual')
-    plt.plot(df['y'].tail(report_days), '.', label='hours')
-    plt.plot(df['yhat'].tail(report_days), '.', label='hours predicted WFO OOS')
-    plt.plot(forecast['yhat'].tail(report_days+forecast_days), '.', label='hours forecasted')
+    plt.plot(df['y'].tail(report_days), '.', label=metric)
+    plt.plot(df['yhat'].tail(report_days), '.', label='predicted WFO OOS')
+    plt.plot(forecast['yhat'].tail(report_days+forecast_days), '.', label=f'forecasted')
     plt.legend()
 
     plt.subplot(2, 1, 2, title='Predicted+Forecasts vs Actual Cumulative')
-    plt.plot(df.tail(report_days)['y'].cumsum(), label='hours')
-    #plt.plot(df.tail(report_days)['yhat'].cumsum(), label='hours predicted WFO OOS')
-    plt.plot(forecast['yhat'].tail(report_days+forecast_days).cumsum(), label='hours forecasted', color='green')
+    plt.plot(df.tail(report_days)['y'].cumsum(), label=metric)
+    plt.plot(forecast['yhat'].tail(report_days+forecast_days).cumsum(), label='forecasted', color='green')
     plt.text(0.98, 0.5, summarytable.to_string(), horizontalalignment='right', verticalalignment='center', transform=plt.gca().transAxes, fontsize=8, color='red')
     plt.legend()
 
@@ -259,4 +321,10 @@ if doplot:
     #plot_plotly(model, forecast)
 
     plt.show()
+
+    if technique == 'prophet':
+        fig = model.plot(forecast)
+        plt.show()
+        fig = model.plot_components(forecast)
+        plt.show()
 
