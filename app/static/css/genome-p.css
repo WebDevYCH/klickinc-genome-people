@@ -298,6 +298,10 @@ body[data-theme=colored] .navbar-bg {
   color: var(--gcr-primary-text);
 }
 
+.dhx_widget.dhx_widget--bg_gray {
+  background-color: initial;
+}
+
 .dhx_list-item--selected {
   box-shadow: inset 2px 0 0 0 var(--gcr-primary);
 }
