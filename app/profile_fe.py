@@ -6,8 +6,8 @@ from model import *
 from skills_core import *
 from profile_core import *
 
-@app.route('/profile', methods=['GET', 'POST'])
-@app.route('/profile/<selected_user_id>', methods=['GET'])
+@app.route('/p/profile', methods=['GET', 'POST'])
+@app.route('/p/profile/<selected_user_id>', methods=['GET'])
 @login_required
 def profile(selected_user_id = None):
 
@@ -28,6 +28,8 @@ def profile(selected_user_id = None):
             # get user profile from user_id passed in url
             try:
                 profile = db.session.query(UserProfile).filter(UserProfile.user_id==selected_user_id).one()
+                user = db.session.query(User).filter(User.userid==selected_user_id).first()
+                title = user.firstname + " " + user.lastname + "'s Profile"
             except:
                 profile = None
                 result = "Unable to find an existing profile for user id: " + selected_user_id
@@ -35,6 +37,8 @@ def profile(selected_user_id = None):
             # attempt to find current user's profile
             try:
                 profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
+                user = current_user
+                title = "Your Profile"
             except:
                 profile = None
                 result = "Unable to find an existing profile, please create one by uploading a resume"
@@ -44,25 +48,28 @@ def profile(selected_user_id = None):
 
     # attempt to find existing skills
     try:
-        my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
+        if selected_user_id:
+        	my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == selected_user_id).order_by(Skill.name).all()
+        else:
+            my_skills = db.session.query(Skill).join(UserSkill).where(UserSkill.user_id == current_user.userid).order_by(Skill.name).all()
     except:
         my_skills = None
 
-    return render_template('profile/index.html', profile=profile, user=current_user, skills=my_skills, title="Profile")
+    return render_template('profile/index.html', profile=profile, user=user, skills=my_skills, title=title)
 
-@app.route('/profile/edit-skills')
+@app.route('/p/profile/edit-skills')
 @login_required
 def resume_skills():
     skills = db.session.query(Skill).join(UserSkill).filter(UserSkill.user_id==current_user.userid).order_by(Skill.name).all()
     return render_template('profile/skill_edit.html', title="Personal Skills", skills=skills)
 
-@app.route('/profile/total-skills-data')
+@app.route('/p/profile/total-skills-data')
 @login_required
 def total_skills_data():
     skills = db.session.query(Skill).order_by(Skill.name).all()
     return [{"id": skill.id, "value": skill.name} for skill in skills]
 
-@app.route('/profile/skill-add', methods=['POST'])
+@app.route('/p/profile/skill-add', methods=['POST'])
 @login_required
 def skill_add():
     if request.method == "POST":
@@ -75,7 +82,7 @@ def skill_add():
         flash("Successfully added your skills!") 
     return redirect(url_for('resume_skills'))
 
-@app.route('/profile/skill-edit/delete/<id>')
+@app.route('/p/profile/skill-edit/delete/<id>')
 @login_required
 def skill_remove(id):
     db.session.query(UserSkill).filter(UserSkill.user_id==current_user.userid, UserSkill.skill_id==id).delete(synchronize_session="fetch")

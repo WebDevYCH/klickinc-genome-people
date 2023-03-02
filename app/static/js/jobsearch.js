@@ -69,11 +69,11 @@ function jobListTemplate(job) {
 	if (expiredOrRemoved) { status = job.removed_date ? "Post closed" : "Post expired"; }
 
 	let template = `
-		<div class="accordion-item  job-card mb-2">
+		<div class="accordion-item job-card">
 			<div class='card-body'> 
-				<h2 class="accordion-header" id="job-header-`+ job.id +`">
+				<div class="accordion-header" id="job-header-`+ job.id +`">
 					<div class="accordion-button d-block collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#job-description-`+ job.id +`" aria-expanded="true" aria-controls="#job-description-`+ job.id +`">
-						<div class="d-flex mb-2 justify-content-between align-items-center">
+						<div class="d-flex mb-1 justify-content-between align-items-center">
 							<div class="d-flex align-items-center">
 								<span class="card-title text-primary fs-4 me-1" job-posting-id="` +job.id+ `">` +job.title + `</span>
 								`+(job.cst ?`<span class="badge rounded-pill bg-primary me-1">`+ job.cst+`</span> `:'')+`
@@ -93,25 +93,25 @@ function jobListTemplate(job) {
 							<div>Location: `+job.job_location+`</div>
 						<div>
 						<div class="no-show-on-collapse d-flex align-items-center justify-content-between">
-								<div>
-									` + (expiredOrRemoved ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
-								</div>
-								<div>
-									` + (current_user_id  == job.poster_user_id ? `					
-										<button type="button" class="header-job-btn btn btn-primary view_applicants_btn">View Applicants</button>
-										<button type="button" class="header-job-btn btn btn-primary edit-post job_form_btn">Edit Post</button>
-										` + (expiredOrRemoved ? '' : `<button type="button" class="header-job-btn btn btn-primary close_post_btn">Close Post</button>` ) +`
-									` : '') + `
-									`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
-										<button type="button" class="header-job-btn btn btn-primary apply_job_btn">Apply</button>
-									`:'') + `
-									`+ (job.apply == 1 ? `
-										<button type="button" class="header-job-btn btn btn-primary cancel_application_btn">Cancel Application</button>
-									`:'') + `
-								</div>
+							<div>
+								` + (expiredOrRemoved ? '' : `<label class="text-danger">Expires in ` + job.expiry_day + ` days</label>` ) +`
+							</div>
+							<div class="d-flex">
+								` + (current_user_id  == job.poster_user_id ? `
+									<button type="button" class="header-job-btn btn btn-primary me-1 view_applicants_btn">View Applicants</button>
+									<button type="button" class="header-job-btn btn btn-primary edit-post job_form_btn">Edit Post</button>
+									` + (expiredOrRemoved ? '' : `<button type="button" class="header-job-btn btn btn-primary ms-1 close_post_btn">Close Post</button>` ) +`
+								` : '') + `
+								`+ (job.apply == 0 && current_user_id  != job.poster_user_id ? `
+									<button type="button" class="header-job-btn btn btn-primary apply_job_btn">Apply</button>
+								`:'') + `
+								`+ (job.apply == 1 ? `
+									<button type="button" class="header-job-btn btn btn-primary cancel_application_btn">Cancel Application</button>
+								`:'') + `
+							</div>
 						</div>
 					</div>
-				</h2>
+				</div>
 			</div>
 			<div id="job-description-` +  job.id + `" class="accordion-collapse collapse" aria-labelledby="job-header-`+ job.id +`" data-bs-parent="#jobListAccordion">
 				<div class="accordion-body">
@@ -257,19 +257,13 @@ const jobFormConfig = {
 					<div id="quill-toolbar">
 						<span class="ql-formats">
 							<select class="ql-size"></select>
-						</span>
-						<span class="ql-formats">
-							<select class="ql-color"></select>
+							<select class="ql-header"></select>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-bold"></button>
 							<button class="ql-italic"></button>
 							<button class="ql-underline"></button>
 							<button class="ql-strike"></button>
-						</span>
-						<span class="ql-formats">
-							<button class="ql-header" value="1"></button>
-							<button class="ql-header" value="2"></button>
 						</span>
 						<span class="ql-formats">
 							<button class="ql-list" value="ordered"></button>
@@ -639,7 +633,7 @@ function closePostConfirm(id) {
 				},
 				error: function(err) {
 					unloading();
-					showToast("error", err.responseJSON?.message || "An error occurred while closing job posting.");
+					showToast("error", err.responseJSON?.message || "An error occurred while closing job posting. Please try again later.");
 				}
 			})
 		 } 
@@ -670,7 +664,7 @@ function cancelApplicationConfirm(id) {
 				},
 				error: function(err) {
 					unloading();
-					showToast("error", err.responseJSON?.message || "An error occurred while cancelling the application.");
+					showToast("error", err.responseJSON?.message || "An error occurred while cancelling the application. Please try again later.");
 				}
 			})
 		 } 
@@ -840,7 +834,7 @@ function viewApplicantTemplate(applicant){
 				</div>
 				<div>
 					<div class="d-flex justify-content-end">`+applicant.applied_date+`</div>
-					<a href="#" class="d-flex justify-content-end"">View profile</a>
+					<a href="/p/profile/`+ applicant.userid +`" class="d-flex justify-content-end"">View profile</a>
 					<a href="#" class="d-flex justify-content-end">Request approval</a>
 				</div>
 			</div>

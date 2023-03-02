@@ -23,13 +23,14 @@
     {% block app_head %}{% endblock %}
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
+	<link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
     <!-- Choose your prefered color scheme -->
     <link href="/p/static/css/light.css" rel="stylesheet">
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
     <link href="/p/static/css/custom.css" rel="stylesheet">
-	<link href="/p/static/css/genome-global.css" rel="stylesheet"/>
+	<link href="/p/static/css/genome-styles.css" rel="stylesheet"/>
+	<link href="/p/static/css/genome-p.css" rel="stylesheet"/>
 	<script src="/p/static/js/helpers.js"></script>
 </head>
 <!--
@@ -48,17 +49,9 @@
 	<div class="wrapper">
         <nav id="sidebar" class="sidebar js-sidebar">
             <div class="sidebar-content js-simplebar">
-                <a class="sidebar-brand" href="/p/">
-                    <span class="sidebar-brand-text align-middle">
-                        Genome
-                        <sup><small class="badge bg-primary text-uppercase">People</small></sup>
-                    </span>
-                    <svg class="sidebar-brand-icon align-middle" width="32px" height="32px" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5"
-                        stroke-linecap="square" stroke-linejoin="miter" color="#FFFFFF" style="margin-left: -3px">
-                        <path d="M12 4L20 8.00004L12 12L4 8.00004L12 4Z"></path>
-                        <path d="M20 12L12 16L4 12"></path>
-                        <path d="M20 16L12 20L4 16"></path>
-                    </svg>
+                <a class="sidebar-brand topbar-logo" href="/p/">
+					<img src="https://genome.klick.com/assets/img/logo.svg">
+					<sup><small class="badge bg-light text-uppercase">People</small></sup>
                 </a>
 
                 {% if current_user.is_authenticated %}
@@ -66,9 +59,9 @@
                     <div class="d-flex justify-content-center">
                         <div class="flex-shrink-0">
                             {% if current_user.photourl %}
-                            <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="{{ current_user.photourl }}" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% else %}
-                            <img src="/p/static/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="/p/static/img/avatars/avatar.jpg" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-2">
@@ -155,12 +148,9 @@
                     {% endif %}
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
-                    <li class="sidebar-header">
-                        Admin
-                    </li>
                     <li class="sidebar-item">
                         <a class="sidebar-link" href="/p/admin">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Admin Home</span>
+                            <i class="align-middle" data-feather="server"></i> <span class="align-middle">Admin Home</span>
                         </a>
                     </li>
                     {% endif %}
@@ -486,14 +476,4 @@
     <script src="/p/static/js/custom.js"></script>
     {% block script %}{% endblock %}
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
