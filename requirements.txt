@@ -31,3 +31,4 @@ beautifulsoup4
 pytz
 jsonpickle
 fbprophet
+orbit-ml

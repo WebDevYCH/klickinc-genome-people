@@ -548,7 +548,9 @@ def get_dlrfs(year, lrcat, showportfolios=True, showsources=True, showfullyear=T
             PortfolioLRForecast.yearmonth >= datetime.date(year,1,1),
             PortfolioLRForecast.yearmonth < datetime.date(year+1,1,1),
             LaborRole.categoryname == lrcat,
-            PortfolioLRForecast.forecastedhours != None
+            PortfolioLRForecast.forecastedhours != None,
+            ~PortfolioLRForecast.source.like('linear%'),
+            ~PortfolioLRForecast.source.like('linreg%'),
         ).all()
 
     app.logger.info(f"  query done, rowcount: {len(pflrs)}")

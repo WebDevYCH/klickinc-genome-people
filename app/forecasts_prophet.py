@@ -4,6 +4,10 @@ from collections import OrderedDict
 from sklearn.metrics import r2_score
 from fbprophet import Prophet
 from fbprophet.plot import plot_plotly, plot_components_plotly
+import orbit
+from orbit.utils.dataset import load_iclaims
+from orbit.models import ETS
+from orbit.diagnostics.plot import plot_predicted_data
 
 import sys
 import numpy as np
@@ -26,6 +30,8 @@ if len(sys.argv) > 1 and sys.argv[1] in ['help', '-h', '--h', '--help']:
     print("    jobfunction=xx")
     print("    clientname=xx")
     print("    employeecst=xx")
+    print("    metric=Hours|ExternalValueDollars")
+    print("    technique=prophet|orbit")
     print("    hyperoptonly=true|false")
     print("    predictonly=true|false")
     print("    doplot=true|false")
@@ -56,7 +62,7 @@ clientname = getarg("clientname", None)
 employeecst = getarg("employeecst", None)
 predictonly = getarg("predictonly", False)
 doplot = getarg("doplot", True)
-
+technique = getarg("technique", "prophet")
 data_years = getarg("data_years", 8)
 report_days = getarg("report_days", 1200)
 forecast_days = getarg("forecast_days", 365)
@@ -112,8 +118,16 @@ display(df)
 print()
 
 def create_model():
-    model = Prophet()
-    model.add_country_holidays(country_name='CA')
+    if technique == 'prophet':
+        model = Prophet()
+        model.add_country_holidays(country_name='CA')
+    elif technique == 'orbit':
+        model = ETS(
+            response_col='y',
+            date_col='ds',
+            seasonality=7,
+            seed=42,
+        )
     return model
 
 # walk forward optimization (really evaluation)
@@ -128,15 +142,21 @@ for wfostep in range(0, wfosteps):
     model = create_model()
     model.fit(train)
     # predict
-    forecast = model.predict(model.make_future_dataframe(periods=forecast_days))
+    #forecast = model.predict(model.make_future_dataframe(periods=forecast_days))
+    forecast = model.predict(test)
     # set index to ds
     forecast = forecast.set_index('ds')
     # save back to df
     df.update(forecast[['yhat','yhat_lower','yhat_upper']])
 
-#df.to_csv(f"logs/prophet-df.csv")
+df.to_csv(f"../logs/prophet-wfo.csv")
 
-r2_error = r2_score(df.tail(wfosteps*wfodaysperstep)['y'], df.tail(wfosteps*wfodaysperstep)['yhat'])
+r2df = df[['y','yhat']]
+# clear NaN and Inf values
+r2df.replace([np.inf, -np.inf], np.nan, inplace = True)
+r2df.dropna(inplace = True)
+# calculate r2
+r2_error = r2_score(r2df['y'], r2df['yhat'])
 print(f"prediction accuracy in WFO: {r2_error}")
 
 print("Training full model...")
@@ -151,7 +171,7 @@ forecast = forecast.set_index('ds')
 forecast['ds'] = forecast.index
 display(forecast)
 
-#forecast.to_csv(f"logs/prophet-forecast.csv")
+#forecast.to_csv(f"../logs/prophet-forecast.csv")
 
 # descriptive statistics
 stats = OrderedDict()
@@ -228,9 +248,9 @@ if doplot:
     plt.legend()
 
     plt.subplot(2, 1, 2, title='Predicted+Forecasts vs Actual Cumulative')
-    plt.plot(df['y'].tail(report_days).cumsum(), label='hours')
-    plt.plot(df['yhat'].tail(report_days).cumsum(), label='hours predicted WFO OOS')
-    plt.plot(forecast['yhat'].tail(report_days+forecast_days).cumsum(), label='hours forecasted')
+    plt.plot(df.tail(report_days)['y'].cumsum(), label='hours')
+    #plt.plot(df.tail(report_days)['yhat'].cumsum(), label='hours predicted WFO OOS')
+    plt.plot(forecast['yhat'].tail(report_days+forecast_days).cumsum(), label='hours forecasted', color='green')
     plt.text(0.98, 0.5, summarytable.to_string(), horizontalalignment='right', verticalalignment='center', transform=plt.gca().transAxes, fontsize=8, color='red')
     plt.legend()
 
