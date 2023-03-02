@@ -16,6 +16,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import GridSearchCV
 import xgboost as xgb
 import lightgbm as lgb
+from fbprophet import Prophet
 
 import sys
 import numpy as np
@@ -30,7 +31,7 @@ from core import *
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
-if len(sys.argv) < 3:
+if len(sys.argv) < 2:
     print("Usage: " + sys.argv[0] + " [jobfunction] [clientname=xx or employeecst=xx] [opt args]")
     print("  opt arguments:")
     print("    hyperoptonly=true|false")
@@ -47,6 +48,7 @@ if len(sys.argv) < 3:
     print("    colsample_bytree=0.8")
     print("    reg_alpha=0.1")
     print("    reg_lambda=0.1")
+    print("    linear_tree=true|false")
     print()
 
     print()
@@ -90,6 +92,7 @@ min_child_weight = getarg("min_child_weight", 1)
 colsample_bytree = getarg("colsample_bytree", 0.8)
 reg_alpha = getarg("reg_alpha", 0.1)
 reg_lambda = getarg("reg_lambda", 0.1)
+linear_tree = getarg("linear_tree", False)
 
 # LOAD DATA
 
@@ -189,9 +192,11 @@ def make_model():
             'min_child_weight': 50,
             'n_jobs': -1,
             'random_state': 42,
-            #'linear_tree': True,
+            'linear_tree': linear_tree,
         }
         model = lgb.LGBMRegressor(**params)
+    elif technique == 'prophet':
+        model = Prophet()
     else:
         print(f"ERROR: Unknown technique: {technique}")
         exit()
@@ -346,6 +351,7 @@ stats['estimators'] = estimators
 stats['maxdepth'] = maxdepth
 stats['learning_rate'] = learning_rate
 stats['colsample_bytree'] = colsample_bytree
+stats['linear_tree'] = linear_tree
 stats['wfosteps'] = wfosteps
 
 stats['** RESULTS'] = '--'

@@ -30,3 +30,4 @@ textmagic
 beautifulsoup4
 pytz
 jsonpickle
+fbprophet
