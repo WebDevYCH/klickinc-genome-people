@@ -370,7 +370,7 @@ const jobFormConfig = {
 					inputType: "number",
 					width: "50%",
 					required: true,
-					errorMessage: "Expected hours is required",
+					errorMessage: "Expected hours is required and must be greater than 0",
 					validation: function(value) {
 						return value && value != "" && value > 0;
 					},
@@ -382,14 +382,14 @@ const jobFormConfig = {
 			cols: [
 				{
 					name: "client",
-					type: "input",
+					type: "combo",
 					padding: "0 10px 0 0",
 					width: "50%",
 					label: "Client",
-					placeholder: "Name of client",
-					errorMessage: "Client is required",
+					itemHeight: "auto",
+					errorMessage: "Client must be selected",
 					validation: function(value) {
-						return value && value != "";
+						return value;
 					},
 					required: true,
 				},
@@ -425,14 +425,13 @@ const jobFormConfig = {
 				},
 				{
 					name: "hiring_manager",
-					type: "input",
-					inputType: "number",
+					type: "combo",
 					width: "50%",
-					label: "Hiring Manager ID",
-					placeholder: "Hiring manager ID",
-					errorMessage: "Hiring manager is required",
+					label: "Hiring Manager",
+					itemHeight: "auto",
+					errorMessage: "Hiring manager must be selected",
 					validation: function(value) {
-						return value && value != "";
+						return value;
 					},
 					required: true,
 				}
@@ -516,7 +515,16 @@ editForm.getItem("cancel-posting-btn").events.on("click", () => {
 // start date and end date date range set up
 let startDate = editForm.getItem("job_start_date").getWidget();
 let endDate = editForm.getItem("job_end_date").getWidget();
-startDate.link(endDate)
+startDate.link(endDate);
+
+// load data for hiring manager combo
+let hiringManagerCombo = editForm.getItem("hiring_manager").getWidget();
+hiringManagerCombo.data.load('/users/user-list');
+
+// load data for client combo
+let clientCombo = editForm.getItem("client").getWidget();
+clientCombo.data.load('/p/forecasts/client-list?year='+ new Date().getFullYear());
+//clientCombo.data.load('/p/tmkt/client-list');
 
 // Datepicker does not clear validation on focus automatically so we need to do it manually
 function clearDateValidateOnFocus(field) {
@@ -602,6 +610,8 @@ function openJobFormModal(id) {
 	}else{
 		editor.root.innerHTML = "";
 	}
+	
+
 
 	// manually remove classes on load
 	editorContainer.classList.remove("dhx_form-group--state_error");
