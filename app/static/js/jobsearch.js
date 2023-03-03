@@ -130,14 +130,12 @@ function jobListTemplate(job) {
 									<div>Job Function: `+job.job_function+`</div>
 								</div>
 								<div>
-									<div>Client: `+job.client+`</div>
+									<div>Client: `+(job.client_name ? job.client_name : job.client) +`</div>
 									<div>Brands: `+job.brands+`</div>
 									<div>ProjectID: `+job.project_id+`</div>
-									<div>Hiring Manager: `+job.hiring_manager+`</div>
-								</div>
-								
-								
+								</div>				
 							</div>
+							<div>Hiring Manager: <a target="_blank" href="/p/profile/`+ job.hiring_manager +`">`+ job.manager_name +`</a> </div>
 							`+ (job.job_posting_skills ?
 								`<div class="other-info">
 									`+ job.job_posting_skills.join(', ') +`
@@ -844,7 +842,7 @@ function viewApplicantTemplate(applicant){
 				</div>
 				<div>
 					<div class="d-flex justify-content-end">`+applicant.applied_date+`</div>
-					<a href="/p/profile/`+ applicant.userid +`" class="d-flex justify-content-end"">View profile</a>
+					<a href="/p/profile/`+ applicant.userid +`" class="d-flex justify-content-end">View profile</a>
 					<a href="#" class="d-flex justify-content-end">Request approval</a>
 				</div>
 			</div>
@@ -983,7 +981,7 @@ function filterJobList() {
 			(diffDays <= datePosted || datePosted == 0) &&
 			(jobFunction.includes(item.job_function) || jobFunction.length == 0) &&
 			(cst.includes(item.cst) || cst.length == 0) &&
-			(item.client?.toLowerCase().includes(client) || client == "") &&
+			(item.client?.toLowerCase().includes(client) || item.client_name?.toLowerCase().includes(client) || client == "") &&
 			(item.brands?.toLowerCase().includes(brand) || brand == "")
 		);
 	});
