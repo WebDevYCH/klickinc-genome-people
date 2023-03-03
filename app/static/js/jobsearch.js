@@ -372,7 +372,7 @@ const jobFormConfig = {
 					required: true,
 					errorMessage: "Expected hours is required",
 					validation: function(value) {
-						return value && value != "";
+						return value && value != "" && value > 0;
 					},
 					placeholder: "Total expected hours of work",
 				},
