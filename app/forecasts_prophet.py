@@ -34,8 +34,8 @@ if len(sys.argv) > 1 and sys.argv[1] in ['help', '-h', '--h', '--help']:
     print("    metric=Hours|ExternalValueDollars")
     print("    technique=prophet|orbitets|orbitlgt|orbitdlt")
     print("    growth=linear|logistic")
-    print("    changepoint_range=0.8")
-    print("    changepoint_prior_scale=0.05")
+    print("    changepoint_range=0.98")
+    print("    changepoint_prior_scale=0.2")
     print("    seasonality_mode=additive|multiplicative")
     print("    hyperoptonly=true|false")
     print("    predictonly=true|false")
@@ -71,8 +71,8 @@ employeecst = getarg("employeecst", None)
 metric = getarg("metric", "Hours")
 technique = getarg("technique", "prophet")
 growth = getarg("growth", "linear")
-changepoint_range = getarg("changepoint_range", 0.8)
-changepoint_prior_scale = getarg("changepoint_prior_scale", 0.05)
+changepoint_range = getarg("changepoint_range", 0.98)
+changepoint_prior_scale = getarg("changepoint_prior_scale", 0.2)
 seasonality_mode = getarg("seasonality_mode", "additive")
 predictonly = getarg("predictonly", False)
 doplot = getarg("doplot", True)
@@ -128,6 +128,11 @@ df['floor'] = 0
 display(df)
 print()
 
+# clear out rows with low hours (weekends, holidays, etc)
+df = df[df['y'] > 6]
+# remove weekends
+df = df[df.index.dayofweek < 5]
+
 def create_model():
     if technique == 'prophet':
         model = Prophet(
@@ -177,6 +182,8 @@ for wfostep in range(0, wfosteps):
     # split into train and test
     train = df[:pivot][['ds','y']]
     test = df[pivot+1:pivot+wfodaysperstep][['ds','y']]
+    train['floor'] = 0
+    test['floor'] = 0
     # train model
     model = create_model()
     model.fit(train)
@@ -306,8 +313,8 @@ if doplot:
 
     plt.subplot(2, 1, 1, title='Predicted+Forecasts vs Actual')
     plt.plot(df['y'].tail(report_days), '.', label=metric)
-    plt.plot(df['yhat'].tail(report_days), '.', label='predicted WFO OOS')
-    plt.plot(forecast['yhat'].tail(report_days+forecast_days), '.', label=f'forecasted')
+    #plt.plot(df['yhat'].tail(report_days), '.', label='predicted WFO OOS')
+    plt.plot(forecast['yhat'].tail(report_days+forecast_days), '.', label=f'forecasted', color='green')
     plt.legend()
 
     plt.subplot(2, 1, 2, title='Predicted+Forecasts vs Actual Cumulative')
@@ -323,7 +330,7 @@ if doplot:
     plt.show()
 
     if technique == 'prophet':
-        fig = model.plot(forecast)
+        fig = model.plot(forecast, plot_cap=False)
         plt.show()
         fig = model.plot_components(forecast)
         plt.show()

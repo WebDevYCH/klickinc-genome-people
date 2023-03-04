@@ -19,8 +19,12 @@ try:
     from supervised import AutoML
 except:
     pass
+from fbprophet import Prophet
     
 import warnings
+pd.options.mode.chained_assignment = None  # default='warn'
+warnings.filterwarnings("ignore", message="The frame.append method is deprecated")
+
 
 explain_model_path = "../cache/automl_lrforecast_explain"
 perform_model_path = "../cache/automl_lrforecast_perform"
@@ -254,6 +258,121 @@ def model_linreg():
             startdate = startdate + relativedelta(months=1)
 
     return loglines
+
+@app.cli.command('model_prophet')
+def model_prophet_cmd():
+    model_prophet()
+
+def model_prophet():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Prophet Extrapolator")
+    loglines.append("")
+
+    sourcename = f'prophet'
+    lookaheadmonths = 12
+    lookbackyear = 2012
+    thisyear = datetime.date.today().year
+    lastyear = thisyear - 1
+    thismonth = datetime.date.today().month
+
+    # for each portfolio with any forecasts this year or last year
+    for p in db.session.query(PortfolioForecast).where(
+                PortfolioForecast.yearmonth >= datetime.date(lastyear,1,1),
+                PortfolioForecast.forecast != None,
+                PortfolioForecast.forecast != "0.00"
+            ).distinct(PortfolioForecast.portfolioid).all():
+        loglines.append(f"  portfolio {p.portfolioid}")
+
+        # pick up all actuals for this portfolio starting in lookbackyear
+        query = f"""
+        select 
+        d.ActualDate as ds,
+        sum(Hours) as y,
+        lr.LaborRole as laborrole
+        from `genome-datalake-prod.GenomeDW.F_Actuals` fact
+        join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
+        join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+        join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
+        join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+        join `genome-datalake-prod.GenomeDW.JobFunction` jf on fact.JobFunction=jf.JobFunction
+        where pr.Billable=true
+        and d.ActualDate >= '{lookbackyear}-01-01'
+        and p.AccountPortfolioID = {p.portfolioid}
+        and lr.LaborRole != 'NONE'
+        group by 
+        d.ActualDate, lr.LaborRole
+        """
+
+        #os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../keys/google-key.json"
+        bqresult = bigquery.Client().query(query)
+        # convert to dataframe with date as index, do other cleanup
+        df = bqresult.to_dataframe()
+        df['ds'] = pd.to_datetime(df['ds'])
+        df = df.set_index('ds')
+        df = df.sort_index()
+        df['ds'] = df.index
+        df['yhat'] = np.nan
+        df['yhat_upper'] = np.nan
+        df['yhat_lower'] = np.nan
+        df['floor'] = 0
+
+        # for each labor role in df
+        for lr in df['laborrole'].unique():
+
+            rowcount = 0
+
+            # for each month starting in Jan of last year
+            for y in range(lastyear,thisyear+1):
+                for m in range(1,13):
+                    if y == thisyear and m > datetime.date.today().month:
+                        break
+                    startofrowmonth = datetime.date(y,m,1)
+                    startofnextmonth = startofrowmonth + relativedelta(months=1)
+
+                    loglines.append(f"    training/predicting {p.portfolioid} {lr} {startofrowmonth} - {startofnextmonth}")
+
+                    # gather records in df not including this month
+                    train = df.loc[(df['laborrole'] == lr) & (df.index < pd.to_datetime(startofrowmonth))]
+
+                    # create and train the model (hardcoded hyperparameters, tuned with the forecasts_prophet.py script)
+                    model = Prophet(
+                        growth='linear',
+                        changepoint_range=0.99,
+                        changepoint_prior_scale=0.2,
+                        seasonality_mode='multiplicative',
+                    )
+                    model.add_country_holidays(country_name='CA')
+                    model.fit(train)
+
+                    # predict past the sample, for 1 month or the rest of the year depending on whether we're in the this month
+                    future = model.make_future_dataframe(periods=365, include_history=False)
+                    future['floor'] = 0
+                    forecast = model.predict(future)
+
+                    # sum total forecasted hours for the row's month
+                    hours = forecast[(forecast['ds'] >= pd.to_datetime(startofrowmonth)) & (forecast['ds'] < pd.to_datetime(startofnextmonth))]['yhat'].sum()
+                    # save the forecast to the database
+                    upsert(db.session, PortfolioLRForecast, {
+                        'portfolioid': p.portfolioid,
+                        'yearmonth': startofrowmonth,
+                        'laborroleid': lr,
+                        'source': sourcename,
+                    }, {
+                        'forecastedhours': hours,
+                        'forecasteddollars': None
+                    })
+                    rowcount += 1
+
+
+            loglines.append(f"    saved {rowcount} rows")
+            db.session.commit()
+        db.session.commit()
+    db.session.commit()
+
+    return loglines
+
 
 @app.cli.command('model_cilinear')
 def model_cilinear_cmd():
