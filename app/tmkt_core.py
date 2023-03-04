@@ -9,6 +9,8 @@ import jsonpickle
 
 # create job_posting object from request.form
 def create_job_posting_object(request_form):
+    # TODO: need to add job_posting_skills, and similarity
+
     # find existing job posting if id is passed in request_form
     try:
         job_posting_id = int(request_form['id'])
@@ -93,7 +95,7 @@ def search_job_postings(categories = None, view = None):
     if categories is None:
         categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
 
-    # attempt to find existing user profile
+	# attempt to find existing user profile
     try:
         profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
     except:
@@ -137,6 +139,14 @@ def search_job_postings(categories = None, view = None):
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
+        # TODO: code check for client and manager
+        client = db.session.query(Portfolio).filter(Portfolio.clientid == job.client).first()
+        if client:
+            result_job['client_name'] = client.clientname
+        manager = db.session.query(User).filter(User.userid == job.hiring_manager).first()
+        if manager:
+            result_job['manager_name'] = manager.firstname + ' ' + manager.lastname
+
         d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
         d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
         # adding sort for negative number of days to expiry (so sort reverse order works correctly)

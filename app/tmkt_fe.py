@@ -152,3 +152,15 @@ def cancelapplication():
         return jsonify({"message": "Error cancelling application, no application found",}), 400
 
     return clean_job_application(job_application)
+
+
+# TODO: update to return a list of clients
+@app.route('/p/tmkt/client-list')
+@login_required
+def client_list():
+    clients = db.session.query(Portfolio).\
+        distinct(Portfolio.clientid,Portfolio.clientname).\
+        order_by(Portfolio.clientname).\
+        all()
+
+    return [{"id":c.clientid, "value":c.clientname } for c in clients]
