@@ -24,7 +24,7 @@
 		<script>function loadFont(a,b,c,d){function e(){if(!window.FontFace)return!1;var a=new FontFace("t",'url("data:application/font-woff2,") format("woff2")',{}),b=a.load();try{b.then(null,function(){})}catch(c){}return"loading"===a.status}var f=navigator.userAgent,g=!window.addEventListener||f.match(/(Android (2|3|4.0|4.1|4.2|4.3))|(Opera (Mini|Mobi))/)&&!f.match(/Chrome/);if(!g){var h={};try{h=localStorage||{}}catch(i){}var j="x-font-"+a,k=j+"url",l=j+"css",m=h[k],n=h[l],o=document.createElement("style");if(o.rel="stylesheet",document.head.appendChild(o),!n||m!==b&&m!==c){var p=c&&e()?c:b,q=new XMLHttpRequest;q.open("GET",p),q.onload=function(){q.status>=200&&q.status<400&&(h[k]=p,h[l]=q.responseText,d||(o.textContent=q.responseText))},q.send()}else o.textContent=n}}</script>
 		<script>loadFont('robotoFont', './common/fonts/fonts-woff.css?ver=1', './common/fonts/fonts-woff2.css?ver=1')</script>
 		<!-- css -->
-		<link rel="stylesheet" type="text/css" href="./common/cover.css?v=7.3.12">
+		<link rel="stylesheet" type="text/css" href="./common/cover.css?v=8.0.0">
 	</head>
 
 	<body>
@@ -65,26 +65,29 @@
 							<div>
 								<div class="samples-title">Chart</div>
 								<div class="samples-list">
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/bar_chart.html" title="" class="samples-link">Bar chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/area_chart.html" title="" class="samples-link">Area chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/pie_chart.html" title="" class="samples-link">Pie chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/donut_chart.html" title="" class="samples-link">Donut chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/scatter_chart.html" title="" class="samples-link">Scatter chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/radar_chart.html" title="" class="samples-link">Radar chart</a>
 									</div>
-									<div class="samples-list__row samples-list__row--w3">
+									<div class="samples-list__row samples-list__row--w4">
 										<a href="../samples/chart/treemap_chart.html" title="" class="samples-link">TreeMap chart</a>
+									</div>
+									<div class="samples-list__row samples-list__row--w4">
+										<a href="../samples/chart/calendar_heat_map_chart.html" title="" class="samples-link">Calendar HeatMap chart</a>
 									</div>
 								</div>
 								<div class="samples-list-footer">
@@ -492,6 +495,32 @@
 											</svg>
 										</span>
 										Check over 20 online Tabbar samples
+									</a>
+								</div>
+							</div>
+						</div>
+						<div class="samples-container__col ">
+							<div>
+								<div class="samples-title">Theme</div>
+								<div class="samples-list">
+									<div class="samples-list__row">
+										<a href="../samples/theme/base_theme.html" title="" class="samples-link">Suite themes</a>
+									</div>
+									<div class="samples-list__row">
+										<a href="../samples/theme/custom_theme.html" title="" class="samples-link">Custom themes</a>
+									</div>
+									<div class="samples-list__row">
+										<a href="../samples/theme/theme_configurator.html" title="" class="samples-link">Suite theme configurator</a>
+									</div>
+								</div>
+								<div class="samples-list-footer">
+									<a href="https://snippet.dhtmlx.com/all?text&#x3D;%23theme" title="" class="samples-icon-link" target="_blank">
+										<span class="samples-icon-link__icon">
+											<svg viewBox="0 0 16 16" class="anchor-icon">
+												<use xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="#anchor" class="anchor-icon line"></use>
+											</svg>
+										</span>
+										Check online Theme samples
 									</a>
 								</div>
 							</div>

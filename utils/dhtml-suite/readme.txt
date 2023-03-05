@@ -1,7 +1,7 @@
 /*
 @license
 
-dhtmlxSuite v.7.3.12 Professional
+dhtmlxSuite v.8.0.0 Professional
 This software is covered by Commercial License. Usage without proper license is prohibited.
 
 (c) XB Software.

@@ -31,6 +31,7 @@ export interface ICellConfig {
     tab?: string;
     tabCss?: string;
     full?: boolean;
+    progressDefault?: boolean;
     init?: (c: ICell, cfg: ICellConfig | IView) => void;
     $fixed?: boolean;
     $autoWidth?: boolean;
@@ -65,6 +66,10 @@ export interface ICell extends IView {
     collapse(): void;
     expand(): void;
     toggle(): void;
+    detach(): void;
+    progressShow(): void;
+    progressHide(): void;
+    isVisibleProgress(): boolean;
 }
 export interface IProCell extends ICell {
     scrollView: ScrollView;

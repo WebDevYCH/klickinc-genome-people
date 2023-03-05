@@ -1,17 +1,7 @@
-.job-details {
-	height: 70px;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-	overflow: hidden;
-}
+/* -------------------------------- Job List -------------------------------- */
 .other-info {
 	font-size: x-small;
 }
-#people-list {
-	height: 450px;
-	overflow: auto;
-}
-
 .accordion-button::after {
 	background-image: none;
 }
@@ -34,9 +24,14 @@
 	border-bottom-left-radius: 0px;
 	border-bottom-right-radius: 0px;
 }
+.accordion-button:not(.collapsed) .no-show-on-collapse,
+.accordion-button.collapsed .show-on-collapse {
+	display: block;
+}
 
-.card-title {
-	--bs-card-title-spacer-y: 0px;
+.accordion-button:not(.collapsed) .show-on-collapse,
+.accordion-button.collapsed .no-show-on-collapse {
+	display: none !important;
 }
 
 .job-ul-list > .dhx_list-item,
@@ -52,17 +47,14 @@
 	background-color: white;
 }
 
-.applicant-ul-list > .dhx_list-item:last-child {
-	border-bottom: none;
-}
-
-.dhx_input {
+/* ---------------------------- Form Related CSS ---------------------------- */
+.job-form .dhx_input {
 	background-color: white;
 }
-.invalidMsg {
+.job-form .invalidMsg {
 	display: none;
 }
-.form-editor-container.dhx_form-group--state_error .invalidMsg {
+.job-form .form-editor-container.dhx_form-group--state_error .invalidMsg {
 	display: block;
 }
 
@@ -76,34 +68,52 @@
 	}
 }
 
-.form-btns-container {
+.job-form .form-btns-container {
 	flex: auto !important;
 	align-items: flex-end;
 }
-.form-btns-container > div{
+.job-form .form-btns-container > div {
 	margin: 5px;
 }
 
-.dhx_form-group--textarea .dhx_label {
+.job-form .dhx_form-group--textarea .dhx_label {
 	min-height: auto;
 	white-space: break-spaces;
 	overflow-x: visible;
 	text-overflow: initial;
 }
-
-.accordion-button:not(.collapsed) .no-show-on-collapse,
-.accordion-button.collapsed .show-on-collapse{
-	display: block;
+.job-form .dhx_combobox-input-box {
+	background-color: white;
 }
-
-.accordion-button:not(.collapsed) .show-on-collapse,
-.accordion-button.collapsed .no-show-on-collapse {
-	display: none !important;
+/* ----------------------- Modal Window and Popups CSS ---------------------- */
+.dhx_popup-content .dhx_list-item {
+	height: auto !important;
 }
-
-.dhx_window .dhx_window-header .dhx_toolbar .dhx_navbar{
+.dhx_window .dhx_window-header .dhx_toolbar .dhx_navbar {
 	padding: 20px 16px 0 28px;
 }
-.dhx_window-content{
+.dhx_window-content {
 	padding-bottom: 20px;
+}
+
+/* ---------------------------- Filter Related CSS --------------------------- */
+.filter-container .form-select,
+.filter-container .form-control {
+	padding-left: 0.6rem;
+}
+.filter-container .dhx_label {
+	font-weight: 400;
+	margin-bottom: 1px;
+}
+.filter-container .dhx_combobox-input-box {
+	border-radius: 0.2rem;
+	background-color: white;
+}
+.filter-container .dhx_combobox {
+	margin-bottom: 0px;
+}
+
+/* ---------------------- View Applicants Modal Window ---------------------- */
+.applicant-ul-list > .dhx_list-item:last-child {
+	border-bottom: none;
 }

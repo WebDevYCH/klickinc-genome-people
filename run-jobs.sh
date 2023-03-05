@@ -16,8 +16,9 @@ jobs_core_daily="replicate_laborroles replicate_laborrolehc"
 
 jobs_skills="replicate_skills"
 
-jobs_forecast="model_linear model_linreg model_cilinear model_actuals model_gsheets model_mljar replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
-jobs_forecast_train="model_mljar_train"
+jobs_forecast_core="model_actuals model_gsheets replicate_labor_role_hours_day_ratio replicate_portfolio_laborrole_forecast_sheet"
+jobs_forecast_ml="model_prophet model_linear model_linreg model_cilinear model_blend"
+jobs_forecast_train="model_mljar_train model_mljar"
 
 jobs_tmkt=""
 jobs_tmkt_train="tmkt_people_gptindex tmkt_chatdb_train tmkt_resumes_load_index tmkt_job_postings_load_index"
@@ -25,7 +26,7 @@ jobs_tmkt_test="tmkt_people_gptindex_test tmkt_people_gptindex_test_interactive 
 
 jobs_chat="chat_test chat_core"
 
-sections="core_often core_daily skills forecast forecast_train tmkt tmkt_train tmkt_test chat"
+sections="core_often core_daily skills forecast_core forecast_ml forecast_train tmkt tmkt_train tmkt_test chat"
 
 
 if [ "$1" = "" ]; then
@@ -41,7 +42,7 @@ elif [ "$1" = "job" ]; then
 
 else
 
-    for section in core_often core_daily skills forecast tmkt tmkt_test tmkt_test_train chat; do
+    for section in core_often core_daily skills forecast_core forecast_ml forecast_train tmkt tmkt_test tmkt_test_train chat; do
         if [ "$1" = "$section" ]; then
             eval "sectionlist=\$jobs_$section"
             for function in `echo $sectionlist`; do

@@ -5,9 +5,12 @@ from model import *
 from skills_core import *
 from flask import render_template, request
 from prompt_core import *
+import jsonpickle
 
 # create job_posting object from request.form
 def create_job_posting_object(request_form):
+    # TODO: need to add job_posting_skills, and similarity
+
     # find existing job posting if id is passed in request_form
     try:
         job_posting_id = int(request_form['id'])
@@ -35,28 +38,23 @@ def create_job_posting_object(request_form):
     job_posting.job_end_date = request_form['job_end_date']
     job_posting.cst = request_form['cst']
     job_posting.job_function = request_form['job_function']
-    if request_form['client']:
-        job_posting.client = request_form['client']
-    if request_form['brands']:
-        job_posting.brands = request_form['brands']
-    if request_form['project_id']:
-        job_posting.project_id = request_form['project_id']
-    if request_form['hiring_manager']:
-        job_posting.hiring_manager = request_form['hiring_manager']
-    if request_form['job_location']:
-        job_posting.job_location = request_form['job_location']
+    job_posting.client = request_form['client']
+    job_posting.brands = request_form['brands']
+    job_posting.project_id = request_form['project_id']
+    job_posting.hiring_manager = request_form['hiring_manager']
+    job_posting.job_location = request_form['job_location']
+
+    # Get GPT3 Embedding value for job posting
+    prompt = fill_prompt_for_text(job_posting, job_posting.description)
+    job_posting.job_posting_vector = gpt3_embedding(prompt)
+    if not isinstance(job_posting.job_posting_vector, list):
+        job_posting.job_posting_vector = None
 
     return job_posting
 
 # save job posting function
 def save_job_posting(job_posting, update_skills = True):
     result_msg = None
-
-    # Get GPT3 Embedding value for resume
-    prompt = fill_prompt_for_text(job_posting, job_posting.description)
-    job_posting.job_posting_vector = gpt3_embedding(prompt)
-    if not isinstance(job_posting.job_posting_vector, list):
-        job_posting.job_posting_vector = None
 
     try:
         # if job_posting.id doesn't exist, create new job posting; otherwise, update job posting
@@ -76,55 +74,20 @@ def save_job_posting(job_posting, update_skills = True):
 
     return result_msg
 
-# apply job posting function
-def apply_job_posting(job_application):
-    result_msg = None
-    try:
-        if not job_application.id:
-            db.session.add(job_application)
-        db.session.commit()
-        result_msg = "Successfully applied to job posting"
-    except Exception as e:
-        result_msg = f"Error applying to job posting: {e}"
+# make job_posting object ready to return to FE
+def clean_job_posting_object(job_posting):
+    today = date.today()
+    d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
+    d2 = datetime.datetime.strptime(str(job_posting.expiry_date), "%Y-%m-%d")
+    job_posting.expiry_sort = (d1 - d2).days
+    job_posting.expiry_day = abs(job_posting.expiry_sort)
+    job_posting.posted_for = abs((today-job_posting.posted_date).days) 
+    job_posting.posted_date = job_posting.posted_date.strftime("%Y-%m-%d")
+    job_posting.job_start_date = job_posting.job_start_date.strftime("%Y-%m-%d")
+    job_posting.job_end_date = job_posting.job_end_date.strftime("%Y-%m-%d")
+    job_posting.expiry_date = job_posting.expiry_date.strftime("%Y-%m-%d")
 
-    return result_msg
-
-# close job posting function
-def close_job_posting(job_posting):
-    result_msg = None
-    try:
-        job_posting.removed_date = date.today()
-        db.session.commit()
-        result_msg = "Successfully closed job posting"
-    except Exception as e:
-        result_msg = f"Error closing job posting: {e}"
-
-    return result_msg
-
-# cancel job application function
-def cancel_job_application(job_application):
-    result_msg = None
-    try:
-        job_application.cancelled_date = date.today()
-        db.session.commit()
-        result_msg = "Successfully cancelled job application"
-    except Exception as e:
-        result_msg = f"Error cancelling job application: {e}"
-
-    return result_msg
-
-# get job posting application function
-def get_job_posting_application(job_posting_id=None, user_id=None, include_cancelled = False):
-    filters = []
-    if job_posting_id:
-        filters.append(JobPostingApplication.job_posting_id==job_posting_id)
-    if user_id:
-        filters.append(JobPostingApplication.user_id==user_id)
-    
-    if not include_cancelled:
-        filters.append(JobPostingApplication.cancelled_date == None)
-    
-    return db.session.query(JobPostingApplication).filter(*filters)
+    return jsonpickle.encode(job_posting)
 
 # generic function to do job search
 def search_job_postings(categories = None, view = None):
@@ -132,7 +95,7 @@ def search_job_postings(categories = None, view = None):
     if categories is None:
         categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
 
-    # attempt to find existing user profile
+	# attempt to find existing user profile
     try:
         profile = db.session.query(UserProfile).filter(UserProfile.user_id==current_user.userid).one()
     except:
@@ -176,6 +139,14 @@ def search_job_postings(categories = None, view = None):
             result_posting_skill.append(value['name'])
         result_job['job_posting_skills'] = result_posting_skill
         
+        # TODO: code check for client and manager
+        client = db.session.query(Portfolio).filter(Portfolio.clientid == job.client).first()
+        if client:
+            result_job['client_name'] = client.clientname
+        manager = db.session.query(User).filter(User.userid == job.hiring_manager).first()
+        if manager:
+            result_job['manager_name'] = manager.firstname + ' ' + manager.lastname
+
         d1 = datetime.datetime.strptime(str(today), "%Y-%m-%d")
         d2 = datetime.datetime.strptime(str(job.expiry_date), "%Y-%m-%d")
         # adding sort for negative number of days to expiry (so sort reverse order works correctly)
@@ -185,9 +156,9 @@ def search_job_postings(categories = None, view = None):
         result_job['posted_date'] = job.posted_date.strftime("%Y-%m-%d")
         result_job['expiry_date'] = job.expiry_date.strftime("%Y-%m-%d")
         if job.job_start_date:
-       		result_job['job_start_date'] = job.job_start_date.strftime("%Y-%m-%d")
+            result_job['job_start_date'] = job.job_start_date.strftime("%Y-%m-%d")
         if job.job_end_date:
-        	result_job['job_end_date'] = job.job_end_date.strftime("%Y-%m-%d")
+            result_job['job_end_date'] = job.job_end_date.strftime("%Y-%m-%d")
         # add cosine similarity between job posting and user profile
         if profile and profile.resume_vector and job.job_posting_vector:
             result_job['similarity'] = cosine_similarity(json.loads(job.job_posting_vector.replace("{", "[").replace("}", "]")), json.loads(profile.resume_vector.replace("{", "[").replace("}", "]")))
@@ -215,22 +186,22 @@ def search_job_postings(categories = None, view = None):
 
     return result
 
-# render job search page with all the required parameters
-def render_job_search_page(request = None, view = None):
-    categories = db.session.query(JobPostingCategory).order_by(JobPostingCategory.name).all()
-    titles = db.session.query(Title).order_by(Title.name).all()
-    csts = db.session.query(User.cst).filter(User.enabled == True).distinct().order_by(User.cst).all()
-    csts = [row.cst for row in csts]
-    jobfunctions = db.session.query(User.jobfunction).filter(User.enabled == True).distinct().order_by(User.jobfunction).all()
-    jobfunctions = [row.jobfunction for row in jobfunctions]
-
-    result = search_job_postings(categories, view = view)
+# get job posting application function
+def get_job_posting_application(job_posting_id=None, user_id=None, include_cancelled = False):
+    filters = []
+    if job_posting_id:
+        filters.append(JobPostingApplication.job_posting_id==job_posting_id)
+    if user_id:
+        filters.append(JobPostingApplication.user_id==user_id)
     
-    title = "Job Search"
-    if view == 'posted':
-        title = "Posted Jobs"
-    elif view == 'applied':
-        title = "Applied Jobs"
-  
+    if not include_cancelled:
+        filters.append(JobPostingApplication.cancelled_date == None)
+    
+    return db.session.query(JobPostingApplication).filter(*filters)
 
-    return render_template('tmkt/jobsearch.html', jobs=result, categories=categories, titles=titles, csts=csts, jobfunctions=jobfunctions, title=title)
+# clean job_application object
+def clean_job_application(job_application):
+    job_application.applied_date = job_application.applied_date.strftime("%Y-%m-%d")
+    job_application.cancelled_date = job_application.cancelled_date.strftime("%Y-%m-%d")
+
+    return jsonpickle.encode(job_application)

@@ -3,7 +3,6 @@ import datetime
 import os, time
 import pickle
 import re
-import traceback
 import requests
 import redis as redislib
 from textmagic.rest import TextmagicRestClient
@@ -37,7 +36,11 @@ login_manager.session_protection = 'strong'
 # Create db reference
 app.logger.info("Initializing database")
 db = SQLAlchemy(app)
-db.init_app(app)
+# sometimes this fails due an instance already existing
+try:
+    db.init_app(app)
+except:
+    pass
 
 # filter out some sqlalchemy warnings
 import warnings
@@ -54,7 +57,7 @@ class MyAdminIndexView(flask_admin.AdminIndexView):
     def inaccessible_callback(self, name, **kwargs):
         return redirect(url_for('login', next=request.url))
 
-admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView())
+admin = flask_admin.Admin(app, 'Genome People Admin', template_mode='bootstrap4', index_view=MyAdminIndexView(url='/p/admin'), url='/p/admin')
 
 # Customized admin/crud interfaces ensure there's at least basic authentication and permissions
 class AdminModelView(ModelView):
@@ -151,10 +154,10 @@ def handle_ex(e):
     if tmu != '':
         tmc = TextmagicRestClient(tmu, tmk)
         # if e is a string send it, otherwise send the first 300 chars of the traceback
-        if isinstance(e, str):
-            message = tmc.messages.create(phones=tmp, text=f"GP FAIL {e}")
-        else:
-            message = tmc.messages.create(phones=tmp, text=f"GBP FAIL {traceback.format_exc()[0:300]}")
+        #if isinstance(e, str):
+        #    message = tmc.messages.create(phones=tmp, text=f"GP FAIL {e}")
+        #else:
+        #    message = tmc.messages.create(phones=tmp, text=f"GBP FAIL {traceback.format_exc()[0:300]}")
 
 
 # set the format of a cell in a google sheet, but retry for up to a minute if it hits a rate limit

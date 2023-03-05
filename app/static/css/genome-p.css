@@ -1,0 +1,318 @@
+/** This file is used to override the default bootstrap styles with the Genome theme colors. 
+
+It is divided into sections and subsection for each component that is being overridden.
+- ADMIN KIT BOOTSTRAP STYLES
+- DHTMLX STYLES
+*/
+/* -------------------------------------------------------------------------- */
+/*                         ADMIN KIT BOOTSTRAP STYLES                         */
+/* -------------------------------------------------------------------------- */
+:root {
+  --bs-blue: var(--gcr-primary);
+  --bs-red: var(--gcr-danger);
+  --bs-yellow: var(--gcr-warning);
+  --bs-green: var(--gcr-success);
+  --bs-cyan: var(--gcr-primary-lighter-5);
+  --bs-primary: var(--gcr-primary);
+  --bs-success: var(--gcr-success);
+  --bs-info: var(--gcr-primary-lighter-5);
+  --bs-warning: var(--gcr-warning);
+  --bs-danger: var(--gcr-danger);
+  --bs-primary-rgb: var(--gcr-primary-rgb);
+  --bs-secondary-rgb: var(--gcr-secondary-rgb);
+  --bs-success-rgb: var(--gcr-success-rgb);
+  --bs-info-rgb: var(--gcr-info-rgb);
+  --bs-warning-rgb: var(--gcr-warning-rgb);
+  --bs-danger-rgb: var(--gcr-danger-rgb);
+  --bs-body-font-family: var(--gcr-font-family);
+  --bs-card-color: var(--gcr-primary-text);
+}
+
+.main {
+  background: var(--gcr-body-bg-color);
+}
+
+/* --------------------- Toast Notification Popup Styles -------------------- */
+.toast.success {
+  background: var(--gcr-success-lighter-40);
+  border-left: 3px solid var(--gcr-success);
+}
+.toast.error {
+  background: var(--gcr-danger-lighter-40);
+  border-left: 3px solid var(--gcr-danger);
+}
+.toast.info {
+  background-color: var(--gcr-primary-lighter-50);
+  border-left: 3px solid var(--gcr-primary-lighter-5);
+}
+.toast.warning {
+  background: var(--gcr-warning-lighter-30);
+  border-left: 3px solid var(--gcr-warning);
+}
+
+.genome-toast-header {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* ----------------------------- Side Bar Styles ---------------------------- */
+[data-simplebar] {
+  width: 100%;
+}
+
+body:not([data-sidebar-position=right]) .sidebar.collapsed {
+  margin-left: calc(var(--gcr-sidebar-width) * -1);
+}
+
+@media (max-width: 991.98px) {
+  body:not([data-sidebar-position=right]) .sidebar {
+    margin-left: calc(var(--gcr-sidebar-width) * -1);
+  }
+}
+body[data-theme=colored] .sidebar {
+  max-width: var(--gcr-sidebar-width);
+  min-width: var(--gcr-sidebar-width);
+}
+body[data-theme=colored] .sidebar-content {
+  background: var(--gcr-topbar-color);
+}
+body[data-theme=colored] .sidebar-user {
+  padding: 0.75rem 1rem;
+}
+body[data-theme=colored] .sidebar-user img.avatar {
+  border-radius: 50%;
+}
+body[data-theme=colored] .sidebar-user .sidebar-user-title {
+  font-size: 1rem;
+}
+body[data-theme=colored] .sidebar-user .sidebar-user-subtitle {
+  font-size: 0.75rem;
+}
+body[data-theme=colored] .sidebar-user-subtitle,
+body[data-theme=colored] .sidebar-link,
+body[data-theme=colored] a.sidebar-link,
+body[data-theme=colored] .sidebar-link i,
+body[data-theme=colored] .sidebar-link svg,
+body[data-theme=colored] a.sidebar-link i,
+body[data-theme=colored] a.sidebar-link svg {
+  color: var(--gcr-lightgrey);
+}
+body[data-theme=colored] .sidebar-link,
+body[data-theme=colored] a.sidebar-link {
+  padding: 0.625rem 1rem;
+}
+body[data-theme=colored] .sidebar-link svg,
+body[data-theme=colored] a.sidebar-link svg {
+  margin-right: 0.35rem;
+}
+body[data-theme=colored] .sidebar-dropdown .sidebar-link {
+  padding: 0.625rem 1rem 0.625rem 2.8rem;
+}
+body[data-theme=colored] .sidebar-dropdown .sidebar-link:before {
+  content: "";
+}
+body[data-theme=colored] .sidebar-dropdown .sidebar-item.active .sidebar-link {
+  font-weight: 600;
+}
+body[data-theme=colored] .sidebar-header,
+body[data-theme=colored] .sidebar-user-title,
+body[data-theme=colored] .sidebar-user-title:hover,
+body[data-theme=colored] .sidebar-link:hover,
+body[data-theme=colored] .sidebar-link:hover i,
+body[data-theme=colored] .sidebar-link:hover svg {
+  color: white;
+}
+body[data-theme=colored] .sidebar-brand {
+  padding: 0px;
+}
+body[data-theme=colored] .sidebar-brand.topbar-logo sup {
+  top: 6px;
+  left: 155px;
+  position: absolute;
+}
+body[data-theme=colored] .sidebar-brand.topbar-logo sup small {
+  color: var(--gcr-primary);
+}
+
+/* --------------------------- Top Nav Bar Styles --------------------------- */
+body[data-theme=colored] .navbar-bg {
+  background: var(--gcr-topbar-color);
+}
+
+.sidebar-toggle:hover .hamburger,
+.sidebar-toggle:hover .hamburger:after,
+.sidebar-toggle:hover .hamburger:before {
+  background: var(--gcr-lightgrey);
+}
+.sidebar-toggle .hamburger,
+.sidebar-toggle .hamburger:after,
+.sidebar-toggle .hamburger:before {
+  background: white;
+  width: 24px;
+}
+
+/* ------------------------------ Button Styles ----------------------------- */
+.btn {
+  --gcr-btn-disabled-bg: #c9ced3;
+  --gcr-btn-disabled-color: #798086;
+  --bs-btn-font-size: var(--text-sm, 14px);
+  --bs-btn-border-radius: var(--gcr-rounding-xs);
+}
+.btn.disabled, .btn:disabled, fieldset:disabled .btn {
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+.btn.btn-primary, .btn.btn-secondary, .btn.btn-success, .btn.btn-info, .btn.btn-warning, .btn.btn-danger, .btn.btn-tertiary {
+  --bs-btn-disabled-color: var(--gcr-btn-disabled-color);
+  --bs-btn-disabled-bg: var(--gcr-btn-disabled-bg);
+  --bs-btn-disabled-border-color: var(--gcr-btn-disabled-bg);
+}
+
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: var(--gcr-primary);
+  --bs-btn-border-color: var(--gcr-primary);
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: var(--gcr-primary-darker-5);
+  --bs-btn-hover-border-color: var(--gcr-primary-darker-5);
+  --bs-btn-focus-shadow-rgb: 32, 137, 172;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: var(--gcr-primary-darker-10);
+  --bs-btn-active-border-color: var(--gcr-primary-darker-10);
+}
+
+.btn-secondary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #6e7278;
+  --bs-btn-border-color: #6e7278;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #3e4043;
+  --bs-btn-hover-border-color: #3e4043;
+  --bs-btn-focus-shadow-rgb: 62 64 67;
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #3e4043;
+  --bs-btn-active-border-color: #3e4043;
+}
+
+.btn-tertiary {
+  --bs-btn-color: var(--gcr-primary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--gcr-primary);
+  --bs-btn-hover-color: var(--gcr-primary);
+  --bs-btn-hover-bg: var(--gcr-btn-disabled-bg);
+  --bs-btn-hover-border-color: var(--gcr-primary);
+  --bs-btn-focus-shadow-rgb: 35, 153, 194;
+  --bs-btn-active-color: var(--gcr-primary);
+  --bs-btn-active-bg: var(--gcr-btn-disabled-bg);
+  --bs-btn-active-border-color: var(--gcr-primary);
+}
+
+.btn-ghost {
+  --bs-btn-hover-bg: #d1d8e3;
+  --bs-btn-font-weight: 400;
+  --bs-btn-color: var(--gcr-primary);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: transparent;
+  --bs-btn-hover-color: var(--gcr-primary);
+  --bs-btn-hover-border-color: transparent;
+  --bs-btn-active-color: var(--gcr-primary);
+  --bs-btn-active-border-color: transparent;
+  --bs-btn-disabled-color: #6c757d;
+  --bs-btn-disabled-border-color: transparent;
+  --bs-btn-box-shadow: none;
+  text-decoration: none;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                DHTMLX STYLES                               */
+/* -------------------------------------------------------------------------- */
+.dhx_drag-ghost .dhx_tree-list-item__text,
+.dhx_button--view_flat,
+.dhx_button--view_link,
+.dhx_input,
+.dhx_input__caption,
+.dhx_label,
+.dhx_text,
+.dhx_select__placeholder,
+.dhx_simplevault,
+.dhx_simplevault-files__item,
+.dhx_slider__thumb-label,
+.dhx_slider__tick-label,
+.dhx_message,
+.dhx_message__text,
+.dhx_alert__content,
+.dhx_alert__header,
+.dhx_tooltip,
+.dhx_navbar-count,
+.dhx_navbar-title,
+.dhx_timepicker-ampm,
+.dhx_calendar__week-numbers:before,
+.dhx_calendar-week-number,
+.dhx_calendar-weekday,
+.dhx_calendar-day,
+.dhx_calendar-month,
+.dhx_calendar-year,
+.dhx_chart .group-text,
+.dhx_chart .header-text,
+.dhx_chart .legend-text,
+.dhx_chart .scale-text,
+.dhx_chart .scale-title,
+.dhx_chart .bar-text,
+.dhx_chart .radar-axis-text,
+.dhx_chart_tooltip,
+.dhx_chart_tooltip.tooltip-text,
+.dhx_chart .pie-value,
+.dhx_chart .pie-inner-value,
+.dhx_chart .treeMap-inner-value,
+.dhx_chart .donut-value-title,
+.dhx_chart .donut-value,
+.dhx_popup,
+.dhx_colorpicker,
+.dhx_list-item,
+.dhx_list-item--text,
+.dhx_combobox-input,
+.dhx_combobox-tag__value,
+.dhx_combobox-options__item,
+.dhx_grid-footer-cell,
+.dhx_grid-header-cell,
+.dhx_grid-cell,
+.dhx_tree-cell,
+.dhx_cell-editor,
+.dhx_span-cell,
+.dhx_grid,
+.dhx_nav-menu-button,
+.dhx_menu-button,
+.dhx_ribbon-button,
+.dhx_ribbon-button-image,
+.dhx_ribbon-content-label,
+.dhx_sidebar-button,
+.dhx_toolbar-button,
+.dhx_toolbar-button-image,
+.dhx_tabbar-tab-button,
+.dhx_tree-list-item__text,
+.dhx_tree-input,
+.dhx_window-content,
+.dhx_window-content-without-header,
+.dhx_tree-editor {
+  font-family: var(--gcr-font-family);
+  color: var(--gcr-primary-text);
+}
+
+.dhx_widget.dhx_widget--bg_gray {
+  background-color: initial;
+}
+
+.dhx_list-item--selected {
+  box-shadow: inset 2px 0 0 0 var(--gcr-primary);
+}
+
+.dhx_button.dhx_button--view_flat {
+  color: white;
+  border-radius: var(--gcr-rounding-xs);
+}
+
+.dhx_label-help {
+  color: var(--gcr-primary);
+}
+
+/*# sourceMappingURL=genome-p.css.map */

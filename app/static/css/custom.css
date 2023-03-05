@@ -34,6 +34,7 @@ div.loading {
     z-index: 9999999999;
 }
 
+/* DHTMLx Overrides */
 .dhx_grid-cell, .dhx_footer-wrapper, .dhx_header-wrapper, .dhx_grid-header-cell
 {
     font-size: 12px;

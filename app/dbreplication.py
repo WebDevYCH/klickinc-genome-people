@@ -360,14 +360,15 @@ def replicate_laborrolehc():
     # pull data from bigquery
     loglines.append("LABORROLE HEADCOUNT TABLE")
     sql = f"""
-  select LAST_DAY(uwd.YearMonthDay) as YearMonth, uwd.CST, LaborRoleID, EmployeeTypeID, count(*) as HeadCount, sum(Billed) as Billed, sum(Target) as Target, 
+  select LAST_DAY(uwd.YearMonthDay) as YearMonth, uwd.CST, LaborRoleID, EmployeeTypeID, count(*) as HeadCount, sum(Billed) as Billed, sum(Target) as Target,
   sum(BillableAllocation) as BillableAllocation, sum(ifnull(fa.Hours,0)) as AutobillHours
   from GenomeDW.DUserWorkDay uwd
   left join (
-    select UserID, LAST_DAY(YearMonthDay) as YearMonth, sum(Billed) as Billed, sum(ProratedTarget) as Target, max(BillableAllocation) as BillableAllocation
-    from GenomeBillability.BillableHours bh 
+    select UserID, LAST_DAY(YearMonthDay) as YearMonth, sum(Billed) as Billed, sum(ProratedTarget) as Target, 
+    max(case when Leave > 0 then 0 else BillableAllocation end) as BillableAllocation
+    from GenomeBillability.BillableHours bh
     where EmployeeType in ('Permanent', 'Contractor')
-    group by UserID, YearMonth 
+    group by UserID, YearMonth
   ) bh on uwd.YearMonthDay = bh.YearMonth and uwd.UserID = bh.UserID
   left join (
     select fa.Employee as UserID,
@@ -376,7 +377,7 @@ def replicate_laborrolehc():
       from `genome-datalake-prod.GenomeDW.F_Actuals` fa
         inner join `genome-datalake-prod.GenomeDW.DateDimension` dd on dd.DateDimension = fa.Date
       where fa.Client != 1 and (fa.Oversight != 'None' or fa.SchedulerAssistance != 'None') and dd.Year = 2023
-      group by 
+      group by
       fa.Employee, YearMonth
   ) fa on fa.UserID = uwd.UserID and fa.YearMonth = uwd.YearMonthDay
   where uwd.YearMonthDay =  LAST_DAY(uwd.YearMonthDay)

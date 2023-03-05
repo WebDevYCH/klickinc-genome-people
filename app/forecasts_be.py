@@ -6,7 +6,6 @@ import pandas as pd
 
 from flask_admin import expose
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
 import numpy as np
 
 from core import *
@@ -19,8 +18,12 @@ try:
     from supervised import AutoML
 except:
     pass
+from fbprophet import Prophet
     
 import warnings
+pd.options.mode.chained_assignment = None  # default='warn'
+warnings.filterwarnings("ignore", message="The frame.append method is deprecated")
+
 
 explain_model_path = "../cache/automl_lrforecast_explain"
 perform_model_path = "../cache/automl_lrforecast_perform"
@@ -123,9 +126,12 @@ def model_linear():
 
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
-    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
 
-    for lookbackmonths in [4,8,12,16]:
+    for lookbackmonths in [4,8,10,12,16]:
+        startdate = today.replace(day=1, month=1) - relativedelta(years=1)
+
+        #startdate = datetime.date(2022,11,1)
+
         sourcename = f'linear{lookbackmonths}'
         lookaheadmonths = 12
         while startdate < today:
@@ -188,7 +194,7 @@ def model_linreg():
     loglines.append("Starting Same-Portfolio Linear Regression Extrapolator")
     loglines.append("")
 
-    for lookbackmonths in [4,8,12,16]:
+    for lookbackmonths in [4,8,10,12,16]:
         sourcename = f'linreg{lookbackmonths}'
         lookaheadmonths = 12
         # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
@@ -205,58 +211,181 @@ def model_linreg():
             if startdate >= today:
                 thislookahead = lookaheadmonths
 
-            try:
-                # for each portfolio with forecasts at this month or later
-                for p in db.session.query(PortfolioForecast).where(
-                            PortfolioForecast.yearmonth >= startdate,
-                            PortfolioForecast.forecast != None,
-                            PortfolioForecast.forecast != "0.00"
-                        ).distinct(PortfolioForecast.portfolioid).all():
-                    loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
-                    # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+            # for each portfolio with forecasts at this month or later
+            for p in db.session.query(PortfolioForecast).where(
+                        PortfolioForecast.yearmonth >= startdate,
+                        PortfolioForecast.forecast != None,
+                        PortfolioForecast.forecast != "0.00"
+                    ).distinct(PortfolioForecast.portfolioid).all():
+                loglines.append(f"  portfolio {p.portfolioid} for {startdate}")
+                # pick up the forecasts from the Genome report (hardcoded numbers come from the report config)
+                try:
                     json = retrieveGenomeReport(2161, [2448,2449,2452,2450], 
                         [p.portfolioid,lookbackmonths,f"{startdate.year}-{startdate.month:02d}-01",thislookahead])
-                    #loglines.append(f"{json}")
+                except Exception as e:
+                    loglines.append(f"ERROR: EXCEPTION RETRIEVING PORTFOLIO'S FORECASTS")
+                    continue
+                #loglines.append(f"{json}")
 
-                    try:
-                        if 'Entries' in json:
-                            # for each Genome forecast
-                            for pfin in json['Entries']:
-                                # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
-                                pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
-                                upsert(db.session, PortfolioLRForecast, {
-                                    'portfolioid': pfin['AccountPortfolioID'],
-                                    'yearmonth': pfin['YearMonth'],
-                                    'laborroleid': pfin['LaborRoleID'],
-                                    'source': sourcename,
-                                }, {
-                                    'forecastedhours': pfin['PredictedHour'],
-                                    'forecasteddollars': None
-                                })
+                if 'Entries' in json:
+                    # for each Genome forecast
+                    for pfin in json['Entries']:
+                        # {"AccountPortfolioID":580,"YearMonth":"\/Date(1669870800000-0500)\/","CategoryName":"Analytics","LaborRoleID":"ANLTCSTD","LaborRoleName":"Analytics","PredictedHour":110.67,"ActualHour":159.05,"PredictedHourAccuracy":69.58}
+                        pfin['YearMonth'] = parseGenomeDate(pfin['YearMonth'])
+                        upsert(db.session, PortfolioLRForecast, {
+                            'portfolioid': pfin['AccountPortfolioID'],
+                            'yearmonth': pfin['YearMonth'],
+                            'laborroleid': pfin['LaborRoleID'],
+                            'source': sourcename,
+                        }, {
+                            'forecastedhours': pfin['PredictedHour'],
+                            'forecasteddollars': None
+                        })
 
-                                rowcount += 1
-                                if rowcount % 100 == 0:
-                                    loglines.append(f"  updated {rowcount} rows")
-                                    db.session.commit()
-                            loglines.append(f"    updated {rowcount} rows")
+                        rowcount += 1
+                        if rowcount % 100 == 0:
+                            loglines.append(f"  updated {rowcount} rows")
                             db.session.commit()
-                        else:
-                            loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
-                    except Exception as e:
-                        loglines.append(f"ERROR: {e}")
-                        handle_ex(e)
-
-            except Exception as e:
-                loglines.append(f"ERROR: {e}")
-                handle_ex(e)
+                    loglines.append(f"    updated {rowcount} rows")
+                    db.session.commit()
+                else:
+                    loglines.append("ERROR: CRASH RETRIEVING PORTFOLIO'S FORECASTS")
 
             loglines.append(f"  updated {rowcount} rows")
             db.session.commit()
             # add 1 month to startdate
             startdate = startdate + relativedelta(months=1)
 
+    return loglines
+
+@app.cli.command('model_prophet')
+def model_prophet_cmd():
+    model_prophet()
+
+def model_prophet():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Prophet Extrapolator")
+    loglines.append("")
+
+    sourcename = f'prophet'
+    lookaheadmonths = 12
+    lookbackyear = 2012
+    thisyear = datetime.date.today().year
+    lastyear = thisyear - 1
+    thismonth = datetime.date.today().month
+
+    # for each portfolio with any forecasts this year or last year
+    for p in db.session.query(PortfolioForecast).where(
+                PortfolioForecast.yearmonth >= datetime.date(lastyear,1,1),
+                PortfolioForecast.forecast != None,
+                PortfolioForecast.forecast != "0.00"
+            ).distinct(PortfolioForecast.portfolioid).all():
+        loglines.append(f"  portfolio {p.portfolioid}")
+
+        # pick up all actuals for this portfolio starting in lookbackyear
+        query = f"""
+        select 
+        d.ActualDate as ds,
+        sum(Hours) as y,
+        lr.LaborRole as laborrole
+        from `genome-datalake-prod.GenomeDW.F_Actuals` fact
+        join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.Portfolio=p.Portfolio
+        join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
+        join `genome-datalake-prod.GenomeDW.Project` pr on fact.Project=pr.Project
+        join `genome-datalake-prod.GenomeDW.LaborRole` lr on fact.LaborRole=lr.LaborRole
+        join `genome-datalake-prod.GenomeDW.JobFunction` jf on fact.JobFunction=jf.JobFunction
+        where pr.Billable=true
+        and d.ActualDate >= '{lookbackyear}-01-01'
+        and p.AccountPortfolioID = {p.portfolioid}
+        and lr.LaborRole != 'None'
+        group by 
+        d.ActualDate, lr.LaborRole
+        """
+
+        #os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../keys/google-key.json"
+        bqresult = bigquery.Client().query(query)
+        # convert to dataframe with date as index, do other cleanup
+        df = bqresult.to_dataframe()
+        df['ds'] = pd.to_datetime(df['ds'])
+        df = df.set_index('ds')
+        df = df.sort_index()
+        df['ds'] = df.index
+        df['yhat'] = np.nan
+        df['yhat_upper'] = np.nan
+        df['yhat_lower'] = np.nan
+        df['floor'] = 0
+
+        # for each labor role in df
+        for lr in df['laborrole'].unique():
+
+            rowcount = 0
+
+            # for each month starting in Jan of last year
+            #for y in range(lastyear,thisyear+1):
+            for y in [thisyear]:
+                for m in range(1,13):
+                    if y == thisyear and m > datetime.date.today().month:
+                        break
+                    startofrowmonth = datetime.date(y,m,1)
+                    startofnextmonth = startofrowmonth + relativedelta(months=1)
+
+                    loglines.append(f"    training/predicting {p.portfolioid} {lr} {startofrowmonth} - {startofnextmonth}")
+
+                    # gather records in df not including this month
+                    train = df.loc[(df['laborrole'] == lr) & (df.index < pd.to_datetime(startofrowmonth))]
+
+                    # skip months with almost no data
+                    if len(train['y']) < 3:
+                        loglines.append(f"      skipping month with {train['y'].sum()} hours")
+                        continue
+
+                    # create and train the model (hardcoded hyperparameters, tuned with the forecasts_prophet.py script)
+                    model = Prophet(
+                        growth='linear',
+                        changepoint_range=0.99,
+                        changepoint_prior_scale=0.2,
+                        seasonality_mode='multiplicative',
+                    )
+                    model.add_country_holidays(country_name='CA')
+                    model.fit(train)
+
+                    # predict past the sample, for 1 month or the rest of the year depending on whether we're in the this month
+                    future = model.make_future_dataframe(periods=365, include_history=False)
+                    future['floor'] = 0
+                    forecast = model.predict(future)
+
+                    # fill in just the current row's month's forecast
+                    # unless row month is this month, in which case fill in the rest of the year
+                    endofstoragemonth = startofrowmonth + relativedelta(months=lookaheadmonths)
+                    if startofrowmonth == datetime.date(thisyear,thismonth,1):
+                        endofstoragemonth = datetime.date(thisyear,12,1)
+
+                    for storagemonth in pd.date_range(startofrowmonth, endofstoragemonth, freq='MS'):
+                        # sum total forecasted hours for the row's month
+                        hours = forecast[(forecast['ds'] >= pd.to_datetime(storagemonth)) & (forecast['ds'] < pd.to_datetime(storagemonth + relativedelta(months=1)))]['yhat'].sum()
+                        # save the forecast to the database
+                        loglines.append(f"    storing {p.portfolioid} {lr} {storagemonth} --> {hours}")
+                        upsert(db.session, PortfolioLRForecast, {
+                            'portfolioid': p.portfolioid,
+                            'yearmonth': storagemonth,
+                            'laborroleid': lr,
+                            'source': sourcename,
+                        }, {
+                            'forecastedhours': hours,
+                            'forecasteddollars': None
+                        })
+                        rowcount += 1
+
+
+            loglines.append(f"    saved {rowcount} rows")
+            db.session.commit()
+        db.session.commit()
+    db.session.commit()
 
     return loglines
+
 
 @app.cli.command('model_cilinear')
 def model_cilinear_cmd():
@@ -327,6 +456,110 @@ def model_cilinear():
 
     return loglines
 
+# blend multiple models together
+@app.cli.command('model_blend')
+def model_blend_cmd():
+    model_blend()
+
+def model_blend():
+    loglines = AdminLog()
+    with app.app_context():
+        Base.prepare(autoload_with=db.engine, reflect=True)
+    loglines.append("Starting Multi-Model Blends")
+    loglines.append("")
+
+    blends = {
+        'blend1': {
+            'models': ['gsheet','linear4','linear8','linreg8'],
+        },
+        'blend2': {
+            'models': ['gsheet','linear4','linear8','linreg8','linreg10'],
+        },
+        'blend3': {
+            'models': ['gsheet','linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+        'blendm1': {
+            'models': ['linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+        'blendm2': {
+            'models': ['linear4','linear8','linreg8','linreg10'],
+        },
+        'blendm3': {
+            'models': ['linear4','linear8','linreg8','linreg10','cilinear'],
+        },
+    }
+
+    for blend in blends.keys():
+        lookaheadmonths = 12
+
+        # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
+        today = datetime.date.today()
+        startdate = today.replace(day=1, month=1) - relativedelta(years=1)
+
+        while startdate < today + relativedelta(months=lookaheadmonths):
+            rowcount = 0
+            loglines.append(f"processing {blend} for {startdate}")
+
+            # gather the list of forecasts for this month and save in a hash by portfolio ID and labor role and source
+            forecastedhours = {}
+            forecastedpflrs = {}
+            loglines.append("  gathering portfolio forecast list")
+            for plrf in db.session.query(PortfolioLRForecast).where(
+                        PortfolioLRForecast.yearmonth == startdate,
+                        PortfolioLRForecast.forecastedhours != None,
+                        PortfolioLRForecast.forecastedhours != 0
+                    ).all():
+                fhkey = f"{plrf.portfolioid}-{plrf.laborroleid}-{plrf.source}"
+                forecastedhours[fhkey] = plrf.forecastedhours
+                fkey = f"{plrf.portfolioid}-{plrf.laborroleid}"
+                forecastedpflrs[fkey] = True
+
+
+            try:
+                rowcount = 0
+                # for each portfolio-laborrole combination with a forecast
+                for fkey in forecastedpflrs.keys():
+                    modelcount = 0
+                    modelhours = 0
+                    # for each model in the blend
+                    for model in blends[blend]['models']:
+                        # if there is a forecast for this portfolio-laborrole-model combination
+                        fhkey = f"{fkey}-{model}"
+                        if fhkey in forecastedhours:
+                            # add the forecast to the blend
+                            modelcount += 1
+                            modelhours += forecastedhours[fhkey]
+                    if modelcount > 0:
+                        #loglines.append(f"    {blend} {startdate} {fkey}: found {modelcount} models, {modelhours} hours --> {modelhours / modelcount} hours")
+                        # calculate the average hours for the blend
+                        blendhours = modelhours / len(blends[blend]['models'])
+                        upsert(db.session, PortfolioLRForecast, {
+                            'portfolioid': fkey.split('-')[0],
+                            'yearmonth': startdate,
+                            'laborroleid': fkey.split('-')[1],
+                            'source': blend,
+                        }, {
+                            'forecastedhours': blendhours,
+                            'updateddate': datetime.date.today(),
+                        })
+                        rowcount += 1
+                        if rowcount % 100 == 0:
+                            loglines.append(f"    {rowcount} rows")
+                            db.session.commit()
+                loglines.append(f"    {rowcount} rows")
+                db.session.commit()
+                
+                
+            except Exception as e:
+                loglines.append(f"ERROR: {e}")
+                handle_ex(e)
+
+            # add 1 month to startdate
+            startdate = startdate + relativedelta(months=1)
+
+
+    return loglines
+
 @app.cli.command('model_actuals')
 def model_actuals_cmd():
     model_actuals()
@@ -340,6 +573,7 @@ def model_actuals():
 
     sourcename = 'actuals'
     startyear = datetime.date.today().year - 2
+    thismonth = datetime.date.today().month
 
     loglines.append("querying Genome BQ model")
     # query the CI-selected portfolios view in BigQuery
@@ -355,7 +589,7 @@ def model_actuals():
     inner join `genome-datalake-prod.GenomeDW.Portfolio` p on fact.portfolio=p.portfolio
     inner join `genome-datalake-prod.GenomeDW.DateDimension` d on fact.Date=d.DateDimension
     inner join `genome-datalake-prod.GenomeDW.Project` pr on fact.project=pr.project
-    where year >= {startyear} and pr.Billable=true and fact.LaborRole != 'None'
+    where year >= {startyear} and month < {thismonth} and pr.Billable=true and fact.LaborRole != 'None'
     group by
     p.AccountPortfolioID, fact.LaborRole, d.Year, d.Month
     """)
@@ -490,8 +724,8 @@ def model_mljar():
 
     # start Jan 1 last year, running for each month since then until now, then extrapolate forward 
     today = datetime.date.today()
-    startdate = today.replace(day=1, month=1) - relativedelta(years=1)
-    lookaheadmonths = 12
+    startdate = today.replace(day=1, month=1) # TODO:remove - relativedelta(years=1)
+    lookaheadmonths = 14
 
     laborroles = db.session.query(LaborRole).all()
 
@@ -508,7 +742,7 @@ def model_mljar():
     # for each portfolio with forecasts from start month to lookaheadmonths from now
     for pf in db.session.query(PortfolioForecast).filter(
         PortfolioForecast.yearmonth >= startdate,
-        PortfolioForecast.yearmonth < startdate + relativedelta(months=lookaheadmonths)
+        PortfolioForecast.yearmonth <= startdate + relativedelta(months=lookaheadmonths)
     ).order_by(PortfolioForecast.yearmonth).all():
         loglines.append(f"  for portfolio {pf.portfolioid}, processing {pf.yearmonth}")
         starttime = datetime.datetime.now()
@@ -571,20 +805,16 @@ def model_mljar():
         rowcount = 0
         for index, row in np.ndenumerate(predictions):
             if row != None and row > 0:
-                try:
-                    upsert(db.session, PortfolioLRForecast, {
-                        'portfolioid': pf.portfolioid,
-                        'yearmonth': pf.yearmonth,
-                        'laborroleid': Xdf.loc[index,'LaborRole'],
-                        'source': source,
-                    }, {
-                        'forecastedhours': row,
-                        'forecasteddollars': None,
-                        'updateddate': datetime.date.today()
-                    }, usecache=True)
-                except Exception as e:
-                    loglines.append(f"    ERROR: {e}")
-                    handle_ex(e)
+                upsert(db.session, PortfolioLRForecast, {
+                    'portfolioid': pf.portfolioid,
+                    'yearmonth': pf.yearmonth,
+                    'laborroleid': Xdf.loc[index,'LaborRole'],
+                    'source': source,
+                }, {
+                    'forecastedhours': row,
+                    'forecasteddollars': None,
+                    'updateddate': datetime.date.today()
+                })
                 rowcount += 1
                 commitrowcount += 1
 
@@ -720,14 +950,14 @@ def train_automl_model():
     df = rows.to_dataframe()
     df.to_csv(bq_csv_path)
 
-    # split into train and test
+    # split into train and test, keeping the most recent 3 months for test
     loglines.append(f"  splitting into train and test")
-    X_train, X_test, y_train, y_test = train_test_split(
-        df.drop("Hours", axis=1),
-        df["Hours"],
-        test_size=0.2,
-        random_state=123,
-    )
+    # split date point is yearmonth in int format
+    splitdate = int((datetime.date.today() - relativedelta(months=3)).strftime("%Y%m"))
+    X_train = df[df.YearMonth < splitdate].drop("Hours", axis=1)
+    X_test = df[df.YearMonth >= splitdate].drop("Hours", axis=1)
+    y_train = df[df.YearMonth < splitdate]["Hours"]
+    y_test = df[df.YearMonth >= splitdate]["Hours"]
     loglines.append(f"  training with rows {X_train.shape[0]} test rows {X_test.shape[0]}")
 
     # train models with Explain settings

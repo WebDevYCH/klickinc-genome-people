@@ -13,10 +13,11 @@ from model import *
 import compmgr
 import dbreplication
 import forecasts_fe
+import forecasts_charts
 import forecasts_be
 import tmkt_fe
 import tmkt_be
-import myprofile
+import profile_fe as profile_fe
 import skills
 import survey
 import chat
@@ -31,31 +32,44 @@ import requests
 # GET /
 @app.route('/')
 @app.route('/index')
+def mainindex():
+    # every URL should be under /p
+    return redirect("/p/")
+
+
+# GET /p
+@app.route('/p')
+@app.route('/p/')
 def index():
     '''This is the route for the Home Page.'''
     if current_user.is_authenticated:
         return render_template('index.html', title='Main')
     else:
         #return render_template('login.html', title='Google Login') # webpage with login button
-        return redirect("/login") # redirect straight to the oath process
+        return redirect("/p/login") # redirect straight to the oath process
 
 
 ###################################################################
 ## STATIC PATHS (maps /css/x.css to /static/css/x.css, for e.g.)
 
-@app.route('/css/<path:text>')
-@app.route('/fonts/<path:text>')
-@app.route('/img/<path:text>')
-@app.route('/js/<path:text>')
+@app.route('/p/css/<path:text>')
+@app.route('/p/static/css/<path:text>')
+@app.route('/p/fonts/<path:text>')
+@app.route('/p/static/fonts/<path:text>')
+@app.route('/p/img/<path:text>')
+@app.route('/p/static/img/<path:text>')
+@app.route('/p/js/<path:text>')
+@app.route('/p/static/js/<path:text>')
 def static_file(text):
-    return app.send_static_file(request.path[1:])
+    filename = request.path[3:].replace('static/','')
+    return app.send_static_file(filename)
 
 
 ###################################################################
 ## AUTHENTICATION / LOGIN
 
-# GET /login
-@app.route("/login")
+# GET /p/login
+@app.route("/p/login")
 def login():
     # Find out what URL to hit for Google login
     google_provider_cfg = get_google_provider_cfg()
@@ -74,8 +88,8 @@ def login():
     )
     return redirect(request_uri)
 
-# GET /login/callback
-@app.route("/login/callback")
+# GET /p/login/callback
+@app.route("/p/login/callback")
 def callback():
     # Get authorization code Google sent back to you
     code = request.args.get("code")
@@ -138,8 +152,8 @@ def callback():
     else:
         return "You are not in the user list and are not authorized to use this application.", 400
 
-# GET /logout
-@app.route("/logout")
+# GET /p/logout
+@app.route("/p/logout")
 @login_required
 def logout():
     logout_user()
@@ -176,10 +190,19 @@ class UserModelView(ReadOnlyModelView):
     column_searchable_list = ('email','firstname','lastname')
     column_filters = ('firstname', 'lastname', 'email', 'enabled')
 
-admin.add_link(MenuLink(name='Frontend', url='/'))
-admin.add_link(MenuLink(name='Logout', url='/logout'))
+admin.add_link(MenuLink(name='Frontend', url='/p/'))
+admin.add_link(MenuLink(name='Logout', url='/p/logout'))
 
 admin.add_view(UserModelView(ModelUser, db.session, category='Users/Roles'))
 admin.add_view(AdminModelView(Role, db.session, category='Users/Roles'))
-admin.add_view(AdminModelView(UserRole, db.session, category='Users/Roles'))
+
+class UserRoleModelView(AdminModelView):
+    def is_accessible(self):
+        return current_user.is_authenticated and current_user.has_roles('user_admin')
+    column_searchable_list = ('user.firstname','user.lastname','role.name')
+    column_sortable_list = ('user.firstname','user.lastname','role.name')
+    #column_filters = ('role')
+    #column_editable_list = ('role')
+
+admin.add_view(UserRoleModelView(UserRole, db.session, category='Users/Roles'))
 

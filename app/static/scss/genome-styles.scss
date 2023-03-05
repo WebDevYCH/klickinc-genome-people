@@ -1,0 +1,129 @@
+/* Global SCSS Variables for calculations*/
+$gcr-primary: #2399c2;
+$gcr-success: #43D476;
+$gcr-warning: #fed933;
+$gcr-danger: #ed1d24;
+:root {
+	--gcr-font-family: 'Open Sans', system-ui, Helvetica, Arial, sans-serif;
+	
+	--gcr-info-rgb: 82, 187, 224;
+
+	--gcr-primary: #{$gcr-primary}; 
+	--gcr-primary-rgb: 35, 153, 194;
+	--gcr-primary-darker-5: #{darken($gcr-primary, 5% )}; 
+	--gcr-primary-darker-10: #{darken($gcr-primary, 10% )}; 
+	--gcr-primary-darker-15: #{darken($gcr-primary, 15% )}; 	
+	--gcr-primary-lighter-5: #{lighten($gcr-primary, 5% )}; 
+	--gcr-primary-lighter-10: #{lighten($gcr-primary, 10% )}; 
+	--gcr-primary-lighter-15: #{lighten($gcr-primary, 15% )}; 
+	--gcr-primary-lighter-30: #{lighten($gcr-primary, 30% )}; 
+	--gcr-primary-lighter-40: #{lighten($gcr-primary, 40% )};
+	--gcr-primary-lighter-50: #{lighten($gcr-primary, 50% )};
+	
+	--gcr-secondary: #32383e;
+	--gcr-secondary-rgb: 50, 56, 62;
+	
+	--gcr-success: #{$gcr-success};
+	--gcr-success-rgb: 67, 212, 118;
+	--gcr-success-lighter-5: #{lighten($gcr-success, 5% )};
+	--gcr-success-lighter-10: #{lighten($gcr-success, 10% )};
+	--gcr-success-lighter-15: #{lighten($gcr-success, 15% )};
+	--gcr-success-lighter-30: #{lighten($gcr-success, 30% )};
+	--gcr-success-lighter-40: #{lighten($gcr-success, 40% )};
+	--gcr-success-darker-5: #{darken($gcr-success, 5% )};
+	--gcr-success-darker-10: #{darken($gcr-success, 10% )};
+	
+	--gcr-warning: #{$gcr-warning};
+	--gcr-warning-rgb: 254, 217, 51;
+	--gcr-warning-lighter-5: #{lighten($gcr-warning, 5% )};
+	--gcr-warning-lighter-10: #{lighten($gcr-warning, 10% )};
+	--gcr-warning-lighter-15: #{lighten($gcr-warning, 15% )};
+	--gcr-warning-lighter-30: #{lighten($gcr-warning, 30% )};
+	--gcr-warning-darker-5: #{darken($gcr-warning, 5% )};
+	--gcr-warning-darker-10: #{darken($gcr-warning, 10% )};
+	
+	--gcr-danger: #{$gcr-danger};
+	--gcr-danger-rgb:237, 29, 36;
+	--gcr-danger-lighter-5: #{lighten($gcr-danger, 5% )};
+	--gcr-danger-lighter-10: #{lighten($gcr-danger, 10% )};
+	--gcr-danger-lighter-15: #{lighten($gcr-danger, 15% )};
+	--gcr-danger-lighter-30: #{lighten($gcr-danger, 30% )};
+	--gcr-danger-lighter-40: #{lighten($gcr-danger, 40% )};
+	--gcr-danger-darker-5: #{darken($gcr-danger, 5% )};
+	--gcr-danger-darker-10: #{darken($gcr-danger, 10% )};
+	
+	--gcr-offwhite: rgb(244, 248, 248);
+	--gcr-lightgrey: rgb(230, 230, 235);
+
+	--gcr-slate: #6d6e7d;
+	--gcr-eggplant: #261e37;
+	--gcr-fog: rgb(230, 230, 235);
+
+	--gcr-grey: #C9CED3; //borders
+	--gcr-grey-light: #DFE5EB; //borders
+	--gcr-grey-lighter: #F5F8FB; //section bg
+
+	--gcr-primary-text: #4f5357;
+	--gcr-secondary-text: #798086;
+	
+	--gcr-topbar-height: 60px;
+	--gcr-topbar-color: #32383E;
+	--gcr-sidebar-width: 230px;
+	--gcr-body-bg-color: #EAEEF1;
+	
+	--gcr-rounding-xs: 2px;
+	--gcr-rounding-sm: 4px;
+	--gcr-rounding-md: 8px;
+	--gcr-rounding-lg: 16px;
+
+	--gcr-spacing-xs: 2px;
+	--gcr-spacing-sm: 4px;
+	--gcr-spacing-md: 8px;
+	--gcr-spacing-lg: 16px;
+
+	--gcr-size-ctrl-xxs: 16px;
+	--gcr-size-ctrl-xs: 24px;
+	--gcr-size-ctrl-sm: 32px;
+	--gcr-size-ctrl-md: 40px;
+	--gcr-size-ctrl-lg: 48px;
+	--gcr-size-ctrl-xl: 64px;
+	--gcr-size-ctrl-xxl: 128px;
+
+	--icon-xs: 16px;
+	--icon-sm: 24px;
+	--icon-md: 32px;
+	--icon-lg: 64px;
+	--icon-xl: 128px;
+
+	--text-xxs: 10px;
+	--text-xs: 12px;
+	--text-sm: 14px;
+	--text-md: 16px;
+	--text-lg: 18px;
+	--text-xl: 20px;
+	--text-xxl: 24px;
+
+	--line-height-xs: 18px;
+	--line-height-sm: 20px;
+	--line-height-md: 22px;
+	--line-height-lg: 24px;
+	--line-height-xl: 26px;
+}
+
+
+body {
+	font-family: var(--gcr-font-family);
+}
+
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+	color: var(--gcr-primary-text);
+}
+
+
+.topbar-logo img {
+    max-width: 100%;
+    width: 100%;
+    height: calc(var(--gcr-topbar-height) - 6px);
+    position: relative;
+	background: var(--gcr-primary);
+}

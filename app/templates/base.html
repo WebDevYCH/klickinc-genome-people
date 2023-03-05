@@ -10,7 +10,7 @@
     <meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
 
     <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link rel="shortcut icon" href="/static/img/icons/icon-48x48.png" />
+    <link rel="shortcut icon" href="/p/static/img/icons/icon-48x48.png" />
 
     <title>Genome People
         {% block title %}
@@ -23,14 +23,15 @@
     {% block app_head %}{% endblock %}
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-
+	<link href="//fonts.googleapis.com/css?family=Open+Sans:300,400,700,300italic,400italic,700italic" rel="stylesheet" type="text/css">
     <!-- Choose your prefered color scheme -->
-    <link href="/static/css/light.css" rel="stylesheet">
+    <link href="/p/static/css/light.css" rel="stylesheet">
     <!-- <link href="css/dark.css" rel="stylesheet"> -->
 
-    <link href="/static/css/custom.css" rel="stylesheet">
-
-
+    <link href="/p/static/css/custom.css" rel="stylesheet">
+	<link href="/p/static/css/genome-styles.css" rel="stylesheet"/>
+	<link href="/p/static/css/genome-p.css" rel="stylesheet"/>
+	<script src="/p/static/js/helpers.js"></script>
 </head>
 <!--
   HOW TO USE: 
@@ -41,20 +42,16 @@
 -->
 
 <body data-theme="colored" data-layout="fluid" data-sidebar-position="left" data-sidebar-layout="default">
-    <div class="wrapper">
+	<!-- Stackable Toasts Notifications showToast() from helper.js -->
+	<div aria-live="polite" aria-atomic="true" class="position-relative">
+		<div class="toast-container position-fixed  top-0 end-0 p-3" id="genome-toast-container"></div>
+	</div>
+	<div class="wrapper">
         <nav id="sidebar" class="sidebar js-sidebar">
             <div class="sidebar-content js-simplebar">
-                <a class="sidebar-brand" href="/">
-                    <span class="sidebar-brand-text align-middle">
-                        Genome
-                        <sup><small class="badge bg-primary text-uppercase">People</small></sup>
-                    </span>
-                    <svg class="sidebar-brand-icon align-middle" width="32px" height="32px" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5"
-                        stroke-linecap="square" stroke-linejoin="miter" color="#FFFFFF" style="margin-left: -3px">
-                        <path d="M12 4L20 8.00004L12 12L4 8.00004L12 4Z"></path>
-                        <path d="M20 12L12 16L4 12"></path>
-                        <path d="M20 16L12 20L4 16"></path>
-                    </svg>
+                <a class="sidebar-brand topbar-logo" href="/p/">
+					<img src="https://genome.klick.com/assets/img/logo.svg">
+					<sup><small class="badge bg-light text-uppercase">People</small></sup>
                 </a>
 
                 {% if current_user.is_authenticated %}
@@ -62,9 +59,9 @@
                     <div class="d-flex justify-content-center">
                         <div class="flex-shrink-0">
                             {% if current_user.photourl %}
-                            <img src="{{ current_user.photourl }}" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="{{ current_user.photourl }}" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% else %}
-                            <img src="/static/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
+                            <img src="/p/static/img/avatars/avatar.jpg" class="avatar img-fluid me-1" alt="{{ current_user.firstname }} {{ current_user.lastname }}" />
                             {% endif %}
                         </div>
                         <div class="flex-grow-1 ps-2">
@@ -72,12 +69,14 @@
                                 {{ current_user.firstname}} {{ current_user.lastname }}
                             </a>
                             <div class="dropdown-menu dropdown-menu-start">
-                                <a class="dropdown-item" href="/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <a class="dropdown-item" href="/p/profile"><i class="align-middle me-1" data-feather="user"></i> Profile</a>
+                                <!--
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="pie-chart"></i> Analytics</a>
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="pages-settings.html"><i class="align-middle me-1" data-feather="settings"></i> Settings &
                                     Privacy</a>
                                 <a class="dropdown-item" href="#"><i class="align-middle me-1" data-feather="help-circle"></i> Help Center</a>
+                                -->
                                 <div class="dropdown-divider"></div>
                                 <a class="dropdown-item" href="{{ url_for('logout') }}">Log out</a>
                             </div>
@@ -91,62 +90,72 @@
 
                 <ul class="sidebar-nav">
 
+                    <!--
                     <li class="sidebar-header">
                         Survey
                     </li>
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/survey">
+                        <a class="sidebar-link" href="/p/survey">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Sample Survey Fill Screen</span>
                         </a>
                     </li>
+                    -->
 
+                    {% if current_user.has_roles('forecast_frontend') %}
                     <li class="sidebar-header">
                         Portfolio and Labor Forecasts
                     </li>
+                    {% if current_user.has_roles('forecast_advanced') %}
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/forecasts/portfolio-forecasts">
+                        <a class="sidebar-link" href="/p/forecasts/portfolio-forecasts">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Portfolio Forecasts</span>
                         </a>
                     </li>
+                    {% endif %}
                     <!-- 
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/forecasts/portfolio-lr-forecasts">
+                        <a class="sidebar-link" href="/p/forecasts/portfolio-lr-forecasts">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Portfolio Labor Forecasts</span>
                         </a>
                     </li>
                     -->
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/forecasts/dept-lr-forecasts">
+                        <a class="sidebar-link" href="/p/forecasts/dept-lr-forecasts">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Dept Labor Forecasts</span>
                         </a>
                     </li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" href="/p/forecasts/charts">
+                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Forecast Charts</span>
+                        </a>
+                    </li>
+                    {% endif %}
 
+                    {% if current_user.has_roles('tmkt_frontend') %}
                     <li class="sidebar-header">
-                        Job Board
+                        Talent Marketplace
                     </li>
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/tmkt/jobsearch">
+                        <a class="sidebar-link" href="/p/tmkt/jobsearch">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Search Jobs</span>
                         </a>
                     </li>
 					<li class="sidebar-item">
-                        <a class="sidebar-link" href="/tmkt/jobsearch/posted">
+                        <a class="sidebar-link" href="/p/tmkt/jobsearch/posted">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Posted Jobs</span>
                         </a>
                     </li>
 					<li class="sidebar-item">
-                        <a class="sidebar-link" href="/tmkt/jobsearch/applied">
+                        <a class="sidebar-link" href="/p/tmkt/jobsearch/applied">
                             <i class="align-middle" data-feather="list"></i> <span class="align-middle">Applied Jobs</span>
                         </a>
                     </li>
+                    {% endif %}
 
                     {% if (current_user.is_authenticated and current_user.has_roles('admin')) %}
-                    <li class="sidebar-header">
-                        Admin
-                    </li>
                     <li class="sidebar-item">
-                        <a class="sidebar-link" href="/admin">
-                            <i class="align-middle" data-feather="list"></i> <span class="align-middle">Admin Home</span>
+                        <a class="sidebar-link" href="/p/admin">
+                            <i class="align-middle" data-feather="server"></i> <span class="align-middle">Admin Home</span>
                         </a>
                     </li>
                     {% endif %}
@@ -467,19 +476,9 @@
     </div>
 
     <div class="loading"></div>
-    <script src="/static/js/app.js"></script>
-    <script src="/static/js/jquery-3.6.1.min.js"></script>
-    <script src="/static/js/custom.js"></script>
+    <script src="/p/static/js/app.js"></script>
+    <script src="/p/static/js/jquery-3.6.1.min.js"></script>
+    <script src="/p/static/js/custom.js"></script>
     {% block script %}{% endblock %}
 </body>
-
 </html>
-
-
-
-
-
-
-
-
-
