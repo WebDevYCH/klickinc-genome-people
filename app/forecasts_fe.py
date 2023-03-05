@@ -216,7 +216,7 @@ def queryClientCst(clients, csts):
     return queryfilter
 
 def sourcename_from_source(source):
-    sourcename = f"'{source}' Source",
+    sourcename = f"'{source}' Source"
     if source == 'actuals':
         sourcename = 'Actuals'
     elif source == 'linear':

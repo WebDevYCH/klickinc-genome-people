@@ -11,18 +11,26 @@
 	<div class="card-body">
 		<div id="layout" style="height: 80%; width: 100%"></div>
 	</div>
+	<div class="card-body">
+		<div id="treegrid2" style="height: 80%; width: 100%"></div>
+	</div>
 </div>
 <script>
+    {% if current_user.has_roles('forecast_advanced') %}
+    forecast_advanced = true;
+    {% else %}
+    forecast_advanced = false;
+    {% endif %}
+
     ///////////////////////////////////////////////////////////////////////
     // OVERALL LAYOUT
     const layout = new dhx.Layout("layout", {
         rows: [
             { id: "yearcombo", width: "300px" },
             { id: "lrcatcombo", width: "300px" },
-            { id: "checkboxformcontainer", html: '<form id="form"></form>' },
+            { id: "checkboxformcontainer" },
+            { id: "treegrid", html: "grid" },
             { id: "note", html: "Numbers are in FTE ('Billable Allocation'), accounts for part-timers, part-billable, etc. Shorter months and expected vacation/sick are also accounted for. Numbers include full-time and contract, not freelance.</i>" },
-            { id: "treegrid" },
-            { id: "errorrates", html: `<div id="errorrates"` },
         ]
     });
 
@@ -40,6 +48,7 @@
         value: {{thisyear}},
         readOnly: true,
     });
+    layout.getCell("yearcombo").attach(yearcombo);
     yearcomboonchange = function(id) {
         var year = yearcombo.getValue();
         if (year == "") return;
@@ -52,7 +61,6 @@
     }
     yearcombo.events.on("change", yearcomboonchange);
     setTimeout(yearcomboonchange, 0);
-    layout.getCell("yearcombo").attach(yearcombo);
 
     ///////////////////////////////////////////////////////////////////////
     // LABOR CATEGORY DROPDOWN
@@ -83,18 +91,21 @@
     }
 
     const emptydata = [];
-    const treegrid = new dhx.TreeGrid("grid", {
+    const treegrid = new dhx.TreeGrid(null, {
         autoWidth: true,
         autoHeight: true,
         resizable: true,
         selection: true,
+        topSplit: 1,
+        leftSplit: 1,
         headerRowHeight: 32,
         rowHeight: 32,
         label: "Forecasts and Targets",
     });
+    layout.getCell("treegrid").attach(treegrid);
 
     treegrid.data.events.on("load", function() {
-        unloading();
+        layout.progressHide();
         year = yearcombo.getValue();
         thisyear = "{{thisyear}}";
         // build column dataset: if it's this year, add HC column, and if months are present in the data then keep the column
@@ -146,17 +157,10 @@
         // open the first row
         treegrid.expand('lcat');
     });
-    layout.getCell("treegrid").attach(treegrid);
-
-    {% if current_user.has_roles('forecast_advanced') %}
-    forecast_advanced = true;
-    {% else %}
-    forecast_advanced = false;
-    {% endif %}
 
     ///////////////////////////////////////////////////////////////////////
     // CHECKBOXES
-    const form = new dhx.Form("form", {
+    const form = new dhx.Form(null, {
         width: "400px",
         height: "100%",
         rows: [
@@ -167,6 +171,7 @@
             { id: "showlaborroles", type: "checkbox", label: "Show Labor Roles Instead of Job Function", labelWidth: "350px", labelPosition: "left", disabled: false, required: false, hidden: false, helpMessage: "Show more detail with LR's instead of JF" },
         ]
     });
+    layout.getCell("checkboxformcontainer").attach(form);
     form.events.on("change", function(id) {
         loadgrid();
     });
@@ -185,11 +190,23 @@
             treegrid.data.removeAll();
             postfix = '&showportfolios='+showportfolios+'&showsources='+showsources+'&showyear='+showyear+'&showhours='+showhours+'&showlaborroles='+showlaborroles;
             treegrid.data.load('dept-lr-forecasts-data?year='+year+'&lrcat='+lrcat+postfix);
-            loading();
+            layout.progressShow();
         }
     }
 
 </script>
+
+<style>
+    .dhx_layout-cell-content {
+        /*
+        padding: 12px;
+        border: 1px solid #e6e6e6;
+        */
+	}
+    .dhx_grid-content {
+        height: 800px !important;
+    }
+</style>
 
 {% endblock %}
 

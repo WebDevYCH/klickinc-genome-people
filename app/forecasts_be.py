@@ -323,7 +323,8 @@ def model_prophet():
             rowcount = 0
 
             # for each month starting in Jan of last year
-            for y in range(lastyear,thisyear+1):
+            #for y in range(lastyear,thisyear+1):
+            for y in [thisyear]:
                 for m in range(1,13):
                     if y == thisyear and m > datetime.date.today().month:
                         break
@@ -355,19 +356,27 @@ def model_prophet():
                     future['floor'] = 0
                     forecast = model.predict(future)
 
-                    # sum total forecasted hours for the row's month
-                    hours = forecast[(forecast['ds'] >= pd.to_datetime(startofrowmonth)) & (forecast['ds'] < pd.to_datetime(startofnextmonth))]['yhat'].sum()
-                    # save the forecast to the database
-                    upsert(db.session, PortfolioLRForecast, {
-                        'portfolioid': p.portfolioid,
-                        'yearmonth': startofrowmonth,
-                        'laborroleid': lr,
-                        'source': sourcename,
-                    }, {
-                        'forecastedhours': hours,
-                        'forecasteddollars': None
-                    })
-                    rowcount += 1
+                    # fill in just the current row's month's forecast
+                    # unless row month is this month, in which case fill in the rest of the year
+                    endofstoragemonth = startofrowmonth + relativedelta(months=lookaheadmonths)
+                    if startofrowmonth == datetime.date(thisyear,thismonth,1):
+                        endofstoragemonth = datetime.date(thisyear,12,1)
+
+                    for storagemonth in pd.date_range(startofrowmonth, endofstoragemonth, freq='MS'):
+                        # sum total forecasted hours for the row's month
+                        hours = forecast[(forecast['ds'] >= pd.to_datetime(storagemonth)) & (forecast['ds'] < pd.to_datetime(storagemonth + relativedelta(months=1)))]['yhat'].sum()
+                        # save the forecast to the database
+                        loglines.append(f"    storing {p.portfolioid} {lr} {storagemonth} --> {hours}")
+                        upsert(db.session, PortfolioLRForecast, {
+                            'portfolioid': p.portfolioid,
+                            'yearmonth': storagemonth,
+                            'laborroleid': lr,
+                            'source': sourcename,
+                        }, {
+                            'forecastedhours': hours,
+                            'forecasteddollars': None
+                        })
+                        rowcount += 1
 
 
             loglines.append(f"    saved {rowcount} rows")

@@ -43,7 +43,7 @@
         if (csts != "") {
             treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&csts='+csts);
-            loading();
+            layout.progressShow();
         }
     }
     {% endblock %}
@@ -61,7 +61,7 @@
         if (clients != "") {
             treegrid.data.removeAll();
             treegrid.data.load('portfolio-forecasts-data?year='+year+'&clients='+clients);
-            loading();
+            layout.progressShow();
         }
     }
     {% endblock %}
@@ -97,7 +97,7 @@
     {% endblock %}
 
     const emptydata = [];
-    const treegrid = new dhx.TreeGrid("grid", {
+    const treegrid = new dhx.TreeGrid(null, {
         columns: [
             { id: "name", gravity: 4, minWidth: 150, header: [{ text: "Name" }] },
             { id: "m1", type: "number", format: "#.0", htmlEnable: true, template: treegridcelltemplate, header: [{ text: "Jan" }] },
@@ -117,6 +117,8 @@
         autoHeight: true,
         resizable: true,
         selection: true,
+        topSplit: 1,
+        leftSplit: 1,
         headerRowHeight: 32,
         rowHeight: 32,
         label: "Forecasts and Targets",
@@ -124,7 +126,7 @@
         {% endblock %}
     });
     treegrid.data.events.on("load", function() {
-        unloading();
+        layout.progressHide();
         treegrid.collapseAll();
     });
     layout.getCell("yearcombo").attach(yearcombo);
@@ -137,5 +139,10 @@
 
 </script>
 
-{% endblock %}
+<style>
+    .dhx_grid-content { 
+        height: 800px !important; 
+    }
+</style>
 
+{% endblock %}
