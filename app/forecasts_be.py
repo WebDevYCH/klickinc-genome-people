@@ -6,7 +6,6 @@ import pandas as pd
 
 from flask_admin import expose
 from sklearn.metrics import mean_squared_error, r2_score
-from sklearn.model_selection import train_test_split
 import numpy as np
 
 from core import *
@@ -300,7 +299,7 @@ def model_prophet():
         where pr.Billable=true
         and d.ActualDate >= '{lookbackyear}-01-01'
         and p.AccountPortfolioID = {p.portfolioid}
-        and lr.LaborRole != 'NONE'
+        and lr.LaborRole != 'None'
         group by 
         d.ActualDate, lr.LaborRole
         """
@@ -335,6 +334,11 @@ def model_prophet():
 
                     # gather records in df not including this month
                     train = df.loc[(df['laborrole'] == lr) & (df.index < pd.to_datetime(startofrowmonth))]
+
+                    # skip months with almost no data
+                    if len(train['y']) < 3:
+                        loglines.append(f"      skipping month with {train['y'].sum()} hours")
+                        continue
 
                     # create and train the model (hardcoded hyperparameters, tuned with the forecasts_prophet.py script)
                     model = Prophet(
