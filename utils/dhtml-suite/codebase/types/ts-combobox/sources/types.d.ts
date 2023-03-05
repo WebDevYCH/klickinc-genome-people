@@ -36,6 +36,7 @@ export interface IComboboxConfig {
     readonly?: boolean;
 }
 export declare enum ComboboxEvents {
+    beforeChange = "beforeChange",
     change = "change",
     focus = "focus",
     blur = "blur",
@@ -52,6 +53,7 @@ export declare enum ComboboxEvents {
 }
 export interface IComboboxEventHandlersMap {
     [key: string]: (...args: any[]) => any;
+    [ComboboxEvents.beforeChange]: (ids: Id | Id[]) => boolean | void;
     [ComboboxEvents.change]: (ids: Id | Id[]) => void;
     [ComboboxEvents.focus]: () => void;
     [ComboboxEvents.blur]: () => void;

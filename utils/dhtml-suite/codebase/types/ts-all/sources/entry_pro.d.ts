@@ -4,6 +4,7 @@ export { TreeGridCollection } from "../../ts-treegrid";
 export { ScrollView, scrollViewConfig } from "../../ts-common/ScrollView";
 export { TreeGrid } from "../../ts-treegrid";
 export { ProGrid as Grid } from "../../ts-grid";
+export { ProChart as Chart } from "../../ts-chart";
 export { ProList as List } from "../../ts-list";
 export { ProCombobox as Combobox } from "../../ts-combobox";
 export { ProDataView as DataView } from "../../ts-dataview";

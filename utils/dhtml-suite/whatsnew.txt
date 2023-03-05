@@ -1,3 +1,172 @@
+# Version 8.0.0 (February 24, 2023)
+
+### New functionality
+
+#### Styling
+
+- New "light", "contrast-light", "dark" and "contrast-dark" color themes
+- The ability to change base themes or configure your own color theme
+- New Theme configurator
+
+#### Chart
+
+- New Calendar heatmap chart (Pro version)
+- The ability to export the Chart data to PDF and PNG
+
+#### Colorpicker
+
+- New "beforeChange" event
+
+#### Combobox
+
+- New "beforeChange" event
+
+#### Slider
+
+- New "beforeChange" event
+
+#### Timepicker
+
+- New "beforeChange" event
+
+#### Form
+
+- New "beforeChange" event
+
+#### Form controls
+  - Datepicker "beforeChange" event
+  - Checkbox "beforeChange" event
+  - CheckboxGroup "beforeChange" event
+  - Colorpicker "beforeChange" event
+  - Combo "beforeChange" event
+  - Input "beforeChange" event
+  - Radiogroup "beforeChange" event
+  - Slider "beforeChange" event
+  - Textarea "beforeChange" event
+  - Timepicker "beforeChange" event
+  - Select "beforeChange" and "beforeChangeOptions" events
+
+#### Grid
+
+- Now the user can clear date values in the cell
+- The ability to configure drag-n-drop of multiple rows
+- The ability to control the process of data filtering (new "beforeFilter" event)
+- The ability to configure the "datePicker" editor of a cell by passing most of properties of DHTMLX Calendar to the "columns.editorConfig" property
+- The ability to fix bottom rows and right columns using the corresponding "bottomSplit" and "rightSplit" properties
+
+#### Layout
+
+- The ability to show a progress bar for empty cells by default (new "progressDefault" property of a Layout cell)
+- The ability to hide/show a progress bar via API calls:
+    - new methods of Layout: "progressShow()" and "progressHide()"
+    - new method of a Layout cell: "progressShow()" and "progressHide()"
+- The ability to detach a component or HTML content from a cell (new "detach()" method of a Layout cell)
+
+#### Message
+
+- The ability to close a message box (new "close()" method)
+- The ability to set margin between the node and tooltip (new "margin" property of the tooltip)
+
+#### Toolbar
+
+- DatePicker control. The ability to let the user enter the date via the input (new "editable" property)
+- DatePicker control. New properties: "valueFormat", "disabledDates", "mark", "mode", "thisMonthOnly", "timeFormat", "timePicker", "weekNumbers" and "weekStart"
+- The ability to set focus on an Input (new "setFocus()" method)
+
+#### TreeCollection
+
+- New "beforeItemLoad" and "afterItemLoad" events
+
+#### TreeGrid
+
+- Now the user can clear date values in the cell
+- The ability to control the process of data filtering (new "beforeFilter" event)
+- The ability to configure the datePicker editor of a cell by passing most of properties of DHTMLX Calendar to the "columns.editorConfig" property
+- The ability to fix bottom rows and right columns using the corresponding "bottomSplit" and "rightSplit" properties 
+
+### Updates
+
+#### Combobox
+
+- The "addOption()" method is updated (new "join" parameter)
+
+#### Form
+
+- New "id" parameter is added for Form events: "afterHide", "afterShow", "beforeHide" and "beforeShow"
+
+#### Form. CheckboxGroup control
+
+- Now it is possible to hide/show not only of the whole control but also of its separate checkboxes:
+    - new "id" parameter is added for CheckboxGroup methods: "hide()" and "show()"
+    - new "id" parameter is added for CheckboxGroup events: "afterHide", "afterShow", "beforeHide" and "beforeShow"
+
+- Now it is possible to enable/disable and check visibility not only of the whole control but also of its separate checkboxes:
+    - new "id" parameter is added for CheckboxGroup methods: "enable()", "disable()", "isVisible()" and "isDisabled()"
+
+#### Form. RadioGroup control
+
+- Now it is possible to hide/show not only of the whole control but also of its separate radio buttons:
+    - new "id" parameter is added for RadioGroup methods: "hide()" and "show()"
+    - new "id" parameter is added for RadioGroup events: "afterHide", "afterShow", "beforeHide" and "beforeShow"
+
+- Now it is possible to enable/disable and check visibility not only of the whole control but also of its separate radio buttons:
+    - new "id" parameter is added for RadioGroup methods: "enable()", "disable()", "isVisible()" and "isDisabled()"
+
+#### Form. Select control
+
+- Now it is possible to enable/disable and check visibility not only of the whole control but also of its separate radio buttons:
+    - new "value" parameter is added for Select methods: "enable()", "disable()" and "isDisabled()"
+
+#### Form. Container control
+
+-  The "value" parameter is removed from Container events: "afterhide", "aftershow", "beforehide" and "beforeshow"
+
+#### Form. Spacer control
+
+-  The "value" parameter is removed from Spacer events: "afterhide", "aftershow", "beforehide" and "beforeshow"
+
+#### Grid/TreeGrid
+
+- The "getHeaderFilter()" method is updated. Now the method returns an object with a set of methods: "blur()", "clear()", "focus()", "getFilter()" and "setValue()"
+- Now the sorting icon will also appear after sorting data via the "data.sort()" method
+
+#### Message
+
+- The "position" property of the tooltip is extended by the "left" and "top" values
+
+### Fixes
+
+- Grid. Fix the issue related to the "complex" selection that works incorrectly with the multiselection (shift selection)
+- Grid/TreeGrid. Fix the issue related to the Drag'n'drop and highlighting the dropping area
+- Grid/TreeGrid. Fix the issue related to incorrect display rows that available for dropping 
+- Tree. Fix the issue related to templated item that cannot be edited
+
+# Version 7.3.14 (January 17, 2023)
+
+### Fixes
+
+- Grid. Fix the issue which caused "inputFilter"/"selectFilter" to stop working in some browsers
+- Grid. Fix the issue with automatic adjustment of the column's width for header or footer consisting of several rows
+- Grid. Fix the issue with calculation of the height for frozen columns in Grid with horizontal and vertical scrollbars
+- Grid. Fix work of drag-n-drop for columns
+- Grid. Fix work of the "headerSort:false" property specified for the header consisting of the spanned rows
+- Grid. Now it is possible to select several cells/rows when using "multiselection" together with "selection:"complex""
+- Grid. Now the "eventHandlers" property works for frozen columns
+- TreeGrid. Fix the display of selection for spanned cells
+- TreeGrid. Fix the issue with display of total values in the footer of the exported .csv / .xlsx file
+- TreeGrid. Fix the issue with editing of spanned cells
+- TreeGrid. Now it is possible to collapse/expand the content of the first cell of the first column even if it is included into the colspan
+- Fix issues with AJAX helper
+
+# Version 7.3.13 (December 14, 2022)
+
+### Fixes
+
+- Grid. Fix the issue with checkbox editors of the column which appeared after double-click on one of the checkboxes
+- Grid. Fix work of the beforeUnSelect event
+- Grid. Now you can edit content in the spans of columns/rows via double-click on it
+- Layout. Fix the issue with resizing of cells for which sizes were not specified. The issue appeared after one of the Layout cells was hidden
+
 # Version 7.3.12 (November 17, 2022)
 
 ### Fixes

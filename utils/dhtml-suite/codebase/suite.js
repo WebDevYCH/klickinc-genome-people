@@ -1,7 +1,7 @@
 /*
 @license
 
-dhtmlxSuite v.7.3.12 Professional
+dhtmlxSuite v.8.0.0 Professional
 
 This software is covered by DHTMLX Commercial License.
 Usage without proper license is prohibited.
@@ -102,7 +102,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 124);
+/******/ 	return __webpack_require__(__webpack_require__.s = 116);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -112,7 +112,8 @@ return /******/ (function(modules) { // webpackBootstrap
 "use strict";
 /* WEBPACK VAR INJECTION */(function(Promise) {
 Object.defineProperty(exports, "__esModule", { value: true });
-var dom = __webpack_require__(137);
+var dom = __webpack_require__(129);
+var html_1 = __webpack_require__(2);
 exports.el = dom.defineElement;
 exports.sv = dom.defineSvgElement;
 exports.view = dom.defineView;
@@ -168,8 +169,19 @@ function awaitRedraw() {
     });
 }
 exports.awaitRedraw = awaitRedraw;
+function setTheme(theme, container) {
+    if (theme === void 0) { theme = "light"; }
+    var dhxAttr = "data-dhx-theme";
+    if (!container) {
+        var elements = document.querySelectorAll("[" + dhxAttr + "]");
+        elements.forEach(function (el) { return el.removeAttribute(dhxAttr); });
+    }
+    container = container || document.documentElement;
+    html_1.toNode(container).setAttribute(dhxAttr, theme);
+}
+exports.setTheme = setTheme;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
 /* 1 */
@@ -432,6 +444,9 @@ exports.rgbToHex = function (color) {
     if (color.substr(0, 1) === "#") {
         return color;
     }
+    if (color.substr(0, 3) !== "rgb") {
+        return;
+    }
     var digits = /(.*?)rgb[a]?\((\d+), *(\d+), *(\d+),* *([\d+.]*)\)/.exec(color);
     var red = parseInt(digits[2], 10)
         .toString(16)
@@ -467,7 +482,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 function toNode(node) {
     var _a;
     return typeof node === "string"
-        ? document.getElementById(node) || document.querySelector(node) || ((_a = document.querySelector("[data-dhx-root-id=" + node + "]")) === null || _a === void 0 ? void 0 : _a.parentElement) || document.body
+        ? document.getElementById(node) || document.querySelector("[data-cell-id=" + node + "]") || document.querySelector(node) || ((_a = document.querySelector("[data-dhx-root-id=" + node + "]")) === null || _a === void 0 ? void 0 : _a.parentElement) || document.body
         : node || document.body;
 }
 exports.toNode = toNode;
@@ -777,6 +792,45 @@ function getLabelStyle(config) {
     };
 }
 exports.getLabelStyle = getLabelStyle;
+var checkCrossLink = function (sheet) { return sheet.href && !sheet.href.startsWith(window.location.origin); };
+function getPageInlineCss() {
+    var css = [];
+    for (var i = 0; i < document.styleSheets.length; i++) {
+        var sheet = document.styleSheets[i];
+        if (!checkCrossLink(sheet)) {
+            var rules = "cssRules" in sheet && sheet.cssRules.length
+                ? sheet.cssRules
+                : sheet.rules;
+            for (var j = 0; j < rules.length; j++) {
+                var rule = rules[j];
+                if ("cssText" in rule) {
+                    css.push(rule.cssText);
+                }
+                else {
+                    css.push(rule.selectorText + " {\n" + rule.style.cssText + "\n}\n");
+                }
+            }
+        }
+    }
+    return css.join("\n");
+}
+exports.getPageInlineCss = getPageInlineCss;
+function getPageLinksCss(exportStyles) {
+    var css = [];
+    if (exportStyles) {
+        exportStyles.forEach(function (link) { return css.push("<link href=\"" + link + "\" rel=\"stylesheet\"/>"); });
+    }
+    else {
+        for (var i = 0; i < document.styleSheets.length; i++) {
+            var sheet = document.styleSheets[i];
+            if (checkCrossLink(sheet)) {
+                css.push("<link href=\"" + sheet.href + "\" rel=\"stylesheet\"/>");
+            }
+        }
+    }
+    return css.join("\n");
+}
+exports.getPageLinksCss = getPageLinksCss;
 
 
 /***/ }),
@@ -847,177 +901,22 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(20));
-__export(__webpack_require__(60));
-__export(__webpack_require__(142));
-__export(__webpack_require__(143));
-__export(__webpack_require__(27));
-__export(__webpack_require__(176));
 __export(__webpack_require__(21));
-__export(__webpack_require__(63));
-__export(__webpack_require__(62));
-__export(__webpack_require__(177));
 __export(__webpack_require__(61));
+__export(__webpack_require__(134));
+__export(__webpack_require__(135));
+__export(__webpack_require__(28));
+__export(__webpack_require__(171));
+__export(__webpack_require__(22));
+__export(__webpack_require__(64));
+__export(__webpack_require__(63));
+__export(__webpack_require__(172));
+__export(__webpack_require__(62));
 __export(__webpack_require__(41));
 
 
 /***/ }),
 /* 5 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var core_1 = __webpack_require__(1);
-var html_1 = __webpack_require__(2);
-var View = /** @class */ (function () {
-    function View(_container, config) {
-        this.config = config || {};
-        this._uid = this.config.rootId || core_1.uid();
-    }
-    View.prototype.mount = function (container, vnode) {
-        if (vnode) {
-            this._view = vnode;
-        }
-        if (container && this._view && this._view.mount) {
-            // init view inside of HTML container
-            this._container = html_1.toNode(container);
-            if (this._container.tagName) {
-                this._view.mount(this._container);
-            }
-            else if (this._container.attach) {
-                this._container.attach(this);
-            }
-        }
-    };
-    View.prototype.unmount = function () {
-        var rootView = this.getRootView();
-        if (rootView && rootView.node) {
-            rootView.unmount();
-            this._view = null;
-        }
-    };
-    View.prototype.getRootView = function () {
-        return this._view;
-    };
-    View.prototype.getRootNode = function () {
-        return this._view && this._view.node && this._view.node.el;
-    };
-    View.prototype.paint = function () {
-        if (this._view && // was mounted
-            (this._view.node || // already rendered node
-                this._container)) {
-            // not rendered, but has container
-            this._doNotRepaint = false;
-            this._view.redraw();
-        }
-    };
-    return View;
-}());
-exports.View = View;
-function toViewLike(view) {
-    return {
-        getRootView: function () { return view; },
-        paint: function () { return view.node && view.redraw(); },
-        mount: function (container) { return view.mount(container); },
-    };
-}
-exports.toViewLike = toViewLike;
-
-
-/***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var FormEvents;
-(function (FormEvents) {
-    FormEvents["change"] = "change";
-    FormEvents["click"] = "click";
-    FormEvents["focus"] = "focus";
-    FormEvents["blur"] = "blur";
-    FormEvents["keydown"] = "keydown";
-    FormEvents["beforeShow"] = "beforeShow";
-    FormEvents["afterShow"] = "afterShow";
-    FormEvents["beforeHide"] = "beforeHide";
-    FormEvents["afterHide"] = "afterHide";
-    FormEvents["afterValidate"] = "afterValidate";
-    FormEvents["beforeValidate"] = "beforeValidate";
-    FormEvents["beforeChangeProperties"] = "beforeChangeProperties";
-    FormEvents["afterChangeProperties"] = "afterChangeProperties";
-    FormEvents["beforeSend"] = "beforesend";
-    FormEvents["afterSend"] = "aftersend";
-    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
-    FormEvents["buttonClick"] = "buttonClick";
-    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
-    FormEvents["validationFail"] = "validationfail";
-})(FormEvents = exports.FormEvents || (exports.FormEvents = {}));
-var FileStatus;
-(function (FileStatus) {
-    FileStatus["queue"] = "queue";
-    FileStatus["uploaded"] = "uploaded";
-    FileStatus["failed"] = "failed";
-    FileStatus["inprogress"] = "inprogress";
-})(FileStatus = exports.FileStatus || (exports.FileStatus = {}));
-var UploaderEvents;
-(function (UploaderEvents) {
-    UploaderEvents["uploadBegin"] = "uploadbegin";
-    UploaderEvents["beforeUploadFile"] = "beforeuploadfile";
-    UploaderEvents["uploadFile"] = "uploadfile";
-    UploaderEvents["uploadFail"] = "uploadfail";
-    UploaderEvents["uploadComplete"] = "uploadcomplete";
-    UploaderEvents["uploadProgress"] = "uploadprogress";
-})(UploaderEvents = exports.UploaderEvents || (exports.UploaderEvents = {}));
-var ItemEvent;
-(function (ItemEvent) {
-    ItemEvent["click"] = "click";
-    ItemEvent["change"] = "change";
-    ItemEvent["input"] = "input";
-    ItemEvent["focus"] = "focus";
-    ItemEvent["blur"] = "blur";
-    ItemEvent["keydown"] = "keydown";
-    ItemEvent["changeOptions"] = "changeOptions";
-    ItemEvent["beforeShow"] = "beforeShow";
-    ItemEvent["afterShow"] = "afterShow";
-    ItemEvent["beforeHide"] = "beforeHide";
-    ItemEvent["afterHide"] = "afterHide";
-    ItemEvent["beforeValidate"] = "beforeValidate";
-    ItemEvent["afterValidate"] = "afterValidate";
-    ItemEvent["beforeUploadFile"] = "beforeUploadFile";
-    ItemEvent["uploadFile"] = "uploadfile";
-    ItemEvent["uploadBegin"] = "uploadBegin";
-    ItemEvent["uploadComplete"] = "uploadComplete";
-    ItemEvent["uploadFail"] = "uploadFail";
-    ItemEvent["uploadProgress"] = "uploadProgress";
-    ItemEvent["beforeChangeProperties"] = "beforeChangeProperties";
-    ItemEvent["afterChangeProperties"] = "afterChangeProperties";
-})(ItemEvent = exports.ItemEvent || (exports.ItemEvent = {}));
-var ClearMethod;
-(function (ClearMethod) {
-    ClearMethod["value"] = "value";
-    ClearMethod["validation"] = "validation";
-})(ClearMethod = exports.ClearMethod || (exports.ClearMethod = {}));
-var Validation;
-(function (Validation) {
-    Validation["empty"] = "";
-    Validation["validEmail"] = "email";
-    Validation["validInteger"] = "integer";
-    Validation["validNumeric"] = "numeric";
-    Validation["validAlphaNumeric"] = "alphanumeric";
-    Validation["validIPv4"] = "IPv4";
-})(Validation = exports.Validation || (exports.Validation = {}));
-var ValidationStatus;
-(function (ValidationStatus) {
-    ValidationStatus[ValidationStatus["pre"] = 0] = "pre";
-    ValidationStatus[ValidationStatus["error"] = 1] = "error";
-    ValidationStatus[ValidationStatus["success"] = 2] = "success";
-})(ValidationStatus = exports.ValidationStatus || (exports.ValidationStatus = {}));
-
-
-/***/ }),
-/* 7 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1337,7 +1236,260 @@ exports.checkPositions = checkPositions;
 
 
 /***/ }),
+/* 6 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
+var html_1 = __webpack_require__(2);
+var View = /** @class */ (function () {
+    function View(_container, config) {
+        this.config = config || {};
+        this._uid = this.config.rootId || core_1.uid();
+    }
+    View.prototype.mount = function (container, vnode) {
+        if (vnode) {
+            this._view = vnode;
+        }
+        if (container && this._view && this._view.mount) {
+            // init view inside of HTML container
+            this._container = html_1.toNode(container);
+            if (this._container.tagName) {
+                this._view.mount(this._container);
+            }
+            else if (this._container.attach) {
+                this._container.attach(this);
+            }
+        }
+    };
+    View.prototype.unmount = function () {
+        var rootView = this.getRootView();
+        if (rootView && rootView.node) {
+            rootView.unmount();
+            this._view = null;
+        }
+    };
+    View.prototype.getRootView = function () {
+        return this._view;
+    };
+    View.prototype.getRootNode = function () {
+        return this._view && this._view.node && this._view.node.el;
+    };
+    View.prototype.paint = function () {
+        if (this._view && // was mounted
+            (this._view.node || // already rendered node
+                this._container)) {
+            // not rendered, but has container
+            this._doNotRepaint = false;
+            this._view.redraw();
+        }
+    };
+    return View;
+}());
+exports.View = View;
+function toViewLike(view) {
+    return {
+        getRootView: function () { return view; },
+        paint: function () { return view.node && view.redraw(); },
+        mount: function (container) { return view.mount(container); },
+    };
+}
+exports.toViewLike = toViewLike;
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var FormEvents;
+(function (FormEvents) {
+    FormEvents["beforeChange"] = "beforeChange";
+    FormEvents["change"] = "change";
+    FormEvents["click"] = "click";
+    FormEvents["focus"] = "focus";
+    FormEvents["blur"] = "blur";
+    FormEvents["keydown"] = "keydown";
+    FormEvents["beforeShow"] = "beforeShow";
+    FormEvents["afterShow"] = "afterShow";
+    FormEvents["beforeHide"] = "beforeHide";
+    FormEvents["afterHide"] = "afterHide";
+    FormEvents["afterValidate"] = "afterValidate";
+    FormEvents["beforeValidate"] = "beforeValidate";
+    FormEvents["beforeChangeProperties"] = "beforeChangeProperties";
+    FormEvents["afterChangeProperties"] = "afterChangeProperties";
+    FormEvents["beforeSend"] = "beforesend";
+    FormEvents["afterSend"] = "aftersend";
+    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
+    FormEvents["buttonClick"] = "buttonClick";
+    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
+    FormEvents["validationFail"] = "validationfail";
+})(FormEvents = exports.FormEvents || (exports.FormEvents = {}));
+var FileStatus;
+(function (FileStatus) {
+    FileStatus["queue"] = "queue";
+    FileStatus["uploaded"] = "uploaded";
+    FileStatus["failed"] = "failed";
+    FileStatus["inprogress"] = "inprogress";
+})(FileStatus = exports.FileStatus || (exports.FileStatus = {}));
+var UploaderEvents;
+(function (UploaderEvents) {
+    UploaderEvents["uploadBegin"] = "uploadbegin";
+    UploaderEvents["beforeUploadFile"] = "beforeuploadfile";
+    UploaderEvents["uploadFile"] = "uploadfile";
+    UploaderEvents["uploadFail"] = "uploadfail";
+    UploaderEvents["uploadComplete"] = "uploadcomplete";
+    UploaderEvents["uploadProgress"] = "uploadprogress";
+})(UploaderEvents = exports.UploaderEvents || (exports.UploaderEvents = {}));
+var ItemEvent;
+(function (ItemEvent) {
+    ItemEvent["click"] = "click";
+    ItemEvent["beforeChange"] = "beforeChange";
+    ItemEvent["change"] = "change";
+    ItemEvent["input"] = "input";
+    ItemEvent["focus"] = "focus";
+    ItemEvent["blur"] = "blur";
+    ItemEvent["keydown"] = "keydown";
+    ItemEvent["beforeChangeOptions"] = "beforeChangeOptions";
+    ItemEvent["changeOptions"] = "changeOptions";
+    ItemEvent["beforeShow"] = "beforeShow";
+    ItemEvent["afterShow"] = "afterShow";
+    ItemEvent["beforeHide"] = "beforeHide";
+    ItemEvent["afterHide"] = "afterHide";
+    ItemEvent["beforeValidate"] = "beforeValidate";
+    ItemEvent["afterValidate"] = "afterValidate";
+    ItemEvent["beforeUploadFile"] = "beforeUploadFile";
+    ItemEvent["uploadFile"] = "uploadfile";
+    ItemEvent["uploadBegin"] = "uploadBegin";
+    ItemEvent["uploadComplete"] = "uploadComplete";
+    ItemEvent["uploadFail"] = "uploadFail";
+    ItemEvent["uploadProgress"] = "uploadProgress";
+    ItemEvent["beforeChangeProperties"] = "beforeChangeProperties";
+    ItemEvent["afterChangeProperties"] = "afterChangeProperties";
+})(ItemEvent = exports.ItemEvent || (exports.ItemEvent = {}));
+var ClearMethod;
+(function (ClearMethod) {
+    ClearMethod["value"] = "value";
+    ClearMethod["validation"] = "validation";
+})(ClearMethod = exports.ClearMethod || (exports.ClearMethod = {}));
+var Validation;
+(function (Validation) {
+    Validation["empty"] = "";
+    Validation["validEmail"] = "email";
+    Validation["validInteger"] = "integer";
+    Validation["validNumeric"] = "numeric";
+    Validation["validAlphaNumeric"] = "alphanumeric";
+    Validation["validIPv4"] = "IPv4";
+})(Validation = exports.Validation || (exports.Validation = {}));
+var ValidationStatus;
+(function (ValidationStatus) {
+    ValidationStatus[ValidationStatus["pre"] = 0] = "pre";
+    ValidationStatus[ValidationStatus["error"] = 1] = "error";
+    ValidationStatus[ValidationStatus["success"] = 2] = "success";
+})(ValidationStatus = exports.ValidationStatus || (exports.ValidationStatus = {}));
+
+
+/***/ }),
 /* 8 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var HeaderFilterEvent;
+(function (HeaderFilterEvent) {
+    HeaderFilterEvent["change"] = "change";
+})(HeaderFilterEvent = exports.HeaderFilterEvent || (exports.HeaderFilterEvent = {}));
+var GridEvents;
+(function (GridEvents) {
+    GridEvents["scroll"] = "scroll";
+    GridEvents["expand"] = "expand";
+    GridEvents["filterChange"] = "filterChange";
+    GridEvents["beforeFilter"] = "beforeFilter";
+    GridEvents["beforeResizeStart"] = "beforeResizeStart";
+    GridEvents["resize"] = "resize";
+    GridEvents["afterResizeEnd"] = "afterResizeEnd";
+    GridEvents["cellClick"] = "cellClick";
+    GridEvents["cellRightClick"] = "cellRightClick";
+    GridEvents["cellMouseOver"] = "cellMouseOver";
+    GridEvents["cellMouseDown"] = "cellMouseDown";
+    GridEvents["cellDblClick"] = "cellDblClick";
+    GridEvents["headerCellClick"] = "headerCellClick";
+    GridEvents["footerCellClick"] = "footerCellClick";
+    GridEvents["headerCellMouseOver"] = "headerCellMouseOver";
+    GridEvents["footerCellMouseOver"] = "footerCellMouseOver";
+    GridEvents["headerCellMouseDown"] = "headerCellMouseDown";
+    GridEvents["footerCellMouseDown"] = "footerCellMouseDown";
+    GridEvents["headerCellDblClick"] = "headerCellDblClick";
+    GridEvents["footerCellDblClick"] = "footerCellDblClick";
+    GridEvents["headerCellRightClick"] = "headerCellRightClick";
+    GridEvents["footerCellRightClick"] = "footerCellRightClick";
+    GridEvents["beforeEditStart"] = "beforeEditStart";
+    GridEvents["afterEditStart"] = "afterEditStart";
+    GridEvents["beforeEditEnd"] = "beforeEditEnd";
+    GridEvents["afterEditEnd"] = "afterEditEnd";
+    GridEvents["beforeKeyDown"] = "beforeKeyDown";
+    GridEvents["afterKeyDown"] = "afterKeyDown";
+    GridEvents["beforeColumnHide"] = "beforeColumnHide";
+    GridEvents["afterColumnHide"] = "afterColumnHide";
+    GridEvents["beforeColumnShow"] = "beforeColumnShow";
+    GridEvents["afterColumnShow"] = "afterColumnShow";
+    GridEvents["beforeRowHide"] = "beforeRowHide";
+    GridEvents["afterRowHide"] = "afterRowHide";
+    GridEvents["beforeRowShow"] = "beforeRowShow";
+    GridEvents["afterRowShow"] = "afterRowShow";
+    GridEvents["beforeRowDrag"] = "beforeRowDrag";
+    GridEvents["dragRowStart"] = "dragRowStart";
+    GridEvents["dragRowOut"] = "dragRowOut";
+    GridEvents["dragRowIn"] = "dragRowIn";
+    GridEvents["canRowDrop"] = "canRowDrop";
+    GridEvents["cancelRowDrop"] = "cancelRowDrop";
+    GridEvents["beforeRowDrop"] = "beforeRowDrop";
+    GridEvents["afterRowDrop"] = "afterRowDrop";
+    GridEvents["afterRowDrag"] = "afterRowDrag";
+    GridEvents["beforeColumnDrag"] = "beforeColumnDrag";
+    GridEvents["dragColumnStart"] = "dragColumnStart";
+    GridEvents["dragColumnOut"] = "dragColumnOut";
+    GridEvents["dragColumnIn"] = "dragColumnIn";
+    GridEvents["canColumnDrop"] = "canColumnDrop";
+    GridEvents["cancelColumnDrop"] = "cancelColumnDrop";
+    GridEvents["beforeColumnDrop"] = "beforeColumnDrop";
+    GridEvents["afterColumnDrop"] = "afterColumnDrop";
+    GridEvents["afterColumnDrag"] = "afterColumnDrag";
+    GridEvents["beforeRowResize"] = "beforeRowResize";
+    GridEvents["afterRowResize"] = "afterRowResize";
+    GridEvents["beforeSort"] = "beforeSort";
+    GridEvents["afterSort"] = "afterSort";
+})(GridEvents = exports.GridEvents || (exports.GridEvents = {}));
+var GridSystemEvents;
+(function (GridSystemEvents) {
+    GridSystemEvents["cellTouchMove"] = "cellTouchMove";
+    GridSystemEvents["cellTouchEnd"] = "cellTouchEnd";
+    GridSystemEvents["headerCellTouchMove"] = "headerCellTouchMove";
+    GridSystemEvents["headerCellTouchEnd"] = "headerCellTouchEnd";
+})(GridSystemEvents = exports.GridSystemEvents || (exports.GridSystemEvents = {}));
+var GridSelectionEvents;
+(function (GridSelectionEvents) {
+    GridSelectionEvents["beforeUnSelect"] = "beforeUnSelect";
+    GridSelectionEvents["afterUnSelect"] = "afterUnSelect";
+    GridSelectionEvents["beforeSelect"] = "beforeSelect";
+    GridSelectionEvents["afterSelect"] = "afterSelect";
+})(GridSelectionEvents = exports.GridSelectionEvents || (exports.GridSelectionEvents = {}));
+var Split;
+(function (Split) {
+    Split["left"] = "leftSplit";
+    Split["right"] = "rightSplit";
+    Split["top"] = "topSplit";
+    Split["bottom"] = "bottomSplit";
+})(Split = exports.Split || (exports.Split = {}));
+
+
+/***/ }),
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1356,7 +1508,7 @@ var __rest = (this && this.__rest) || function (s, e) {
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 /* eslint-disable no-useless-escape */
-var types_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(7);
 function getFormItemCss(item, validate, focus) {
     var _a;
     if (focus === void 0) { focus = false; }
@@ -1483,92 +1635,9 @@ function isVerify(config) {
 exports.isVerify = isVerify;
 exports.baseProps = ["width", "height", "padding", "css"];
 exports.widgetConfig = function (_a) {
-    var width = _a.width, type = _a.type, id = _a.id, name = _a.name, hidden = _a.hidden, editable = _a.editable, valueFormat = _a.valueFormat, css = _a.css, required = _a.required, helpMessage = _a.helpMessage, preMessage = _a.preMessage, successMessage = _a.successMessage, errorMessage = _a.errorMessage, label = _a.label, labelWidth = _a.labelWidth, labelPosition = _a.labelPosition, hiddenLabel = _a.hiddenLabel, validation = _a.validation, icon = _a.icon, res = __rest(_a, ["width", "type", "id", "name", "hidden", "editable", "valueFormat", "css", "required", "helpMessage", "preMessage", "successMessage", "errorMessage", "label", "labelWidth", "labelPosition", "hiddenLabel", "validation", "icon"]);
+    var width = _a.width, type = _a.type, id = _a.id, name = _a.name, hidden = _a.hidden, editable = _a.editable, css = _a.css, required = _a.required, helpMessage = _a.helpMessage, preMessage = _a.preMessage, successMessage = _a.successMessage, errorMessage = _a.errorMessage, label = _a.label, labelWidth = _a.labelWidth, labelPosition = _a.labelPosition, hiddenLabel = _a.hiddenLabel, validation = _a.validation, icon = _a.icon, res = __rest(_a, ["width", "type", "id", "name", "hidden", "editable", "css", "required", "helpMessage", "preMessage", "successMessage", "errorMessage", "label", "labelWidth", "labelPosition", "hiddenLabel", "validation", "icon"]);
     return res;
 };
-
-
-/***/ }),
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var GridEvents;
-(function (GridEvents) {
-    GridEvents["scroll"] = "scroll";
-    GridEvents["expand"] = "expand";
-    GridEvents["filterChange"] = "filterChange";
-    GridEvents["beforeResizeStart"] = "beforeResizeStart";
-    GridEvents["resize"] = "resize";
-    GridEvents["afterResizeEnd"] = "afterResizeEnd";
-    GridEvents["cellClick"] = "cellClick";
-    GridEvents["cellRightClick"] = "cellRightClick";
-    GridEvents["cellMouseOver"] = "cellMouseOver";
-    GridEvents["cellMouseDown"] = "cellMouseDown";
-    GridEvents["cellDblClick"] = "cellDblClick";
-    GridEvents["headerCellClick"] = "headerCellClick";
-    GridEvents["footerCellClick"] = "footerCellClick";
-    GridEvents["headerCellMouseOver"] = "headerCellMouseOver";
-    GridEvents["footerCellMouseOver"] = "footerCellMouseOver";
-    GridEvents["headerCellMouseDown"] = "headerCellMouseDown";
-    GridEvents["footerCellMouseDown"] = "footerCellMouseDown";
-    GridEvents["headerCellDblClick"] = "headerCellDblClick";
-    GridEvents["footerCellDblClick"] = "footerCellDblClick";
-    GridEvents["headerCellRightClick"] = "headerCellRightClick";
-    GridEvents["footerCellRightClick"] = "footerCellRightClick";
-    GridEvents["beforeEditStart"] = "beforeEditStart";
-    GridEvents["afterEditStart"] = "afterEditStart";
-    GridEvents["beforeEditEnd"] = "beforeEditEnd";
-    GridEvents["afterEditEnd"] = "afterEditEnd";
-    GridEvents["beforeKeyDown"] = "beforeKeyDown";
-    GridEvents["afterKeyDown"] = "afterKeyDown";
-    GridEvents["beforeColumnHide"] = "beforeColumnHide";
-    GridEvents["afterColumnHide"] = "afterColumnHide";
-    GridEvents["beforeColumnShow"] = "beforeColumnShow";
-    GridEvents["afterColumnShow"] = "afterColumnShow";
-    GridEvents["beforeRowHide"] = "beforeRowHide";
-    GridEvents["afterRowHide"] = "afterRowHide";
-    GridEvents["beforeRowShow"] = "beforeRowShow";
-    GridEvents["afterRowShow"] = "afterRowShow";
-    GridEvents["beforeRowDrag"] = "beforeRowDrag";
-    GridEvents["dragRowStart"] = "dragRowStart";
-    GridEvents["dragRowOut"] = "dragRowOut";
-    GridEvents["dragRowIn"] = "dragRowIn";
-    GridEvents["canRowDrop"] = "canRowDrop";
-    GridEvents["cancelRowDrop"] = "cancelRowDrop";
-    GridEvents["beforeRowDrop"] = "beforeRowDrop";
-    GridEvents["afterRowDrop"] = "afterRowDrop";
-    GridEvents["afterRowDrag"] = "afterRowDrag";
-    GridEvents["beforeColumnDrag"] = "beforeColumnDrag";
-    GridEvents["dragColumnStart"] = "dragColumnStart";
-    GridEvents["dragColumnOut"] = "dragColumnOut";
-    GridEvents["dragColumnIn"] = "dragColumnIn";
-    GridEvents["canColumnDrop"] = "canColumnDrop";
-    GridEvents["cancelColumnDrop"] = "cancelColumnDrop";
-    GridEvents["beforeColumnDrop"] = "beforeColumnDrop";
-    GridEvents["afterColumnDrop"] = "afterColumnDrop";
-    GridEvents["afterColumnDrag"] = "afterColumnDrag";
-    GridEvents["beforeRowResize"] = "beforeRowResize";
-    GridEvents["afterRowResize"] = "afterRowResize";
-    GridEvents["beforeSort"] = "beforeSort";
-    GridEvents["afterSort"] = "afterSort";
-})(GridEvents = exports.GridEvents || (exports.GridEvents = {}));
-var GridSystemEvents;
-(function (GridSystemEvents) {
-    GridSystemEvents["cellTouchMove"] = "cellTouchMove";
-    GridSystemEvents["cellTouchEnd"] = "cellTouchEnd";
-    GridSystemEvents["headerCellTouchMove"] = "headerCellTouchMove";
-    GridSystemEvents["headerCellTouchEnd"] = "headerCellTouchEnd";
-})(GridSystemEvents = exports.GridSystemEvents || (exports.GridSystemEvents = {}));
-var GridSelectionEvents;
-(function (GridSelectionEvents) {
-    GridSelectionEvents["beforeUnSelect"] = "beforeUnSelect";
-    GridSelectionEvents["afterUnSelect"] = "afterUnSelect";
-    GridSelectionEvents["beforeSelect"] = "beforeSelect";
-    GridSelectionEvents["afterSelect"] = "afterSelect";
-})(GridSelectionEvents = exports.GridSelectionEvents || (exports.GridSelectionEvents = {}));
 
 
 /***/ }),
@@ -1581,9 +1650,9 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(66));
-__export(__webpack_require__(153));
 __export(__webpack_require__(43));
+__export(__webpack_require__(145));
+__export(__webpack_require__(44));
 
 
 /***/ }),
@@ -1596,8 +1665,8 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(156));
-__export(__webpack_require__(68));
+__export(__webpack_require__(148));
+__export(__webpack_require__(67));
 
 
 /***/ }),
@@ -1607,7 +1676,7 @@ __export(__webpack_require__(68));
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var FocusManager_1 = __webpack_require__(18);
+var FocusManager_1 = __webpack_require__(19);
 var html_1 = __webpack_require__(2);
 function getHotKeyCode(code) {
     var matches = code.toLowerCase().match(/\w+/g);
@@ -1729,15 +1798,605 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(170));
-__export(__webpack_require__(171));
-__export(__webpack_require__(172));
-__export(__webpack_require__(81));
-__export(__webpack_require__(47));
+__export(__webpack_require__(165));
+__export(__webpack_require__(166));
+__export(__webpack_require__(167));
+__export(__webpack_require__(80));
+__export(__webpack_require__(48));
 
 
 /***/ }),
 /* 14 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
+var html_1 = __webpack_require__(2);
+function transpose(arr, transform) {
+    var columns = [];
+    for (var i = 0; i < arr.length; i++) {
+        var row = arr[i];
+        for (var cellInd = 0; cellInd < row.length; cellInd++) {
+            columns[cellInd] = columns[cellInd] || [];
+            var cell = transform ? transform(row[cellInd]) : row[cellInd];
+            columns[cellInd].push(cell);
+        }
+    }
+    return columns;
+}
+exports.transpose = transpose;
+function insert(node, newone) {
+    if (typeof newone === "string") {
+        node.insertAdjacentHTML("beforeend", newone);
+        return node.lastChild;
+    }
+    else {
+        node.appendChild(newone);
+        return newone;
+    }
+}
+function getStyleByClass(cssClass, container, targetClass, def) {
+    var cont = container.querySelector("." + targetClass);
+    var testDiv = insert(cont, "<div class=\"" + cssClass + "\"></div>");
+    var styles = window.getComputedStyle(testDiv);
+    var result = {
+        color: styles.color === "rgb(0, 0, 0)" ? def.color : core_1.rgbToHex(styles.color),
+        background: styles.backgroundColor === "rgba(0, 0, 0, 0)" ? def.background : core_1.rgbToHex(styles.backgroundColor),
+        fontSize: parseFloat(styles.fontSize),
+    };
+    cont.removeChild(testDiv);
+    // [dirty]
+    if (result.color === def.color &&
+        result.background === def.background &&
+        result.fontSize === def.fontSize) {
+        return null;
+    }
+    return result;
+}
+exports.getStyleByClass = getStyleByClass;
+function removeHTMLTags(str) {
+    if (typeof str !== "string" && typeof str !== "number" && typeof str !== "boolean") {
+        return "";
+    }
+    return ("" + (str === undefined || str === null ? "" : str))
+        .replace(/<[^>]*>/g, "")
+        .replace(/["]/g, "&quot;")
+        .trim();
+}
+exports.removeHTMLTags = removeHTMLTags;
+function isCssSupport(property, value) {
+    try {
+        return CSS.supports(property, value);
+    }
+    catch (err) {
+        var el = document.createElement("div");
+        el.style[property] = value;
+        return el.style[property] === value;
+    }
+}
+exports.isCssSupport = isCssSupport;
+function isRowEmpty(row) {
+    if (!row) {
+        return;
+    }
+    return Object.keys(row).reduce(function (acc, col) {
+        if (col === "id" || col.startsWith("$")) {
+            return acc;
+        }
+        if (acc && row[col] !== undefined && row[col] !== "") {
+            return;
+        }
+        return acc;
+    }, true);
+}
+exports.isRowEmpty = isRowEmpty;
+function isSortable(config, col) {
+    return (col.sortable !== false && config.sortable) || col.sortable;
+}
+exports.isSortable = isSortable;
+function isAutoWidth(config, col) {
+    if (col) {
+        return (col.autoWidth !== false && config.autoWidth) || col.autoWidth;
+    }
+    var check = false;
+    config.columns.map(function (col) {
+        if ((col.autoWidth !== false && config.autoWidth) || col.autoWidth) {
+            check = true;
+            return;
+        }
+    });
+    return check;
+}
+exports.isAutoWidth = isAutoWidth;
+function isTooltip(config, element) {
+    return (element.tooltip !== false && config.tooltip) || element.tooltip;
+}
+exports.isTooltip = isTooltip;
+function isHtmlEnable(config, col) {
+    return (col.htmlEnable !== false && config.htmlEnable) || col.htmlEnable;
+}
+exports.isHtmlEnable = isHtmlEnable;
+function getTotalWidth(columns) {
+    return columns.reduce(function (total, col) { return total + (col.$width || 0); }, 0);
+}
+exports.getTotalWidth = getTotalWidth;
+function getTotalHeight(rows) {
+    return rows.reduce(function (total, row) { return total + (row.$height || 0); }, 0);
+}
+exports.getTotalHeight = getTotalHeight;
+function scrollFixedColsAndRows(e) {
+    var grid = html_1.locateNode(e, "data-dhx-widget-id");
+    var gridBody = grid.querySelector(".dhx_grid-body");
+    var delta = e.deltaY;
+    var position = e.shiftKey ? [delta, 0] : [0, delta];
+    gridBody === null || gridBody === void 0 ? void 0 : gridBody.scrollBy.apply(gridBody, position);
+}
+exports.scrollFixedColsAndRows = scrollFixedColsAndRows;
+
+
+/***/ }),
+/* 15 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
+var core_2 = __webpack_require__(1);
+exports.locale = {
+    monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    months: [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ],
+    daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Monday"],
+    cancel: "Cancel",
+};
+/*
+    %d	day as a number with leading zero, 01..31
+    %j	day as a number, 1..31
+    %D	short name of the day, Su Mo Tu...
+    %l	full name of the day, Sunday Monday Tuesday...
+    %m	month as a number with leading zero, 01..12
+    %n	month as a number, 1..12
+    %M	short name of the month, Jan Feb Mar...
+    %F	full name of the month, January February March...
+    %y	year as a number, 2 digits
+    %Y	year as a number, 4 digits
+    %h	hours 12-format with leading zero, 01..12)
+    %g	hours 12-format, 1..12)
+    %H	hours 24-format with leading zero, 01..24
+    %G	hours 24-format, 1..24
+    %i	minutes with leading zero, 01..59
+    %s	seconds with leading zero, 01..59
+    %a	am or pm
+    %A	AM or PM
+    %u	milliseconds
+*/
+var formatters = {
+    "%d": function (date) {
+        var day = date.getDate();
+        return day < 10 ? "0" + day : day;
+    },
+    "%j": function (date) { return date.getDate(); },
+    "%l": function (date) {
+        return exports.locale.days[date.getDay()];
+    },
+    "%D": function (date) {
+        return exports.locale.daysShort[date.getDay()];
+    },
+    "%m": function (date) {
+        var month = date.getMonth() + 1;
+        return month < 10 ? "0" + month : month;
+    },
+    "%n": function (date) { return date.getMonth() + 1; },
+    "%M": function (date) { return exports.locale.monthsShort[date.getMonth()]; },
+    "%F": function (date) { return exports.locale.months[date.getMonth()]; },
+    "%y": function (date) {
+        return date
+            .getFullYear()
+            .toString()
+            .slice(2);
+    },
+    "%Y": function (date) { return date.getFullYear(); },
+    "%h": function (date) {
+        var hours = date.getHours() % 12;
+        if (hours === 0) {
+            hours = 12;
+        }
+        return hours < 10 ? "0" + hours : hours;
+    },
+    "%g": function (date) {
+        var hours = date.getHours() % 12;
+        if (hours === 0) {
+            hours = 12;
+        }
+        return hours;
+    },
+    "%H": function (date) {
+        var hours = date.getHours();
+        return hours < 10 ? "0" + hours : hours;
+    },
+    "%G": function (date) { return date.getHours(); },
+    "%i": function (date) {
+        var minutes = date.getMinutes();
+        return minutes < 10 ? "0" + minutes : minutes;
+    },
+    "%s": function (date) {
+        var seconds = date.getSeconds();
+        return seconds < 10 ? "0" + seconds : seconds;
+    },
+    "%a": function (date) {
+        return date.getHours() >= 12 ? "pm" : "am";
+    },
+    "%A": function (date) {
+        return date.getHours() >= 12 ? "PM" : "AM";
+    },
+    "%u": function (date) { return date.getMilliseconds(); },
+};
+var setFormatters = {
+    "%d": function (date, value, _format, validate) {
+        var check = /(^([0-9][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setDate(Number(value)) : date.setDate(Number(1));
+    },
+    "%j": function (date, value, _format, validate) {
+        var check = /(^([0-9]?[0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setDate(Number(value)) : date.setDate(Number(1));
+    },
+    "%m": function (date, value, _format, validate) {
+        var check = /(^([0-9][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setMonth(Number(value) - 1) : date.setMonth(Number(0));
+        if (check && date.getMonth() !== Number(value) - 1)
+            date.setMonth(Number(value) - 1);
+    },
+    "%n": function (date, value, _format, validate) {
+        var check = /(^([0-9]?[0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setMonth(Number(value) - 1) : date.setMonth(Number(0));
+        if (check && date.getMonth() !== Number(value) - 1)
+            date.setMonth(Number(value) - 1);
+    },
+    "%M": function (date, value, _format, validate) {
+        var index = core_2.findIndex(exports.locale.monthsShort, function (v) { return v === value; });
+        if (validate) {
+            return index !== -1;
+        }
+        index === -1 ? date.setMonth(0) : date.setMonth(index);
+        if (index !== -1 && date.getMonth() !== index)
+            date.setMonth(index);
+    },
+    "%F": function (date, value, _format, validate) {
+        var index = core_2.findIndex(exports.locale.months, function (v) { return v === value; });
+        if (validate) {
+            return index !== -1;
+        }
+        index === -1 ? date.setMonth(0) : date.setMonth(index);
+        if (index !== -1 && date.getMonth() !== index)
+            date.setMonth(index);
+    },
+    "%y": function (date, value, _format, validate) {
+        var check = /(^([0-9][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setFullYear(Number("20" + value)) : date.setFullYear(Number("2000"));
+    },
+    "%Y": function (date, value, _format, validate) {
+        var check = /(^([0-9][0-9][0-9][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setFullYear(Number(value)) : date.setFullYear(Number("2000"));
+    },
+    "%h": function (date, value, dateFormat, validate) {
+        var check = /(^0[1-9]|1[0-2]$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        (check && dateFormat === "pm") || dateFormat === "PM"
+            ? date.setHours(Number(value))
+            : date.setHours(Number(0));
+    },
+    "%g": function (date, value, dateFormat, validate) {
+        var check = /(^[1-9]$)|(^0[1-9]|1[0-2]$)/i.test(value);
+        if (validate)
+            return check;
+        if (validate) {
+            return check;
+        }
+        (check && dateFormat === "pm") || dateFormat === "PM"
+            ? date.setHours(Number(value))
+            : date.setHours(Number(0));
+    },
+    "%H": function (date, value, _format, validate) {
+        var check = /(^[0-2][0-9]$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setHours(Number(value)) : date.setHours(Number(0));
+    },
+    "%G": function (date, value, _format, validate) {
+        var check = /(^[1-9][0-9]?$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setHours(Number(value)) : date.setHours(Number(0));
+    },
+    "%i": function (date, value, _format, validate) {
+        var check = /(^([0-5][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setMinutes(Number(value)) : date.setMinutes(Number(0));
+    },
+    "%s": function (date, value, _format, validate) {
+        var check = /(^([0-5][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setSeconds(Number(value)) : date.setSeconds(Number(0));
+    },
+    "%u": function (date, value, _format, validate) {
+        var check = /(^([0-9][0-9][0-9])$)/i.test(value);
+        if (validate) {
+            return check;
+        }
+        check ? date.setMilliseconds(Number(value)) : date.setMilliseconds(Number(0));
+    },
+    "%a": function (date, value, _format, validate) {
+        var check = value === "pm";
+        if (validate) {
+            return check;
+        }
+        check && date.setHours(date.getHours() + 12);
+    },
+    "%A": function (date, value, _format, validate) {
+        var check = value === "PM";
+        if (validate) {
+            return check;
+        }
+        check && date.setHours(date.getHours() + 12);
+    },
+};
+var TokenType;
+(function (TokenType) {
+    TokenType[TokenType["separator"] = 0] = "separator";
+    TokenType[TokenType["datePart"] = 1] = "datePart";
+})(TokenType || (TokenType = {}));
+function tokenizeFormat(format) {
+    var tokens = [];
+    var currentSeparator = "";
+    for (var i = 0; i < format.length; i++) {
+        if (format[i] === "%") {
+            if (currentSeparator.length > 0) {
+                tokens.push({
+                    type: TokenType.separator,
+                    value: currentSeparator,
+                });
+                currentSeparator = "";
+            }
+            tokens.push({
+                type: TokenType.datePart,
+                value: format[i] + format[i + 1],
+            });
+            i++;
+        }
+        else {
+            currentSeparator += format[i];
+        }
+    }
+    if (currentSeparator.length > 0) {
+        tokens.push({
+            type: TokenType.separator,
+            value: currentSeparator,
+        });
+    }
+    return tokens;
+}
+function getFormattedDate(format, date) {
+    return tokenizeFormat(format).reduce(function (res, token) {
+        if (token.type === TokenType.separator) {
+            return res + token.value;
+        }
+        else {
+            if (!formatters[token.value]) {
+                return res;
+            }
+            return res + formatters[token.value](date);
+        }
+    }, "");
+}
+exports.getFormattedDate = getFormattedDate;
+function stringToDate(str, format, validate) {
+    if (typeof str !== "string") {
+        return;
+    }
+    var tokens = tokenizeFormat(format);
+    var dateParts = [];
+    var index = 0;
+    var formatter = null;
+    for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
+        var token = tokens_1[_i];
+        if (token.type === TokenType.separator) {
+            var sepratorIndex = str.indexOf(token.value, index);
+            if (sepratorIndex === -1) {
+                if (validate) {
+                    return false;
+                }
+                throw new Error("Incorrect date, see docs: https://docs.dhtmlx.com/suite/calendar__api__calendar_dateformat_config.html");
+            }
+            if (formatter) {
+                dateParts.push({
+                    formatter: formatter,
+                    value: str.slice(index, sepratorIndex),
+                });
+                formatter = null;
+            }
+            index = sepratorIndex + token.value.length;
+        }
+        else if (token.type === TokenType.datePart) {
+            formatter = token.value;
+        }
+    }
+    if (formatter === "%A" || formatter === "%a") {
+        dateParts.unshift({
+            formatter: formatter,
+            value: str.slice(index),
+        });
+    }
+    else if (formatter) {
+        dateParts.push({
+            formatter: formatter,
+            value: str.slice(index),
+        });
+    }
+    dateParts.reverse();
+    var dateFormat;
+    for (var _a = 0, dateParts_1 = dateParts; _a < dateParts_1.length; _a++) {
+        var datePart = dateParts_1[_a];
+        if (datePart.formatter === "%A" || datePart.formatter === "%a") {
+            dateFormat = datePart.value;
+        }
+    }
+    var date = new Date(0);
+    for (var _b = 0, dateParts_2 = dateParts; _b < dateParts_2.length; _b++) {
+        var datePart = dateParts_2[_b];
+        if (setFormatters[datePart.formatter]) {
+            if (validate && !setFormatters[datePart.formatter](date, datePart.value, dateFormat, validate)) {
+                return false;
+            }
+            setFormatters[datePart.formatter](date, datePart.value, dateFormat);
+        }
+    }
+    return validate ? true : date;
+}
+exports.stringToDate = stringToDate;
+var DateHelper = /** @class */ (function () {
+    function DateHelper() {
+    }
+    DateHelper.copy = function (d) {
+        return new Date(d);
+    };
+    DateHelper.fromYear = function (year) {
+        return new Date(year, 0, 1);
+    };
+    DateHelper.fromYearAndMonth = function (year, month) {
+        return new Date(year, month, 1);
+    };
+    DateHelper.weekStart = function (d, firstWeekday) {
+        var diff = (d.getDay() + 7 - firstWeekday) % 7;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
+    };
+    DateHelper.monthStart = function (d) {
+        return new Date(d.getFullYear(), d.getMonth(), 1);
+    };
+    DateHelper.yearStart = function (d) {
+        return new Date(d.getFullYear(), 0, 1);
+    };
+    DateHelper.dayStart = function (d) {
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    };
+    DateHelper.addDay = function (d, count) {
+        if (count === void 0) { count = 1; }
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + count);
+    };
+    DateHelper.addMonth = function (d, count) {
+        if (count === void 0) { count = 1; }
+        return new Date(d.getFullYear(), d.getMonth() + count);
+    };
+    DateHelper.addYear = function (d, count) {
+        if (count === void 0) { count = 1; }
+        return new Date(d.getFullYear() + count, d.getMonth());
+    };
+    DateHelper.withHoursAndMinutes = function (d, hours, minutes, dateFormat) {
+        if (dateFormat === undefined || (!dateFormat && hours === 12) || (dateFormat && hours !== 12)) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hours, minutes);
+        }
+        else if (dateFormat && hours === 12) {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, minutes);
+        }
+        else {
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hours + 12, minutes);
+        }
+    };
+    DateHelper.setMonth = function (d, month) {
+        d.setMonth(month);
+    };
+    DateHelper.setYear = function (d, year) {
+        d.setFullYear(year);
+    };
+    DateHelper.mergeHoursAndMinutes = function (source, target) {
+        return new Date(source.getFullYear(), source.getMonth(), source.getDate(), target.getHours(), target.getMinutes());
+    };
+    DateHelper.isWeekEnd = function (d) {
+        return d.getDay() === 0 || d.getDay() === 6;
+    };
+    DateHelper.getTwelweYears = function (d) {
+        var y = d.getFullYear();
+        var firstYear = y - (y % 12);
+        return core_1.range(firstYear, firstYear + 11);
+    };
+    DateHelper.getDayOrdinal = function (d) {
+        var dayMS = 24 * 60 * 60 * 1000;
+        return (d.valueOf() - DateHelper.yearStart(d).valueOf()) / dayMS;
+    };
+    DateHelper.getWeekNumber = function (d) {
+        if (d.getDay() !== 6) {
+            d = DateHelper.addDay(d, 6 - d.getDay());
+        }
+        var dayMS = 24 * 60 * 60 * 1000;
+        var ordinal = DateHelper.getDayOrdinal(d);
+        if (ordinal - d.getDay() < 0) {
+            d = new Date(d.getFullYear() - 1, 12, 0);
+            ordinal = DateHelper.getDayOrdinal(d);
+        }
+        return Math.floor((ordinal - d.getDay() + 10) / 7);
+    };
+    DateHelper.isSameDay = function (d1, d2) {
+        return (d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate());
+    };
+    DateHelper.toDateObject = function (date, dateFormat) {
+        if (typeof date === "string") {
+            return stringToDate(date, dateFormat);
+        }
+        else {
+            return new Date(date);
+        }
+    };
+    DateHelper.nullTimestampDate = new Date(0);
+    return DateHelper;
+}());
+exports.DateHelper = DateHelper;
+
+
+/***/ }),
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1769,7 +2428,7 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_popup_1 = __webpack_require__(11);
 var Label = /** @class */ (function (_super) {
     __extends(Label, _super);
@@ -1781,6 +2440,7 @@ var Label = /** @class */ (function (_super) {
                 e.stopPropagation();
                 _this._helper.show(e.target, {
                     mode: _this.config.labelPosition === "left" ? "bottom" : "right",
+                    theme: e.target,
                 });
             }, hideHelper: function (e) {
                 e.preventDefault();
@@ -1844,7 +2504,7 @@ exports.Label = Label;
 
 
 /***/ }),
-/* 15 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, setImmediate) {(function () {
@@ -2164,141 +2824,10 @@ exports.Label = Label;
   } else {}
 })()
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(40), __webpack_require__(134).setImmediate))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(40), __webpack_require__(126).setImmediate))
 
 /***/ }),
-/* 16 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var core_1 = __webpack_require__(1);
-var html_1 = __webpack_require__(2);
-function transpose(arr, transform) {
-    var columns = [];
-    for (var i = 0; i < arr.length; i++) {
-        var row = arr[i];
-        for (var cellInd = 0; cellInd < row.length; cellInd++) {
-            columns[cellInd] = columns[cellInd] || [];
-            var cell = transform ? transform(row[cellInd]) : row[cellInd];
-            columns[cellInd].push(cell);
-        }
-    }
-    return columns;
-}
-exports.transpose = transpose;
-function insert(node, newone) {
-    if (typeof newone === "string") {
-        node.insertAdjacentHTML("beforeend", newone);
-        return node.lastChild;
-    }
-    else {
-        node.appendChild(newone);
-        return newone;
-    }
-}
-function getStyleByClass(cssClass, container, targetClass, def) {
-    var cont = container.querySelector("." + targetClass);
-    var testDiv = insert(cont, "<div class=\"" + cssClass + "\"></div>");
-    var styles = window.getComputedStyle(testDiv);
-    var result = {
-        color: styles.color === "rgb(0, 0, 0)" ? def.color : core_1.rgbToHex(styles.color),
-        background: styles.backgroundColor === "rgba(0, 0, 0, 0)" ? def.background : core_1.rgbToHex(styles.backgroundColor),
-        fontSize: parseFloat(styles.fontSize),
-    };
-    cont.removeChild(testDiv);
-    // [dirty]
-    if (result.color === def.color &&
-        result.background === def.background &&
-        result.fontSize === def.fontSize) {
-        return null;
-    }
-    return result;
-}
-exports.getStyleByClass = getStyleByClass;
-function removeHTMLTags(str) {
-    if (typeof str !== "string" && typeof str !== "number" && typeof str !== "boolean") {
-        return "";
-    }
-    return ("" + (str === undefined || str === null ? "" : str))
-        .replace(/<[^>]*>/g, "")
-        .replace(/["]/g, "&quot;")
-        .trim();
-}
-exports.removeHTMLTags = removeHTMLTags;
-function isCssSupport(property, value) {
-    try {
-        return CSS.supports(property, value);
-    }
-    catch (err) {
-        var el = document.createElement("div");
-        el.style[property] = value;
-        return el.style[property] === value;
-    }
-}
-exports.isCssSupport = isCssSupport;
-function isRowEmpty(row) {
-    if (!row) {
-        return;
-    }
-    return Object.keys(row).reduce(function (acc, col) {
-        if (col === "id" || col.startsWith("$")) {
-            return acc;
-        }
-        if (acc && row[col] !== undefined && row[col] !== "") {
-            return;
-        }
-        return acc;
-    }, true);
-}
-exports.isRowEmpty = isRowEmpty;
-function isSortable(config, col) {
-    return (col.sortable !== false && config.sortable) || col.sortable;
-}
-exports.isSortable = isSortable;
-function isAutoWidth(config, col) {
-    if (col) {
-        return (col.autoWidth !== false && config.autoWidth) || col.autoWidth;
-    }
-    var check = false;
-    config.columns.map(function (col) {
-        if ((col.autoWidth !== false && config.autoWidth) || col.autoWidth) {
-            check = true;
-            return;
-        }
-    });
-    return check;
-}
-exports.isAutoWidth = isAutoWidth;
-function isTooltip(config, element) {
-    return (element.tooltip !== false && config.tooltip) || element.tooltip;
-}
-exports.isTooltip = isTooltip;
-function isHtmlEnable(config, col) {
-    return (col.htmlEnable !== false && config.htmlEnable) || col.htmlEnable;
-}
-exports.isHtmlEnable = isHtmlEnable;
-function getTotalWidth(columns) {
-    return columns.reduce(function (total, col) { return total + (col.$width || 0); }, 0);
-}
-exports.getTotalWidth = getTotalWidth;
-function getTotalHeight(rows) {
-    return rows.reduce(function (total, row) { return total + (row.$height || 0); }, 0);
-}
-exports.getTotalHeight = getTotalHeight;
-function scrollFixedColsAndRows(e) {
-    var grid = html_1.locateNode(e, "data-dhx-widget-id");
-    var gridBody = grid.querySelector(".dhx_grid-body");
-    var delta = e.deltaY;
-    var position = e.shiftKey ? [delta, 0] : [0, delta];
-    gridBody === null || gridBody === void 0 ? void 0 : gridBody.scrollBy.apply(gridBody, position);
-}
-exports.scrollFixedColsAndRows = scrollFixedColsAndRows;
-
-
-/***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2635,7 +3164,7 @@ exports.ScrollView = ScrollView;
 
 
 /***/ }),
-/* 18 */
+/* 19 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2679,7 +3208,7 @@ exports.focusManager = new FocusManager();
 
 
 /***/ }),
-/* 19 */
+/* 20 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2688,13 +3217,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(179));
-__export(__webpack_require__(180));
-__export(__webpack_require__(37));
+__export(__webpack_require__(174));
+__export(__webpack_require__(175));
+__export(__webpack_require__(39));
 
 
 /***/ }),
-/* 20 */
+/* 21 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -2714,11 +3243,13 @@ var DataEvents;
     DataEvents["beforeRemove"] = "beforeremove";
     DataEvents["afterRemove"] = "afterremove";
     DataEvents["change"] = "change";
+    DataEvents["dataRequest"] = "dataRequest";
     DataEvents["load"] = "load";
     DataEvents["loadError"] = "loaderror";
     DataEvents["beforeLazyLoad"] = "beforelazyload";
     DataEvents["afterLazyLoad"] = "afterlazyload";
-    DataEvents["dataRequest"] = "dataRequest";
+    DataEvents["beforeItemLoad"] = "beforeItemLoad";
+    DataEvents["afterItemLoad"] = "afterItemLoad";
 })(DataEvents = exports.DataEvents || (exports.DataEvents = {}));
 var DragEvents;
 (function (DragEvents) {
@@ -2741,14 +3272,14 @@ var DataDriver;
 
 
 /***/ }),
-/* 21 */
+/* 22 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var dataproxy_1 = __webpack_require__(27);
-var drivers_1 = __webpack_require__(61);
+var dataproxy_1 = __webpack_require__(28);
+var drivers_1 = __webpack_require__(62);
 function isEqualObj(a, b) {
     for (var key in a) {
         if (a[key] !== b[key] || Array.isArray(a[key])) {
@@ -2874,411 +3405,6 @@ exports.hasJsonOrArrayStructure = hasJsonOrArrayStructure;
 
 
 /***/ }),
-/* 22 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var core_1 = __webpack_require__(1);
-var core_2 = __webpack_require__(1);
-exports.locale = {
-    monthsShort: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-    months: [
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December",
-    ],
-    daysShort: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Monday"],
-    cancel: "Cancel",
-};
-/*
-    %d	day as a number with leading zero, 01..31
-    %j	day as a number, 1..31
-    %D	short name of the day, Su Mo Tu...
-    %l	full name of the day, Sunday Monday Tuesday...
-    %m	month as a number with leading zero, 01..12
-    %n	month as a number, 1..12
-    %M	short name of the month, Jan Feb Mar...
-    %F	full name of the month, January February March...
-    %y	year as a number, 2 digits
-    %Y	year as a number, 4 digits
-    %h	hours 12-format with leading zero, 01..12)
-    %g	hours 12-format, 1..12)
-    %H	hours 24-format with leading zero, 01..24
-    %G	hours 24-format, 1..24
-    %i	minutes with leading zero, 01..59
-    %s	seconds with leading zero, 01..59
-    %a	am or pm
-    %A	AM or PM
-    %u	milliseconds
-*/
-var formatters = {
-    "%d": function (date) {
-        var day = date.getDate();
-        return day < 10 ? "0" + day : day;
-    },
-    "%j": function (date) { return date.getDate(); },
-    "%l": function (date) {
-        return exports.locale.days[date.getDay()];
-    },
-    "%D": function (date) {
-        return exports.locale.daysShort[date.getDay()];
-    },
-    "%m": function (date) {
-        var month = date.getMonth() + 1;
-        return month < 10 ? "0" + month : month;
-    },
-    "%n": function (date) { return date.getMonth() + 1; },
-    "%M": function (date) { return exports.locale.monthsShort[date.getMonth()]; },
-    "%F": function (date) { return exports.locale.months[date.getMonth()]; },
-    "%y": function (date) {
-        return date
-            .getFullYear()
-            .toString()
-            .slice(2);
-    },
-    "%Y": function (date) { return date.getFullYear(); },
-    "%h": function (date) {
-        var hours = date.getHours() % 12;
-        if (hours === 0) {
-            hours = 12;
-        }
-        return hours < 10 ? "0" + hours : hours;
-    },
-    "%g": function (date) {
-        var hours = date.getHours() % 12;
-        if (hours === 0) {
-            hours = 12;
-        }
-        return hours;
-    },
-    "%H": function (date) {
-        var hours = date.getHours();
-        return hours < 10 ? "0" + hours : hours;
-    },
-    "%G": function (date) { return date.getHours(); },
-    "%i": function (date) {
-        var minutes = date.getMinutes();
-        return minutes < 10 ? "0" + minutes : minutes;
-    },
-    "%s": function (date) {
-        var seconds = date.getSeconds();
-        return seconds < 10 ? "0" + seconds : seconds;
-    },
-    "%a": function (date) {
-        return date.getHours() >= 12 ? "pm" : "am";
-    },
-    "%A": function (date) {
-        return date.getHours() >= 12 ? "PM" : "AM";
-    },
-    "%u": function (date) { return date.getMilliseconds(); },
-};
-var setFormatters = {
-    "%d": function (date, value) {
-        var check = /(^([0-9][0-9])$)/i.test(value);
-        check ? date.setDate(Number(value)) : date.setDate(Number(1));
-    },
-    "%j": function (date, value) {
-        var check = /(^([0-9]?[0-9])$)/i.test(value);
-        check ? date.setDate(Number(value)) : date.setDate(Number(1));
-    },
-    "%m": function (date, value) {
-        var check = /(^([0-9][0-9])$)/i.test(value);
-        check ? date.setMonth(Number(value) - 1) : date.setMonth(Number(0));
-        if (check && date.getMonth() !== Number(value) - 1)
-            date.setMonth(Number(value) - 1);
-    },
-    "%n": function (date, value) {
-        var check = /(^([0-9]?[0-9])$)/i.test(value);
-        check ? date.setMonth(Number(value) - 1) : date.setMonth(Number(0));
-        if (check && date.getMonth() !== Number(value) - 1)
-            date.setMonth(Number(value) - 1);
-    },
-    "%M": function (date, value) {
-        var index = core_2.findIndex(exports.locale.monthsShort, function (v) { return v === value; });
-        index === -1 ? date.setMonth(0) : date.setMonth(index);
-        if (index !== -1 && date.getMonth() !== index)
-            date.setMonth(index);
-    },
-    "%F": function (date, value) {
-        var index = core_2.findIndex(exports.locale.months, function (v) { return v === value; });
-        index === -1 ? date.setMonth(0) : date.setMonth(index);
-        if (index !== -1 && date.getMonth() !== index)
-            date.setMonth(index);
-    },
-    "%y": function (date, value) {
-        var check = /(^([0-9][0-9])$)/i.test(value);
-        check ? date.setFullYear(Number("20" + value)) : date.setFullYear(Number("2000"));
-    },
-    "%Y": function (date, value) {
-        var check = /(^([0-9][0-9][0-9][0-9])$)/i.test(value);
-        check ? date.setFullYear(Number(value)) : date.setFullYear(Number("2000"));
-    },
-    "%h": function (date, value, dateFormat) {
-        var check = /(^0[1-9]|1[0-2]$)/i.test(value);
-        (check && dateFormat === "pm") || dateFormat === "PM"
-            ? date.setHours(Number(value))
-            : date.setHours(Number(0));
-    },
-    "%g": function (date, value, dateFormat) {
-        var check = /(^[1-9]$)|(^0[1-9]|1[0-2]$)/i.test(value);
-        (check && dateFormat === "pm") || dateFormat === "PM"
-            ? date.setHours(Number(value))
-            : date.setHours(Number(0));
-    },
-    "%H": function (date, value) {
-        var check = /(^[0-2][0-9]$)/i.test(value);
-        check ? date.setHours(Number(value)) : date.setHours(Number(0));
-    },
-    "%G": function (date, value) {
-        var check = /(^[1-9][0-9]?$)/i.test(value);
-        check ? date.setHours(Number(value)) : date.setHours(Number(0));
-    },
-    "%i": function (date, value) {
-        var check = /(^([0-5][0-9])$)/i.test(value);
-        check ? date.setMinutes(Number(value)) : date.setMinutes(Number(0));
-    },
-    "%s": function (date, value) {
-        var check = /(^([0-5][0-9])$)/i.test(value);
-        check ? date.setSeconds(Number(value)) : date.setSeconds(Number(0));
-    },
-    "%u": function (date, value) {
-        var check = /(^([0-9][0-9][0-9])$)/i.test(value);
-        check ? date.setMilliseconds(Number(value)) : date.setMilliseconds(Number(0));
-    },
-    "%a": function (date, value) {
-        if (value === "pm") {
-            date.setHours(date.getHours() + 12);
-        }
-    },
-    "%A": function (date, value) {
-        if (value === "PM") {
-            date.setHours(date.getHours() + 12);
-        }
-    },
-};
-var TokenType;
-(function (TokenType) {
-    TokenType[TokenType["separator"] = 0] = "separator";
-    TokenType[TokenType["datePart"] = 1] = "datePart";
-})(TokenType || (TokenType = {}));
-function tokenizeFormat(format) {
-    var tokens = [];
-    var currentSeparator = "";
-    for (var i = 0; i < format.length; i++) {
-        if (format[i] === "%") {
-            if (currentSeparator.length > 0) {
-                tokens.push({
-                    type: TokenType.separator,
-                    value: currentSeparator,
-                });
-                currentSeparator = "";
-            }
-            tokens.push({
-                type: TokenType.datePart,
-                value: format[i] + format[i + 1],
-            });
-            i++;
-        }
-        else {
-            currentSeparator += format[i];
-        }
-    }
-    if (currentSeparator.length > 0) {
-        tokens.push({
-            type: TokenType.separator,
-            value: currentSeparator,
-        });
-    }
-    return tokens;
-}
-function getFormattedDate(format, date) {
-    return tokenizeFormat(format).reduce(function (res, token) {
-        if (token.type === TokenType.separator) {
-            return res + token.value;
-        }
-        else {
-            if (!formatters[token.value]) {
-                return res;
-            }
-            return res + formatters[token.value](date);
-        }
-    }, "");
-}
-exports.getFormattedDate = getFormattedDate;
-function stringToDate(str, format, validate) {
-    if (typeof str !== "string") {
-        return;
-    }
-    var tokens = tokenizeFormat(format);
-    var dateParts = [];
-    var index = 0;
-    var formatter = null;
-    for (var _i = 0, tokens_1 = tokens; _i < tokens_1.length; _i++) {
-        var token = tokens_1[_i];
-        if (token.type === TokenType.separator) {
-            var sepratorIndex = str.indexOf(token.value, index);
-            if (sepratorIndex === -1) {
-                if (validate) {
-                    return false;
-                }
-                throw new Error("Incorrect date, see docs: https://docs.dhtmlx.com/suite/calendar__api__calendar_dateformat_config.html");
-            }
-            if (formatter) {
-                dateParts.push({
-                    formatter: formatter,
-                    value: str.slice(index, sepratorIndex),
-                });
-                formatter = null;
-            }
-            index = sepratorIndex + token.value.length;
-        }
-        else if (token.type === TokenType.datePart) {
-            formatter = token.value;
-        }
-    }
-    if (formatter === "%A" || formatter === "%a") {
-        dateParts.unshift({
-            formatter: formatter,
-            value: str.slice(index),
-        });
-    }
-    else if (formatter) {
-        dateParts.push({
-            formatter: formatter,
-            value: str.slice(index),
-        });
-    }
-    dateParts.reverse();
-    var dateFormat;
-    for (var _a = 0, dateParts_1 = dateParts; _a < dateParts_1.length; _a++) {
-        var datePart = dateParts_1[_a];
-        if (datePart.formatter === "%A" || datePart.formatter === "%a") {
-            dateFormat = datePart.value;
-        }
-    }
-    var date = new Date(0);
-    for (var _b = 0, dateParts_2 = dateParts; _b < dateParts_2.length; _b++) {
-        var datePart = dateParts_2[_b];
-        if (setFormatters[datePart.formatter]) {
-            setFormatters[datePart.formatter](date, datePart.value, dateFormat);
-        }
-    }
-    return validate ? true : date;
-}
-exports.stringToDate = stringToDate;
-var DateHelper = /** @class */ (function () {
-    function DateHelper() {
-    }
-    DateHelper.copy = function (d) {
-        return new Date(d);
-    };
-    DateHelper.fromYear = function (year) {
-        return new Date(year, 0, 1);
-    };
-    DateHelper.fromYearAndMonth = function (year, month) {
-        return new Date(year, month, 1);
-    };
-    DateHelper.weekStart = function (d, firstWeekday) {
-        var diff = (d.getDay() + 7 - firstWeekday) % 7;
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate() - diff);
-    };
-    DateHelper.monthStart = function (d) {
-        return new Date(d.getFullYear(), d.getMonth(), 1);
-    };
-    DateHelper.yearStart = function (d) {
-        return new Date(d.getFullYear(), 0, 1);
-    };
-    DateHelper.dayStart = function (d) {
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    };
-    DateHelper.addDay = function (d, count) {
-        if (count === void 0) { count = 1; }
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate() + count);
-    };
-    DateHelper.addMonth = function (d, count) {
-        if (count === void 0) { count = 1; }
-        return new Date(d.getFullYear(), d.getMonth() + count);
-    };
-    DateHelper.addYear = function (d, count) {
-        if (count === void 0) { count = 1; }
-        return new Date(d.getFullYear() + count, d.getMonth());
-    };
-    DateHelper.withHoursAndMinutes = function (d, hours, minutes, dateFormat) {
-        if (dateFormat === undefined || (!dateFormat && hours === 12) || (dateFormat && hours !== 12)) {
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hours, minutes);
-        }
-        else if (dateFormat && hours === 12) {
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, minutes);
-        }
-        else {
-            return new Date(d.getFullYear(), d.getMonth(), d.getDate(), hours + 12, minutes);
-        }
-    };
-    DateHelper.setMonth = function (d, month) {
-        d.setMonth(month);
-    };
-    DateHelper.setYear = function (d, year) {
-        d.setFullYear(year);
-    };
-    DateHelper.mergeHoursAndMinutes = function (source, target) {
-        return new Date(source.getFullYear(), source.getMonth(), source.getDate(), target.getHours(), target.getMinutes());
-    };
-    DateHelper.isWeekEnd = function (d) {
-        return d.getDay() === 0 || d.getDay() === 6;
-    };
-    DateHelper.getTwelweYears = function (d) {
-        var y = d.getFullYear();
-        var firstYear = y - (y % 12);
-        return core_1.range(firstYear, firstYear + 11);
-    };
-    DateHelper.getDayOrdinal = function (d) {
-        var dayMS = 24 * 60 * 60 * 1000;
-        return (d.valueOf() - DateHelper.yearStart(d).valueOf()) / dayMS;
-    };
-    DateHelper.getWeekNumber = function (d) {
-        if (d.getDay() !== 6) {
-            d = DateHelper.addDay(d, 6 - d.getDay());
-        }
-        var dayMS = 24 * 60 * 60 * 1000;
-        var ordinal = DateHelper.getDayOrdinal(d);
-        if (ordinal - d.getDay() < 0) {
-            d = new Date(d.getFullYear() - 1, 12, 0);
-            ordinal = DateHelper.getDayOrdinal(d);
-        }
-        return Math.floor((ordinal - d.getDay() + 10) / 7);
-    };
-    DateHelper.isSameDay = function (d1, d2) {
-        return (d1.getFullYear() === d2.getFullYear() &&
-            d1.getMonth() === d2.getMonth() &&
-            d1.getDate() === d2.getDate());
-    };
-    DateHelper.toDateObject = function (date, dateFormat) {
-        if (typeof date === "string") {
-            return stringToDate(date, dateFormat);
-        }
-        else {
-            return new Date(date);
-        }
-    };
-    DateHelper.nullTimestampDate = new Date(0);
-    return DateHelper;
-}());
-exports.DateHelper = DateHelper;
-
-
-/***/ }),
 /* 23 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -3286,8 +3412,8 @@ exports.DateHelper = DateHelper;
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
-var main_1 = __webpack_require__(16);
-var date_1 = __webpack_require__(22);
+var main_1 = __webpack_require__(14);
+var date_1 = __webpack_require__(15);
 function normalizeArray(obj, name) {
     if (!obj[name]) {
         return;
@@ -3421,13 +3547,17 @@ function countColumns(config, columns) {
 }
 exports.countColumns = countColumns;
 function calculatePositions(width, height, scroll, conf, data) {
-    var _a, _b;
+    var _a, _b, _c;
     var columns = conf.columns || [];
     var columnsLength = columns.length;
     var rows = data || [];
     var rowsLength = rows.length;
-    var leftSplit = (_a = conf.leftSplit) !== null && _a !== void 0 ? _a : 0;
-    var topSplit = (_b = conf.topSplit) !== null && _b !== void 0 ? _b : 0;
+    var leftSplit = conf.leftSplit
+        ? conf.columns.slice(0, conf.leftSplit).filter(function (col) { return !col.hidden; }).length
+        : 0;
+    var topSplit = (_a = conf.topSplit) !== null && _a !== void 0 ? _a : 0;
+    var rightSplit = (_b = conf.rightSplit) !== null && _b !== void 0 ? _b : 0;
+    var bottomSplit = (_c = conf.bottomSplit) !== null && _c !== void 0 ? _c : 0;
     var x = 0;
     var scrollLeft = scroll.left;
     var avrColWidth = conf.$totalWidth / columnsLength;
@@ -3488,9 +3618,14 @@ function calculatePositions(width, height, scroll, conf, data) {
     var xReserve = Math.round(maxWidth / minWidth);
     var yReserve = Math.round(maxHeight / minHeight);
     var xStart = x - xReserve >= leftSplit ? x - xReserve : leftSplit;
-    var xEnd = x + itemsTotalByWidth + xReserve;
+    var xTotal = x + itemsTotalByWidth + xReserve;
+    var leftSplitHidden = (conf.leftSplit || 0) - leftSplit;
+    var colIndexStartSplit = columns.length - rightSplit - leftSplitHidden;
+    var xEnd = xTotal < colIndexStartSplit ? xTotal : colIndexStartSplit;
     var yStart = y - yReserve >= topSplit ? y - yReserve : topSplit;
-    var yEnd = y + itemsTotalByHeight + yReserve;
+    var yTotal = y + itemsTotalByHeight + yReserve;
+    var rowIndexStartSplit = rows.length - bottomSplit;
+    var yEnd = yTotal < rowIndexStartSplit ? yTotal : rowIndexStartSplit;
     return {
         xStart: xStart,
         xEnd: xEnd,
@@ -3636,7 +3771,7 @@ exports.getMaxColsWidth = function (rows, cols, config, target) {
                     currentValue = htmlEnable ? main_1.removeHTMLTags(value) : value.toString();
                 }
                 var date = format && type === "date" && new Date(currentValue);
-                if (date) {
+                if (date === null || date === void 0 ? void 0 : date.valueOf()) {
                     currentValue = date_1.getFormattedDate(format, date);
                 }
                 var width = ctx.measureText(currentValue).width;
@@ -3718,13 +3853,497 @@ exports.toFormat = toFormat;
 
 "use strict";
 
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(73));
-__export(__webpack_require__(166));
-__export(__webpack_require__(77));
+var dom_1 = __webpack_require__(0);
+var html_1 = __webpack_require__(2);
+var data_1 = __webpack_require__(23);
+var main_1 = __webpack_require__(14);
+var types_1 = __webpack_require__(8);
+var Cells_1 = __webpack_require__(30);
+var FixedCols_1 = __webpack_require__(77);
+var FixedRows_1 = __webpack_require__(78);
+var core_1 = __webpack_require__(1);
+exports.BORDERS = 2;
+function calcScrollBarWidth(config) {
+    var _a = config, _b = _a.headerHeight, headerHeight = _b === void 0 ? config.$headerLevel * config.headerRowHeight : _b, _c = _a.footerHeight, footerHeight = _c === void 0 ? config.$footerLevel * config.footerRowHeight : _c;
+    var scrollbarY = config.$totalHeight + headerHeight + footerHeight + exports.BORDERS <= config.height
+        ? 0
+        : html_1.getScrollbarWidth();
+    var scrollbarX = config.$totalWidth + exports.BORDERS + scrollbarY <= config.width ? 0 : html_1.getScrollbarWidth();
+    return { x: scrollbarX, y: scrollbarY };
+}
+exports.calcScrollBarWidth = calcScrollBarWidth;
+function getRenderConfig(obj, data, wrapperSizes) {
+    var config = obj.config;
+    var columns = config.columns.filter(function (col) { return !col.hidden; });
+    var positions = data_1.calculatePositions(wrapperSizes.width, wrapperSizes.height, obj._scroll, config, data);
+    var currentColumns = columns.slice(positions.xStart, positions.xEnd);
+    var currentRows = data.slice(positions.yStart, positions.yEnd);
+    var fixedColumns = {
+        left: config.columns.slice(0, config.leftSplit || 0).filter(function (col) { return !col.hidden; }),
+        right: config.rightSplit ? config.columns.slice(-config.rightSplit).filter(function (col) { return !col.hidden; }) : [],
+    };
+    var fixedRows = {
+        top: data.slice(0, config.topSplit || 0),
+        bottom: config.bottomSplit ? data.slice(-config.bottomSplit) : [],
+    };
+    return __assign(__assign({}, config), { data: data,
+        columns: columns, scroll: obj._scroll, $positions: positions, headerHeight: config.$headerLevel * config.headerRowHeight, footerHeight: config.$footerLevel * config.footerRowHeight, firstColId: columns[0] && columns[0].id, events: obj.events, _events: obj._events, currentColumns: currentColumns,
+        currentRows: currentRows,
+        fixedColumns: fixedColumns,
+        fixedRows: fixedRows, sortBy: obj._sortBy, sortDir: obj._sortDir, content: obj.content, gridId: obj._uid, $renderFrom: "render" });
+}
+exports.getRenderConfig = getRenderConfig;
+function getElementSizes(element) {
+    if (!element)
+        return;
+    if (!element.tagName)
+        element = element._parent._container;
+    if (!element)
+        return;
+    var styles = element.currentStyle || window.getComputedStyle(element);
+    var paddingsByWidth = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight) || 0;
+    var paddingsByHeight = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom) || 0;
+    return {
+        width: element.clientWidth - paddingsByWidth,
+        height: element.clientHeight - paddingsByHeight,
+    };
+}
+function getEvents(config, mode) {
+    var currentColumns = config.currentColumns, currentRows = config.currentRows, fixedRows = config.fixedRows, fixedColumns = config.fixedColumns, eventHandlers = config.eventHandlers;
+    var events = {};
+    var getCellInfo = function (e) {
+        var rowId = html_1.locate(e, "data-dhx-id");
+        var colId = html_1.locate(e, "data-dhx-col-id");
+        var row, col;
+        switch (mode) {
+            case types_1.Split.left:
+            case types_1.Split.right:
+                row = __spreadArrays(fixedRows.top, fixedRows.bottom, currentRows).find(function (item) {
+                    return item.id.toString() === rowId;
+                });
+                col = __spreadArrays(fixedColumns.left, fixedColumns.right).find(function (item) { return item.id === colId; });
+                break;
+            case types_1.Split.top:
+            case types_1.Split.bottom:
+                row = __spreadArrays(fixedRows.top, fixedRows.bottom).find(function (item) { return (item === null || item === void 0 ? void 0 : item.id.toString()) === rowId; });
+                col = __spreadArrays(fixedColumns.left, fixedColumns.right, currentColumns).find(function (item) {
+                    return item.id === colId;
+                });
+                break;
+            default:
+                row = currentRows.find(function (item) { return item.id.toString() === rowId; });
+                col = currentColumns.find(function (item) { return item.id === colId; });
+        }
+        return {
+            row: rowId ? row : {},
+            col: colId ? col : {},
+        };
+    };
+    if (eventHandlers) {
+        for (var key in eventHandlers) {
+            if (eventHandlers.hasOwnProperty(key)) {
+                var event_1 = eventHandlers[key];
+                events[key] = html_1.eventHandler(function (e) { return getCellInfo(e); }, __assign({}, event_1));
+            }
+        }
+    }
+    return events;
+}
+exports.getEvents = getEvents;
+function getGridData(renderConfig, shifts) {
+    var content = Cells_1.getCells(renderConfig);
+    var columns = renderConfig.columns, $resizing = renderConfig.$resizing, $totalHeight = renderConfig.$totalHeight, $totalWidth = renderConfig.$totalWidth, leftSplit = renderConfig.leftSplit, data = renderConfig.data, $positions = renderConfig.$positions;
+    var contentSpans = Cells_1.getSpans(renderConfig);
+    var getRowAriaAttrs = function (count) { return ({
+        role: "rowgroup",
+        "aria-rowcount": count,
+    }); };
+    var resizedLine;
+    if ($resizing) {
+        var colIndex = core_1.findIndex(columns, function (col) { return col.id === $resizing; });
+        var firstCellLeft = main_1.getTotalWidth(columns.slice(0, colIndex)) + columns[colIndex].$width;
+        resizedLine = dom_1.el(".dhx_grid-resize-line", {
+            style: {
+                top: 0,
+                left: firstCellLeft,
+                height: $totalHeight,
+            },
+        });
+    }
+    var selection = renderConfig.selection ? renderConfig.selection.toHTML() : null;
+    selection =
+        typeof selection === "string" ? dom_1.el("div.dhx_selection", { ".innerHTML": selection }) : selection;
+    var pos = $positions;
+    var events = getEvents(renderConfig);
+    return dom_1.el(".dhx_data-wrap", __assign({ style: {
+            height: $totalHeight,
+            width: $totalWidth,
+            "padding-left": shifts.x,
+            "padding-top": shifts.y,
+        }, role: "presentation" }, events), [
+        dom_1.el(".dhx_grid_data" + (leftSplit ? ".dhx_grid_fixed_left" : ""), __assign(__assign({ _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(pos.yStart, pos.xStart, renderConfig)), getRowAriaAttrs(data.length)), content),
+        dom_1.el(".dhx_span-spans", { role: "presentation" }, contentSpans),
+        dom_1.el(".dhx_grid_selection", { _ref: "selection", "aria-hidden": "true" }, [selection, resizedLine]),
+    ]);
+}
+function getContentHeight(renderConfig, isSticky, wrapperSizes) {
+    var contentHeight = wrapperSizes.height - exports.BORDERS;
+    contentHeight = isSticky ? contentHeight : contentHeight - renderConfig.headerHeight;
+    var isFooter = renderConfig.$footer;
+    return (contentHeight = isFooter
+        ? isSticky
+            ? contentHeight
+            : contentHeight - renderConfig.footerHeight
+        : contentHeight);
+}
+function applyAutoWidth(config, wrapperSizes, firstApply, resizer, scrollViewConfig) {
+    if (firstApply === void 0) { firstApply = true; }
+    if (resizer === void 0) { resizer = false; }
+    if (scrollViewConfig === void 0) { scrollViewConfig = false; }
+    var scrollbarY = !scrollViewConfig && config.$totalHeight >= wrapperSizes.height - config.headerRowHeight
+        ? html_1.getScrollbarWidth()
+        : 0;
+    var newTotalWidth = wrapperSizes.width - exports.BORDERS - scrollbarY;
+    var columns = config.columns.filter(function (col) { return !col.hidden; });
+    var growingColumns = columns.filter(function (col) { return !col.width && !col.$fixed && main_1.isAutoWidth(config, col); });
+    var nonGrowingColumnsWidth = main_1.getTotalWidth(columns.filter(function (col) { return col.width || col.$fixed || !main_1.isAutoWidth(config, col); }));
+    var fullGravity = growingColumns.reduce(function (gravity, col) { return gravity + (col.gravity || 1); }, 0);
+    if (newTotalWidth < config.$totalWidth) {
+        var growingColumnsWidth_1 = growingColumns.reduce(function (width, col) { return width + (col.maxWidth || col.$width); }, 0);
+        if (growingColumns.length) {
+            growingColumns.forEach(function (col) {
+                var newWidth = 0;
+                if (firstApply) {
+                    newWidth =
+                        Math.abs(newTotalWidth - growingColumnsWidth_1) * ((col.gravity || 1) / fullGravity);
+                }
+                else {
+                    newWidth =
+                        Math.abs(newTotalWidth - nonGrowingColumnsWidth) * ((col.gravity || 1) / fullGravity);
+                }
+                var wrongMin = newWidth < col.minWidth;
+                var wrongMax = newWidth > col.maxWidth;
+                if (!wrongMin && !wrongMax) {
+                    col.$width = newWidth;
+                }
+                else if (wrongMin) {
+                    nonGrowingColumnsWidth += col.$width - newWidth;
+                    col.$fixed = true;
+                }
+                else if (wrongMax) {
+                    col.$width = col.maxWidth;
+                    col.$fixed = true;
+                }
+                if (col.$width < 20)
+                    col.$width = 20;
+            });
+        }
+    }
+    else {
+        growingColumns.forEach(function (col) {
+            var newWidth = Math.abs(newTotalWidth - nonGrowingColumnsWidth) * ((col.gravity || 1) / fullGravity);
+            var wrongMin = newWidth < col.minWidth;
+            var wrongMax = newWidth > col.maxWidth;
+            if (!wrongMin && !wrongMax) {
+                col.$width = newWidth;
+            }
+            else if (wrongMin) {
+                nonGrowingColumnsWidth += col.$width - newWidth;
+                if (resizer)
+                    col.$fixed = true;
+            }
+            else if (wrongMax) {
+                col.$width = col.maxWidth;
+                if (resizer)
+                    col.$fixed = true;
+            }
+            if (col.$width < 20)
+                col.$width = 20;
+            if (!firstApply && col.$fixed) {
+                delete col.$fixed;
+            }
+        });
+    }
+    if (firstApply) {
+        applyAutoWidth(config, wrapperSizes, false, resizer, scrollViewConfig);
+    }
+}
+function render(vm, obj, htmlEvents, selection, uid) {
+    if (!obj._container) {
+        obj.config.width = 1;
+        obj.config.height = 1;
+    }
+    // if grid placed inside another component, it will fit to its container
+    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
+        var parentNode = vm.node.parent.el;
+        var parentSizes = getElementSizes(parentNode);
+        obj.config.width = parentSizes.width;
+        obj.config.height = parentSizes.height;
+    }
+    var config = obj.config;
+    // when grid is destructing and user try to repaint it
+    if (!config) {
+        return dom_1.el("div");
+    }
+    if (!config.columns.length) {
+        return dom_1.el(".dhx_grid", {
+            "data-dhx-widget-id": uid,
+            "data-dhx-root-id": config.rootParent,
+            role: "empty-grid",
+        });
+    }
+    var data = obj.data.getRawData(0, -1, null, 2);
+    if (config.columns.reduce(function (check, col) { return (check = !col.hidden ? col.hidden : check); }, true)) {
+        config.$totalHeight = 0;
+    }
+    else {
+        config.$totalHeight = data.reduce(function (total, _a) {
+            var $height = _a.$height;
+            return (total += $height || 0);
+        }, 0);
+    }
+    var sizes = getElementSizes(obj._container);
+    var wrapperSizes = {
+        width: (config.width ? config.width : sizes && sizes.width) || 0,
+        height: (config.height ? config.height : sizes && sizes.height) || 0,
+    };
+    // TODO: Remove scroll
+    if (main_1.isAutoWidth(config)) {
+        applyAutoWidth(config, wrapperSizes);
+        config.$totalWidth = main_1.getTotalWidth(config.columns.filter(function (col) { return !col.hidden; }));
+    }
+    config.width = wrapperSizes.width;
+    config.height = wrapperSizes.height;
+    var renderConfig = getRenderConfig(obj, data, wrapperSizes);
+    renderConfig.selection = selection;
+    renderConfig.datacollection = obj.data;
+    var shifts = Cells_1.getShifts(renderConfig);
+    if (config.leftSplit || config.rightSplit || config.topSplit || config.bottomSplit) {
+        renderConfig.$scrollBarWidth = calcScrollBarWidth(renderConfig);
+    }
+    var isSticky = main_1.isCssSupport("position", "sticky");
+    var gridBodyHeight = getContentHeight(renderConfig, isSticky, wrapperSizes);
+    var layoutState = {
+        wrapper: wrapperSizes,
+        sticky: isSticky,
+        shifts: shifts,
+        gridBodyHeight: gridBodyHeight,
+    };
+    var header = FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "header", position: "top" }));
+    var footer = renderConfig.$footer
+        ? FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "footer", position: "bottom" }))
+        : null;
+    var lessByWidth = renderConfig.$totalWidth + exports.BORDERS < wrapperSizes.width ? "dhx_grid-less-width" : "";
+    var lessByHeight = renderConfig.$totalHeight + exports.BORDERS < wrapperSizes.height ? "dhx_grid-less-height" : "";
+    var fixedRight = renderConfig.fixedColumns.right.length ? "dhx_grid__contains_cols_right--fixed" : "";
+    var fixedBottom = config.bottomSplit ? "dhx_grid__contains_rows_bottom--fixed" : "";
+    var getGridAriaAttrs = function (rows, cols, isEditable, isMultiselectable) { return ({
+        role: "grid",
+        "aria-rowcount": rows.length,
+        "aria-colcount": cols.filter(function (col) { return !col.hidden; }).length,
+        "aria-readonly": isEditable ? "false" : "true",
+        "aria-multiselectable": isMultiselectable ? "true" : "false",
+    }); };
+    // dirty: but work. Change checking of rendering Grid
+    if (!vm.node) {
+        var _a = obj.getScrollState(), x_1 = _a.x, y_1 = _a.y;
+        dom_1.awaitRedraw().then(function () {
+            obj.scroll(x_1, y_1);
+        });
+    }
+    return dom_1.el(".dhx_grid.dhx_widget", __assign({ class: (renderConfig.css || "") +
+            (!isSticky ? " dhx_grid_border" : "") +
+            (config.multiselection ? " dhx_no-select--pointer" : ""), "data-dhx-widget-id": uid, "data-dhx-root-id": config.rootParent }, getGridAriaAttrs(renderConfig.data, config.columns, renderConfig.editable, renderConfig.multiselection)), [
+        dom_1.resizer(function (changeWith) {
+            if (main_1.isAutoWidth(obj.config) && !!changeWith) {
+                config.$totalWidth = 0;
+                applyAutoWidth(config, wrapperSizes, true, true);
+            }
+            return obj.paint();
+        }),
+        dom_1.el(".dhx_grid-content", {
+            style: __assign({}, wrapperSizes),
+            onclick: htmlEvents.onclick,
+            onmouseover: htmlEvents.onmouseover,
+            class: (lessByWidth + " " + lessByHeight + " " + fixedRight + " " + fixedBottom).trim(),
+            role: "presentation",
+        }, [
+            isSticky ? null : header,
+            dom_1.el(".dhx_grid-body", {
+                style: {
+                    height: gridBodyHeight,
+                    width: wrapperSizes.width - exports.BORDERS,
+                },
+                onscroll: htmlEvents.onscroll,
+                _ref: "grid_body",
+                role: "presentation",
+            }, [
+                dom_1.el("div", {}, [
+                    isSticky ? header : null,
+                    getGridData(renderConfig, shifts),
+                    isSticky ? footer : null,
+                ]),
+            ]),
+            FixedCols_1.getFixedColsHeader(renderConfig, layoutState, types_1.Split.left),
+            FixedCols_1.getFixedColsHeader(renderConfig, layoutState, types_1.Split.right),
+            FixedCols_1.getFixedCols(renderConfig, layoutState, types_1.Split.left),
+            FixedCols_1.getFixedCols(renderConfig, layoutState, types_1.Split.right),
+            FixedRows_1.getFixedDataRows(renderConfig, layoutState, types_1.Split.top),
+            FixedRows_1.getFixedDataRows(renderConfig, layoutState, types_1.Split.bottom),
+            isSticky ? null : footer,
+        ]),
+    ]);
+}
+exports.render = render;
+function proRender(vm, obj, htmlEvents, selection, uid) {
+    if (!obj._container) {
+        obj.config.width = 1;
+        obj.config.height = 1;
+    }
+    // if grid placed inside another component, it will fit to its container
+    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
+        var parentNode = vm.node.parent.el;
+        var parentSizes = getElementSizes(parentNode);
+        obj.config.width = parentSizes.width;
+        obj.config.height = parentSizes.height;
+    }
+    var config = obj.config;
+    // when grid is destructing and user try to repaint it
+    if (!config) {
+        return dom_1.el("div");
+    }
+    if (!config.columns.length) {
+        return dom_1.el(".dhx_grid", {
+            "data-dhx-widget-id": uid,
+            "data-dhx-root-id": config.rootParent,
+            role: "empty-grid",
+        });
+    }
+    var data = obj.data.getRawData(0, -1, null, 2);
+    if (config.columns.reduce(function (check, col) { return (check = !col.hidden ? col.hidden : check); }, true)) {
+        config.$totalHeight = 0;
+    }
+    else {
+        config.$totalHeight = data.reduce(function (total, _a) {
+            var $height = _a.$height;
+            return (total += $height || 0);
+        }, 0);
+    }
+    var sizes = getElementSizes(obj._container);
+    var wrapperSizes = {
+        width: (config.width ? config.width : sizes && sizes.width) || 0,
+        height: (config.height ? config.height : sizes && sizes.height) || 0,
+    };
+    // TODO: Remove scroll
+    if (main_1.isAutoWidth(config)) {
+        applyAutoWidth(config, wrapperSizes, true, false, obj.scrollView && obj.scrollView.config.enable);
+        config.$totalWidth = main_1.getTotalWidth(config.columns.filter(function (col) { return !col.hidden; }));
+    }
+    config.width = wrapperSizes.width;
+    config.height = wrapperSizes.height;
+    var renderConfig = getRenderConfig(obj, data, wrapperSizes);
+    renderConfig.selection = selection;
+    renderConfig.datacollection = obj.data;
+    var shifts = Cells_1.getShifts(renderConfig);
+    if (config.leftSplit || config.rightSplit || config.topSplit || config.bottomSplit) {
+        renderConfig.$scrollBarWidth = calcScrollBarWidth(renderConfig);
+    }
+    var isSticky = main_1.isCssSupport("position", "sticky");
+    var gridBodyHeight = getContentHeight(renderConfig, isSticky, wrapperSizes);
+    var layoutState = {
+        wrapper: wrapperSizes,
+        sticky: isSticky,
+        shifts: shifts,
+        gridBodyHeight: gridBodyHeight,
+    };
+    var header = FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "header", position: "top" }));
+    var footer = renderConfig.$footer
+        ? FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "footer", position: "bottom" }))
+        : null;
+    var lessByWidth = renderConfig.$totalWidth + exports.BORDERS < wrapperSizes.width ? "dhx_grid-less-width" : "";
+    var lessByHeight = renderConfig.$totalHeight + exports.BORDERS < wrapperSizes.height ? "dhx_grid-less-height" : "";
+    var fixedRight = renderConfig.fixedColumns.right.length ? "dhx_grid__contains_cols_right--fixed" : "";
+    var fixedBottom = config.bottomSplit ? "dhx_grid__contains_rows_bottom--fixed" : "";
+    // dirty: but work. Change checking of rendering Grid
+    if (!vm.node) {
+        var _a = obj.getScrollState(), x_2 = _a.x, y_2 = _a.y;
+        dom_1.awaitRedraw().then(function () {
+            obj.scroll(x_2, y_2);
+        });
+    }
+    var gridContent = dom_1.el("div", {}, [
+        isSticky ? header : null,
+        getGridData(renderConfig, shifts),
+        isSticky ? footer : null,
+    ]);
+    return dom_1.el(".dhx_grid.dhx_widget", {
+        class: (renderConfig.css || "") +
+            (!isSticky ? " dhx_grid_border" : "") +
+            (config.multiselection ? " dhx_no-select--pointer" : ""),
+        "data-dhx-widget-id": uid,
+        "data-dhx-root-id": config.rootParent,
+        role: "grid",
+        "aria-rowcount": renderConfig.data.length,
+        "aria-colcount": config.columns.filter(function (col) { return !col.hidden; }).length,
+    }, [
+        dom_1.resizer(function (changeWith) {
+            if (main_1.isAutoWidth(obj.config) && !!changeWith) {
+                config.$totalWidth = 0;
+                applyAutoWidth(config, wrapperSizes, true, true);
+            }
+            return obj.paint();
+        }),
+        dom_1.el(".dhx_grid-content", {
+            style: __assign({}, wrapperSizes),
+            onclick: htmlEvents.onclick,
+            onmouseover: htmlEvents.onmouseover,
+            class: (lessByWidth + " " + lessByHeight + " " + fixedRight + " " + fixedBottom).trim(),
+            role: "presentation",
+        }, [
+            isSticky ? null : header,
+            dom_1.el(".dhx_grid-body", {
+                style: {
+                    height: gridBodyHeight,
+                    width: wrapperSizes.width - exports.BORDERS,
+                },
+                onscroll: htmlEvents.onscroll,
+                _ref: "grid_body",
+                role: "presentation",
+            }, [
+                obj.scrollView && obj.scrollView.config.enable
+                    ? obj.scrollView.render([gridContent])
+                    : gridContent,
+            ]),
+            FixedCols_1.getFixedColsHeader(renderConfig, layoutState, types_1.Split.left),
+            FixedCols_1.getFixedColsHeader(renderConfig, layoutState, types_1.Split.right),
+            FixedCols_1.getFixedCols(renderConfig, layoutState, types_1.Split.left),
+            FixedCols_1.getFixedCols(renderConfig, layoutState, types_1.Split.right),
+            FixedRows_1.getFixedDataRows(renderConfig, layoutState, types_1.Split.top),
+            FixedRows_1.getFixedDataRows(renderConfig, layoutState, types_1.Split.bottom),
+            isSticky ? null : footer,
+        ]),
+    ]);
+}
+exports.proRender = proRender;
 
 
 /***/ }),
@@ -3737,12 +4356,27 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(82));
-__export(__webpack_require__(191));
+__export(__webpack_require__(72));
+__export(__webpack_require__(158));
+__export(__webpack_require__(76));
 
 
 /***/ }),
 /* 26 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(81));
+__export(__webpack_require__(186));
+
+
+/***/ }),
+/* 27 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3762,7 +4396,7 @@ var ChartEvents;
 
 
 /***/ }),
-/* 27 */
+/* 28 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3804,7 +4438,7 @@ exports.DataProxy = DataProxy;
 
 
 /***/ }),
-/* 28 */
+/* 29 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3813,18 +4447,18 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(64));
-__export(__webpack_require__(174));
-__export(__webpack_require__(9));
-__export(__webpack_require__(34));
-var Cells_1 = __webpack_require__(29);
+__export(__webpack_require__(65));
+__export(__webpack_require__(169));
+__export(__webpack_require__(8));
+__export(__webpack_require__(36));
+var Cells_1 = __webpack_require__(30);
 exports.getTreeCell = Cells_1.getTreeCell;
 __export(__webpack_require__(23));
-__export(__webpack_require__(16));
+__export(__webpack_require__(14));
 
 
 /***/ }),
-/* 29 */
+/* 30 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -3843,10 +4477,10 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var cells_1 = __webpack_require__(34);
-var main_1 = __webpack_require__(16);
-var types_1 = __webpack_require__(9);
-var editors_1 = __webpack_require__(146);
+var cells_1 = __webpack_require__(36);
+var main_1 = __webpack_require__(14);
+var types_1 = __webpack_require__(8);
+var editors_1 = __webpack_require__(138);
 var html_1 = __webpack_require__(2);
 var data_1 = __webpack_require__(23);
 function handleMouse(rowStart, colStart, conf, type, e) {
@@ -3895,11 +4529,10 @@ function getTreeCell(content, row, col, conf) {
     var isEditable = conf.$editable && conf.$editable.row === row.id && conf.$editable.col === col.id;
     var css = "";
     var cellAlign = col.align ? " dhx_align-" + col.align : "dhx_align-left";
-    if (conf.dragMode && conf.dragItem === "row") {
+    if (conf.dragMode && !isEditable) {
         css +=
-            (row.$drophere && !isEditable ? " dhx_grid-cell--drophere" : "") +
-                (row.$dragtarget && !isEditable ? " dhx_grid-cell--dragtarget" : "") +
-                (!isEditable ? " dhx_grid-cell--drag" : "");
+            (row.$drophere ? " dhx_grid-cell--drophere" : "") +
+                (row.$dragtarget ? " dhx_grid-cell--dragtarget" : "");
     }
     var parentPadding = data_1.getTreeCellWidthOffset(row);
     return dom_1.el(".dhx_grid-cell", __assign({ class: "dhx_tree-cell " + (col.$cellCss[row.id] || "") + " " + (row.$items ? "dhx_grid-expand-cell" : "") +
@@ -4024,7 +4657,8 @@ function getCells(conf) {
                     var colWidth = col.$width;
                     var isEditable = conf.$editable &&
                         conf.$editable.row === row.id &&
-                        conf.$editable.col === col.id;
+                        conf.$editable.col === col.id &&
+                        !conf.$editable.isSpan;
                     var leftSplit = conf.leftSplit, columns_1 = conf.columns;
                     if (isEditable ||
                         (col.type === "boolean" &&
@@ -4039,11 +4673,10 @@ function getCells(conf) {
                     if (conf.type === "tree" && conf.firstColId === col.id) {
                         return getTreeCell(content, row, col, conf);
                     }
-                    if (conf.dragMode && conf.dragItem === "row") {
+                    if (conf.dragMode && !isEditable) {
                         css +=
-                            (row.$drophere && !isEditable ? " dhx_grid-cell--drophere" : "") +
-                                (row.$dragtarget && !isEditable ? " dhx_grid-cell--dragtarget" : "") +
-                                (!isEditable ? " dhx_grid-cell--drag" : "");
+                            (row.$drophere ? " dhx_grid-cell--drophere" : "") +
+                                (row.$dragtarget ? " dhx_grid-cell--dragtarget" : "");
                     }
                     if (col.align) {
                         css += " dhx_align-" + col.align;
@@ -4063,12 +4696,13 @@ function getCells(conf) {
     });
 }
 exports.getCells = getCells;
-function getSpans(config, frozen) {
-    var _a;
+function getSpans(config, mode) {
+    var _a, _b;
     var spanCells = [];
-    var pos = config.$positions, columns = config.columns, rows = config.data, rSpans = config.spans;
+    var pos = config.$positions, columns = config.columns, rows = config.data, rSpans = config.spans, bottomSplit = config.bottomSplit;
     if (!columns.length || !rSpans)
         return null;
+    var rightSplit = config.fixedColumns.right.length;
     var filteredSpans = rSpans.filter(function (span) { var _a; return (_a = span.$renderFrom) === null || _a === void 0 ? void 0 : _a.includes(config.$renderFrom); });
     var spans = filteredSpans.sort(function (a, b) {
         return typeof a.row === "string" && typeof b.row === "string"
@@ -4078,13 +4712,10 @@ function getSpans(config, frozen) {
     var _loop_1 = function (i) {
         var row = spans[i].row;
         var col = spans[i].column;
-        var spanHeight = spans[i].rowspan;
-        var spanWidth = spans[i].colspan;
+        var spanHeight = spans[i].rowspan || 1;
+        var spanWidth = spans[i].colspan || 1;
         var spanCss = spans[i].css;
         var markCss = spans[i].$markCss;
-        if (spanHeight === 1) {
-            return "continue";
-        }
         var colIndex = core_1.findIndex(columns, function (item) { return "" + item.id === "" + col; });
         var rowIndex = core_1.findIndex(rows, function (item) { return "" + item.id === "" + row; });
         if (colIndex < 0 || rowIndex < 0) {
@@ -4095,7 +4726,7 @@ function getSpans(config, frozen) {
         if (currCol.hidden) {
             return "continue";
         }
-        var content = spans[i].text ? spans[i].text : currRow[col] === undefined ? "" : currRow[col];
+        var content = (_a = spans[i].text) !== null && _a !== void 0 ? _a : (currRow[col] === undefined ? "" : currRow[col]);
         var t = function (text, _row, _col) { return (text || text === 0 ? text : ""); };
         var template = currCol.template || t;
         content = template(content, currRow, currCol);
@@ -4107,33 +4738,63 @@ function getSpans(config, frozen) {
         for (var index = 0; index < rowIndex; index++) {
             currentTop += rows[index].$height;
         }
-        var top_1 = currentTop - (frozen ? 0 : 1);
-        var left = 0;
-        for (var s = colIndex - 1; s >= 0; s--) {
-            left += columns[s].$width;
+        var top_1 = void 0;
+        if (mode === types_1.Split.bottom) {
+            var rowIndexStartSplit = rows.length - bottomSplit;
+            top_1 =
+                rowIndex < rowIndexStartSplit
+                    ? -main_1.getTotalHeight(rows.slice(rowIndex, rowIndexStartSplit))
+                    : main_1.getTotalHeight(rows.slice(rowIndexStartSplit, rowIndex));
         }
+        else {
+            top_1 = currentTop - (mode ? 0 : 1);
+        }
+        var left = 0;
+        if (mode === types_1.Split.right) {
+            var colIndexStartSplit = columns.length - config.fixedColumns.right.length;
+            left =
+                colIndex < colIndexStartSplit
+                    ? -main_1.getTotalWidth(columns.slice(colIndex, colIndexStartSplit))
+                    : main_1.getTotalWidth(columns.slice(colIndexStartSplit, colIndex));
+        }
+        else {
+            for (var s = colIndex - 1; s >= 0; s--) {
+                left += columns[s].$width;
+            }
+        }
+        var isExpandingSpan = currRow.$items && colIndex === 0;
         var rowspanWithLastCol = colIndex === columns.length - 1;
         var colspanWithLastCol = colIndex + spanWidth === columns.length;
+        var firstRightFixedCol = rightSplit && colIndex === columns.length - rightSplit;
+        var bottomFixedRowWithAllSpan = bottomSplit && rowIndex >= rows.length - bottomSplit;
+        var bottomFixedRowWithPartSpan = bottomSplit && rowIndex + spanHeight > rows.length - bottomSplit;
+        var spanBeforeFixedCol = rightSplit && colIndex + spanWidth === columns.length - rightSplit;
         var css = currCol.header[0].text ? " dhx_span-cell" : " dhx_span-cell dhx_span-cell--title";
+        css += isExpandingSpan ? " dhx_span-expand-cell" : "";
         css += markCss ? " " + markCss : "";
         css += spanCss ? " " + spanCss : "";
         css += rowIndex === 0 ? " dhx_span-first-row" : "";
-        css += colIndex === 0 ? " dhx_span-first-col" : "";
+        css += rowIndex + spanHeight === rows.length ? " dhx_grid__span_bottom--last-row" : "";
+        css += colIndex === 0 || firstRightFixedCol ? " dhx_span-first-col" : "";
         css += rowspanWithLastCol || colspanWithLastCol ? " dhx_span-last-col" : "";
-        css += !spanWidth ? " dhx_span-" + (currCol.type || "string") + "-cell" : " dhx_span-string-cell";
+        css += spanWidth === 1 ? " dhx_span-" + (currCol.type || "string") + "-cell" : " dhx_span-string-cell";
         css += currCol.align ? " dhx_align-" + currCol.align : " dhx_align-left";
+        css += bottomFixedRowWithAllSpan ? " dhx_grid__span_bottom--all-fixed" : "";
+        css += bottomFixedRowWithPartSpan ? " dhx_grid__span_bottom--part-fixed" : "";
+        css += spanBeforeFixedCol ? " dhx_grid__span_right--before-fixed" : "";
         var width = spanWidth > 1 ? cells_1.getWidth(columns, spanWidth, colIndex) : currCol.$width;
         var height = spanHeight > 1 ? cells_1.getHeight(rows, spanHeight, rowIndex) : currRow.$height;
         var isEditable = config.$editable && config.$editable.row === row && config.$editable.col === col;
         if (isEditable ||
             (currCol.type === "boolean" &&
-                ((config.editable && ((_a = currCol.editable) !== null && _a !== void 0 ? _a : true)) || (!config.editable && currCol.editable)))) {
+                ((config.editable && ((_b = currCol.editable) !== null && _b !== void 0 ? _b : true)) || (!config.editable && currCol.editable)))) {
             var leftSplit = config.leftSplit, topSplit = config.topSplit;
             var fixedByCol = leftSplit && colIndex < leftSplit;
             var fixedByRow = topSplit && rowIndex < topSplit;
             var isFixed = fixedByCol || fixedByRow;
             if (!isFixed) {
-                content = getEditorCell(currRow, currCol, config).toHTML();
+                var text = spans[i].text;
+                content = getEditorCell(currRow, currCol, config).toHTML(text);
                 css += " dhx_span__editable";
                 if (leftSplit === colIndex + 1) {
                     width -= 1;
@@ -4145,7 +4806,20 @@ function getSpans(config, frozen) {
                 height: height,
                 top: top_1,
                 left: left,
-            }, "data-dhx-col-id": col, "data-dhx-id": row, "aria-hidden": "true" }, getHandlers(pos.yStart, pos.xStart, config)), [content]));
+            }, "data-dhx-col-id": col, "data-dhx-id": row, "aria-hidden": "true" }, getHandlers(pos.yStart, pos.xStart, config)), [
+            isExpandingSpan
+                ? dom_1.el(".dhx_span-expand-cell-icon", {
+                    class: currRow.$opened ? "dxi dxi-chevron-up" : "dxi dxi-chevron-down",
+                    "data-dhx-id": currRow.id,
+                    role: "button",
+                    "aria-label": currRow.$opened ? "Collapse group" : "Expand group",
+                    style: {
+                        padding: "0 0 0 " + (4 + data_1.getTreeCellWidthOffset(currRow)) + "px",
+                    },
+                })
+                : null,
+            content,
+        ]));
     };
     for (var i = 0; i < spans.length; i++) {
         _loop_1(i);
@@ -4163,23 +4837,28 @@ function getShifts(conf) {
 }
 exports.getShifts = getShifts;
 function normalizeSpan(span, renderConfig) {
-    var _a = renderConfig.leftSplit, leftSplit = _a === void 0 ? 0 : _a, _b = renderConfig.topSplit, topSplit = _b === void 0 ? 0 : _b, data = renderConfig.data, columns = renderConfig.columns;
+    var _a = renderConfig.leftSplit, leftSplit = _a === void 0 ? 0 : _a, _b = renderConfig.topSplit, topSplit = _b === void 0 ? 0 : _b, _c = renderConfig.rightSplit, rightSplit = _c === void 0 ? 0 : _c, _d = renderConfig.bottomSplit, bottomSplit = _d === void 0 ? 0 : _d, data = renderConfig.data, columns = renderConfig.columns;
     var column = span.column, row = span.row, colspan = span.colspan, rowspan = span.rowspan;
     var colIndexStart = columns.findIndex(function (c) { return c.id == column; });
     var rowIndexStart = data.findIndex(function (r) { return r.id == row; });
-    var colIndexEnd = colIndexStart + (colspan || 0);
-    var rowIndexEnd = rowIndexStart + (rowspan || 0);
+    var colIndexEnd = colIndexStart + (colspan ? colspan - 1 : 0);
+    var rowIndexEnd = rowIndexStart + (rowspan ? rowspan - 1 : 0);
     var $renderFrom = [];
     // if the span is not fully fixed
-    if (colIndexEnd >= leftSplit && rowIndexEnd >= topSplit) {
+    if (colIndexEnd >= leftSplit &&
+        rowIndexEnd >= topSplit &&
+        colIndexStart < columns.length - rightSplit &&
+        rowIndexStart < data.length - bottomSplit) {
         $renderFrom.push("render");
     }
-    // if the span is fixed left
-    if (colIndexStart < leftSplit) {
+    // if the span is fixed left or right
+    if (colIndexStart < leftSplit || colIndexEnd >= columns.length - rightSplit) {
         $renderFrom.push("fixedCols");
     }
-    // if the span isn't fixed left and fixed top
-    if (rowIndexStart < topSplit && colIndexStart >= leftSplit) {
+    // if the span isn't fixed left or right and fixed top or bottom
+    if ((rowIndexStart < topSplit || rowIndexEnd >= data.length - bottomSplit) &&
+        colIndexStart >= leftSplit &&
+        colIndexEnd < columns.length - rightSplit) {
         $renderFrom.push("fixedRows");
     }
     return __assign(__assign({}, span), { $renderFrom: $renderFrom });
@@ -4188,7 +4867,7 @@ exports.normalizeSpan = normalizeSpan;
 
 
 /***/ }),
-/* 30 */
+/* 31 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4197,14 +4876,14 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(73));
+__export(__webpack_require__(156));
 __export(__webpack_require__(74));
-__export(__webpack_require__(164));
-__export(__webpack_require__(75));
-__export(__webpack_require__(45));
+__export(__webpack_require__(46));
 
 
 /***/ }),
-/* 31 */
+/* 32 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4220,7 +4899,7 @@ var SelectionEvents;
 
 
 /***/ }),
-/* 32 */
+/* 33 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4329,7 +5008,7 @@ exports.getNavbarButtonCSS = getNavbarButtonCSS;
 
 
 /***/ }),
-/* 33 */
+/* 34 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4347,7 +5026,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
+var common_1 = __webpack_require__(5);
 function getCoordinates(percent, radiusX, radiusY, stroke) {
     if (stroke) {
         percent = percent + (2 * radiusX * Math.asin((0.5 * stroke) / radiusX)) / (2 * Math.PI * radiusX);
@@ -4420,7 +5099,7 @@ function radarScale(data, width, height) {
     var scalePercent = 1 / data.scales.length;
     var largeArcFlag = scalePercent > 0.5 ? 1 : 0;
     var svg = [];
-    var background = drawBackgroundCircle(radius, "#FAFBFD");
+    var background = drawBackgroundCircle(radius, "#fafafa");
     svg.push(background);
     var currentPercent = -0.25;
     var grid = [];
@@ -4494,7 +5173,131 @@ exports.radarScale = radarScale;
 
 
 /***/ }),
-/* 34 */
+/* 35 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
+var types_1 = __webpack_require__(27);
+var common_1 = __webpack_require__(5);
+var line_1 = __webpack_require__(90);
+var date_1 = __webpack_require__(15);
+var BaseSeria = /** @class */ (function () {
+    function BaseSeria(_data, config, other) {
+        var _this = this;
+        this._data = _data;
+        this._handlers = {
+            onclick: function (id, value) { return _this._events.fire(types_1.ChartEvents.serieClick, [id, value]); },
+            onmousemove: function (id, value, e) {
+                return _this._events.fire(types_1.ChartEvents.seriaMouseMove, [id, value, e]);
+            },
+            onmouseleave: function (id, value) {
+                return _this._events.fire(types_1.ChartEvents.seriaMouseLeave, [id, value]);
+            },
+        };
+        this.id = config.id = config.id || core_1.uid();
+        this._events = other;
+        this._points = [];
+        this._setDefaults(config);
+    }
+    BaseSeria.prototype.toggle = function () {
+        this.config.active = !this.config.active;
+    };
+    BaseSeria.prototype.getClosest = function (x, y) {
+        var res = [Infinity, null, null, null];
+        for (var _i = 0, _a = this._points; _i < _a.length; _i++) {
+            var point = _a[_i];
+            var dist = this._getClosestDist(x, y, point[0], point[1]);
+            if (res[0] > dist) {
+                res[0] = dist;
+                res[1] = point[0];
+                res[2] = point[1];
+                res[3] = point[2];
+            }
+        }
+        return res;
+    };
+    BaseSeria.prototype.getClosestVertical = function (x) {
+        var res = [Infinity, null, null, null, null];
+        for (var _i = 0, _a = this._points; _i < _a.length; _i++) {
+            var point = _a[_i];
+            var dist = Math.abs(point[0] - x);
+            if (res[0] > dist) {
+                res[0] = dist;
+                res[1] = point[0];
+                res[2] = point[1];
+                res[3] = point[2];
+                res[4] = point[4];
+            }
+        }
+        return res;
+    };
+    BaseSeria.prototype.getTooltipType = function (_id) {
+        return "top";
+    };
+    BaseSeria.prototype.getTooltipText = function (id) {
+        if (!this._data.getItem(id) && this.config.type !== "calendarHeatMap") {
+            return;
+        }
+        if (this.config.tooltip) {
+            var p = void 0;
+            var heatP = void 0;
+            if (this.config.type === "calendarHeatMap") {
+                heatP = this._points.find(function (i) { return i[2] === id.toString(); });
+                if (heatP) {
+                    var heatDate = new Date();
+                    heatDate.setTime(heatP[0]);
+                    heatP = [
+                        date_1.getFormattedDate(this.config.dateFormat, heatDate),
+                        heatP[1],
+                    ];
+                }
+            }
+            else {
+                p = this._defaultLocator(this._data.getItem(id));
+            }
+            if (this.config.tooltipTemplate) {
+                return this.config.tooltipTemplate(p || heatP);
+            }
+            return p ? p[0] : heatP[1] + ", <br>" + heatP[0];
+        }
+    };
+    BaseSeria.prototype.dataReady = function (prev) {
+        return (this._points = []);
+    };
+    BaseSeria.prototype.paint = function (width, height) {
+        return this._calckFinalPoints(width, height);
+    };
+    BaseSeria.prototype.getPoints = function () {
+        return this._points;
+    };
+    BaseSeria.prototype.addScale = function (type, scale) {
+        // do nothing
+    };
+    BaseSeria.prototype._getClosestDist = function (x, y, px, py) {
+        return common_1.euclideanDistance(x, y, px, py);
+    };
+    BaseSeria.prototype._calckFinalPoints = function (_width, _height) {
+        // do nothing
+    };
+    BaseSeria.prototype._setDefaults = function (config) {
+        this.config = config;
+    };
+    BaseSeria.prototype._defaultLocator = function (_) {
+        return [null, null];
+    };
+    BaseSeria.prototype._getPointType = function (form, color) {
+        return line_1.getShadeHelper(form, color);
+    };
+    return BaseSeria;
+}());
+exports.default = BaseSeria;
+
+
+/***/ }),
+/* 36 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4555,7 +5358,7 @@ exports.getSpan = getSpan;
 
 
 /***/ }),
-/* 35 */
+/* 37 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4564,12 +5367,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(150));
-__export(__webpack_require__(72));
+__export(__webpack_require__(142));
+__export(__webpack_require__(71));
 
 
 /***/ }),
-/* 36 */
+/* 38 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4604,7 +5407,7 @@ var VaultMode;
 
 
 /***/ }),
-/* 37 */
+/* 39 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -4623,428 +5426,6 @@ var NavigationBarEvents;
     NavigationBarEvents["inputBlur"] = "inputBlur";
     NavigationBarEvents["inputChange"] = "inputChange";
 })(NavigationBarEvents = exports.NavigationBarEvents || (exports.NavigationBarEvents = {}));
-
-
-/***/ }),
-/* 38 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var core_1 = __webpack_require__(1);
-var types_1 = __webpack_require__(26);
-var common_1 = __webpack_require__(7);
-var line_1 = __webpack_require__(87);
-var BaseSeria = /** @class */ (function () {
-    function BaseSeria(_data, config, other) {
-        var _this = this;
-        this._data = _data;
-        this._handlers = {
-            onclick: function (id, value) { return _this._events.fire(types_1.ChartEvents.serieClick, [id, value]); },
-            onmousemove: function (id, value, e) {
-                return _this._events.fire(types_1.ChartEvents.seriaMouseMove, [id, value, e]);
-            },
-            onmouseleave: function (id, value) {
-                return _this._events.fire(types_1.ChartEvents.seriaMouseLeave, [id, value]);
-            },
-        };
-        this.id = config.id = config.id || core_1.uid();
-        this._events = other;
-        this._points = [];
-        this._setDefaults(config);
-    }
-    BaseSeria.prototype.toggle = function () {
-        this.config.active = !this.config.active;
-    };
-    BaseSeria.prototype.getClosest = function (x, y) {
-        var res = [Infinity, null, null, null];
-        for (var _i = 0, _a = this._points; _i < _a.length; _i++) {
-            var point = _a[_i];
-            var dist = this._getClosestDist(x, y, point[0], point[1]);
-            if (res[0] > dist) {
-                res[0] = dist;
-                res[1] = point[0];
-                res[2] = point[1];
-                res[3] = point[2];
-            }
-        }
-        return res;
-    };
-    BaseSeria.prototype.getClosestVertical = function (x) {
-        var res = [Infinity, null, null, null, null];
-        for (var _i = 0, _a = this._points; _i < _a.length; _i++) {
-            var point = _a[_i];
-            var dist = Math.abs(point[0] - x);
-            if (res[0] > dist) {
-                res[0] = dist;
-                res[1] = point[0];
-                res[2] = point[1];
-                res[3] = point[2];
-                res[4] = point[4];
-            }
-        }
-        return res;
-    };
-    BaseSeria.prototype.getTooltipType = function (_id) {
-        return "top";
-    };
-    BaseSeria.prototype.getTooltipText = function (id) {
-        if (!this._data.getItem(id)) {
-            return;
-        }
-        if (this.config.tooltip) {
-            var p = this._defaultLocator(this._data.getItem(id));
-            if (this.config.tooltipTemplate) {
-                return this.config.tooltipTemplate(p);
-            }
-            return p[0];
-        }
-    };
-    BaseSeria.prototype.dataReady = function (prev) {
-        return (this._points = []);
-    };
-    BaseSeria.prototype.paint = function (width, height) {
-        return this._calckFinalPoints(width, height);
-    };
-    BaseSeria.prototype.getPoints = function () {
-        return this._points;
-    };
-    BaseSeria.prototype.addScale = function (type, scale) {
-        // do nothing
-    };
-    BaseSeria.prototype._getClosestDist = function (x, y, px, py) {
-        return common_1.euclideanDistance(x, y, px, py);
-    };
-    BaseSeria.prototype._calckFinalPoints = function (_width, _height) {
-        // do nothing
-    };
-    BaseSeria.prototype._setDefaults = function (config) {
-        this.config = config;
-    };
-    BaseSeria.prototype._defaultLocator = function (_) {
-        return [null, null];
-    };
-    BaseSeria.prototype._getPointType = function (form, color) {
-        return line_1.getShadeHelper(form, color);
-    };
-    return BaseSeria;
-}());
-exports.default = BaseSeria;
-
-
-/***/ }),
-/* 39 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var label_1 = __webpack_require__(14);
-var events_1 = __webpack_require__(3);
-var types_1 = __webpack_require__(6);
-var Input = /** @class */ (function (_super) {
-    __extends(Input, _super);
-    function Input(container, config) {
-        if (config === void 0) { config = {}; }
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._propsItem = [
-            "inputType",
-            "required",
-            "validation",
-            "icon",
-            "placeholder",
-            "autocomplete",
-            "readOnly",
-            "maxlength",
-            "minlength",
-            "min",
-            "max",
-            "step",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        _this._isValid = true;
-        _this._initView(config);
-        _this._initHandlers();
-        return _this;
-    }
-    Input.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.events = this._uid = this._isValid = this._propsItem = this._propsItem = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    Input.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    Input.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Input.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    Input.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    Input.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    Input.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    Input.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    Input.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    Input.prototype.validate = function (silent, validateValue) {
-        if (silent === void 0) { silent = false; }
-        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return;
-        this._isValid = this.config.validation
-            ? helper_1.validateInput(value, this.config.validation)
-            : this.config.required
-                ? !!(helper_1.baseInputValidate(value, this.config) && String(value).trim().length)
-                : helper_1.baseInputValidate(value, this.config);
-        if (!silent) {
-            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        }
-        return this._isValid;
-    };
-    Input.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this.paint();
-    };
-    Input.prototype.clear = function () {
-        if (this.config.value === "")
-            return;
-        this.config.value = "";
-        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-    };
-    Input.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || this.config.value === value)
-            return;
-        this.config.value = value;
-        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    Input.prototype.getValue = function () {
-        var _a = this.config, inputType = _a.inputType, value = _a.value;
-        if ((inputType === "number" && typeof value === "number") || value === null) {
-            return value;
-        }
-        if (inputType === "number" && typeof value === "string") {
-            return value.length ? Number(value) : "";
-        }
-        if (typeof value === "string") {
-            return value.length ? value : "";
-        }
-        return typeof value === "undefined" ? "" : String(value);
-    };
-    Input.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.input.el.focus();
-        });
-    };
-    Input.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.input.el.blur();
-        });
-    };
-    Input.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        this.config = {
-            type: "input",
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            inputType: "text",
-            required: false,
-            icon: "",
-            placeholder: "",
-            autocomplete: false,
-            readOnly: false,
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.paint();
-    };
-    Input.prototype._initHandlers = function () {
-        var _this = this;
-        this.events.on(types_1.ItemEvent.change, function () { return _this.paint(); });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-    };
-    Input.prototype._getHandlers = function () {
-        var _this = this;
-        return {
-            oninput: function (e) {
-                var value = e.target.value;
-                _this.config.value = value;
-                _this.events.fire(types_1.ItemEvent.input, [value]);
-            },
-            onchange: function (e) {
-                var value = e.target.value;
-                _this.config.value = value;
-                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-                helper_1.isVerify(_this.config) && _this.validate();
-                _this.paint();
-            },
-            onfocus: function () {
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-                _this.paint();
-            },
-            onblur: function () {
-                if (!_this._uid)
-                    return;
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-                _this.paint();
-            },
-            onkeydown: function (event) {
-                if (event.code === "Enter" && _this.config.type === "input")
-                    event.preventDefault();
-                _this.events.fire(types_1.ItemEvent.keydown, [event]);
-            },
-        };
-    };
-    Input.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, id = _d.id, value = _d.value, disabled = _d.disabled, name = _d.name, icon = _d.icon, placeholder = _d.placeholder, required = _d.required, inputType = _d.inputType, hidden = _d.hidden, autocomplete = _d.autocomplete, readOnly = _d.readOnly, maxlength = _d.maxlength, minlength = _d.minlength, max = _d.max, min = _d.min, label = _d.label, helpMessage = _d.helpMessage;
-        var visibility = hidden ? " dhx_form-group--hidden" : "";
-        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el("div.dhx_form-group", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus) + visibility,
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", {}, [
-                dom_1.el("div.dhx_input__container", {}, [
-                    this.config.icon
-                        ? dom_1.el(".dhx_input__icon", {
-                            class: this.config.icon,
-                        })
-                        : null,
-                    dom_1.el("input.dhx_input", {
-                        type: ["text", "number", "password"].includes(inputType) ? inputType : "text",
-                        "data-dhx-id": name || id,
-                        id: id || this._uid,
-                        placeholder: placeholder || "",
-                        value: core_1.isDefined(value) ? value : "",
-                        name: name || "",
-                        disabled: disabled,
-                        required: required,
-                        readOnly: readOnly,
-                        maxlength: maxlength,
-                        minlength: minlength,
-                        max: max,
-                        min: min,
-                        onblur: this._handlers.onblur,
-                        oninput: this._handlers.oninput,
-                        onchange: this._handlers.onchange,
-                        onfocus: this._handlers.onfocus,
-                        onkeydown: this._handlers.onkeydown,
-                        class: icon ? "dhx_input--icon-padding" : "",
-                        autocomplete: autocomplete ? "on" : "off",
-                        _ref: "input",
-                        "aria-label": label || helpMessage || "type " + (name || inputType || "text"),
-                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
-                    }),
-                ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    return Input;
-}(label_1.Label));
-exports.Input = Input;
 
 
 /***/ }),
@@ -5083,8 +5464,8 @@ module.exports = g;
 "use strict";
 /* WEBPACK VAR INJECTION */(function(Promise) {
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(20);
-var helpers_1 = __webpack_require__(21);
+var types_1 = __webpack_require__(21);
+var helpers_1 = __webpack_require__(22);
 function toQueryString(data) {
     return Object.keys(data)
         .reduce(function (entries, key) {
@@ -5209,10 +5590,14 @@ function send(url, data, method, headers, responseType) {
         });
     }
     else {
+        var isJson = allHeaders["Content-Type"] === "application/json";
+        if (isJson && data && typeof data === "object") {
+            data = JSON.stringify(data);
+        }
         return window
             .fetch(url, {
             method: method,
-            body: data ? JSON.stringify(data) : null,
+            body: data || null,
             headers: allHeaders,
         })
             .then(function (response) {
@@ -5273,7 +5658,7 @@ exports.ajax = {
     },
 };
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
 /* 42 */
@@ -5285,12 +5670,233 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(151));
-__export(__webpack_require__(71));
+__export(__webpack_require__(143));
+__export(__webpack_require__(70));
 
 
 /***/ }),
 /* 43 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var types_1 = __webpack_require__(44);
+var Cell_1 = __webpack_require__(66);
+var dom_1 = __webpack_require__(0);
+var Layout = /** @class */ (function (_super) {
+    __extends(Layout, _super);
+    function Layout(parent, config) {
+        var _this = _super.call(this, parent, config) || this;
+        // root layout
+        _this._root = _this.config.parent || _this;
+        _this._all = {};
+        _this._parseConfig();
+        _this._progress = false;
+        if (_this.config.activeTab) {
+            _this.config.activeView = _this.config.activeTab;
+        }
+        // Need replace to tabbar
+        if (_this.config.views) {
+            _this.config.activeView = _this.config.activeView || _this._cells[0].id;
+            _this._isViewLayout = true;
+        }
+        if (!config.parent) {
+            var view = dom_1.create({ render: function () { return _this.toVDOM(); } }, _this);
+            _this.mount(parent, view);
+        }
+        return _this;
+    }
+    Layout.prototype.destructor = function () {
+        for (var _i = 0, _a = this._all; _i < _a.length; _i++) {
+            var key = _a[_i];
+            this._all[key].destructor();
+        }
+        this.config = this._cells = this._root = this._xLayout = this._isViewLayout = null;
+        this._all = {};
+        this.unmount();
+    };
+    Layout.prototype.toVDOM = function () {
+        if (this._isViewLayout) {
+            var roots = [this.getCell(this.config.activeView).toVDOM()];
+            return _super.prototype.toVDOM.call(this, roots);
+        }
+        var nodes = [];
+        this._inheritTypes();
+        this._cells.forEach(function (cell) {
+            var node = cell.toVDOM();
+            if (Array.isArray(node)) {
+                nodes = nodes.concat(node);
+            }
+            else {
+                nodes.push(node);
+            }
+        });
+        return _super.prototype.toVDOM.call(this, nodes);
+    };
+    Layout.prototype.removeCell = function (id) {
+        if (!this.events.fire(types_1.LayoutEvents.beforeRemove, [id])) {
+            return;
+        }
+        var root = this.config.parent || this;
+        if (root !== this) {
+            return root.removeCell(id);
+        }
+        // this === root layout
+        var view = this.getCell(id);
+        if (view) {
+            var parent_1 = view.getParent();
+            delete this._all[id];
+            parent_1._cells = parent_1._cells.filter(function (cell) { return cell.id != id; });
+            parent_1.paint();
+        }
+        this.events.fire(types_1.LayoutEvents.afterRemove, [id]);
+    };
+    Layout.prototype.addCell = function (config, index) {
+        if (index === void 0) { index = -1; }
+        if (!this.events.fire(types_1.LayoutEvents.beforeAdd, [config.id])) {
+            return;
+        }
+        var view = this._createCell(config);
+        if (index < 0) {
+            index = this._cells.length + index + 1;
+        }
+        this._cells.splice(index, 0, view);
+        this.paint();
+        if (!this.events.fire(types_1.LayoutEvents.afterAdd, [config.id])) {
+            return;
+        }
+    };
+    Layout.prototype.getId = function (index) {
+        if (index < 0) {
+            index = this._cells.length + index;
+        }
+        return this._cells[index] ? this._cells[index].id : undefined;
+    };
+    Layout.prototype.getRefs = function (name) {
+        return this._root.getRootView().refs[name];
+    };
+    Layout.prototype.getCell = function (id) {
+        var _a;
+        return (_a = this._root) === null || _a === void 0 ? void 0 : _a._all[id];
+    };
+    Layout.prototype.forEach = function (callback, parent, level) {
+        if (level === void 0) { level = Infinity; }
+        if (!this._haveCells(parent) || level < 1) {
+            return;
+        }
+        var array;
+        if (parent) {
+            array = this._root._all[parent]._cells;
+        }
+        else {
+            array = this._root._cells;
+        }
+        for (var index = 0; index < array.length; index++) {
+            var cell = array[index];
+            callback.call(this, cell, index, array);
+            if (this._haveCells(cell.id)) {
+                cell.forEach(callback, cell.id, --level);
+            }
+        }
+    };
+    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
+    Layout.prototype.cell = function (id) {
+        return this.getCell(id);
+    };
+    Layout.prototype.progressShow = function () {
+        this._progress = true;
+        this.paint();
+    };
+    Layout.prototype.progressHide = function () {
+        this._progress = false;
+        this.paint();
+    };
+    Layout.prototype._getCss = function (content) {
+        var layoutCss = this._xLayout ? "dhx_layout-columns" : "dhx_layout-rows";
+        var directionCss = this.config.align ? " " + layoutCss + "--" + this.config.align : "";
+        if (content) {
+            return (layoutCss +
+                " dhx_layout-cell" +
+                (this.config.align ? " dhx_layout-cell--" + this.config.align : ""));
+        }
+        else {
+            var cellCss = this.config.parent ? _super.prototype._getCss.call(this) : "dhx_widget dhx_layout";
+            var fullModeCss = this.config.parent ? "" : " dhx_layout-cell";
+            return cellCss + (this.config.full ? fullModeCss : " " + layoutCss) + directionCss;
+        }
+    };
+    Layout.prototype._parseConfig = function () {
+        var _this = this;
+        var config = this.config;
+        var cells = config.rows || config.cols || config.views || [];
+        this._xLayout = !config.rows;
+        this._cells = cells.map(function (a) { return _this._createCell(a); });
+    };
+    Layout.prototype._createCell = function (cell) {
+        var view;
+        if (cell.rows || cell.cols || cell.views) {
+            cell.parent = this._root;
+            view = new Layout(this, cell);
+        }
+        else {
+            view = new Cell_1.Cell(this, cell);
+        }
+        // FIxME
+        this._root._all[view.id] = view;
+        if (cell.init) {
+            cell.init(view, cell);
+        }
+        return view;
+    };
+    Layout.prototype._haveCells = function (id) {
+        if (id) {
+            var array = this._root._all[id];
+            return array._cells && array._cells.length > 0;
+        }
+        return Object.keys(this._all).length > 0;
+    };
+    Layout.prototype._inheritTypes = function (obj) {
+        var _this = this;
+        if (obj === void 0) { obj = this._cells; }
+        if (Array.isArray(obj)) {
+            obj.forEach(function (cell) { return _this._inheritTypes(cell); });
+        }
+        else {
+            var cellConfig = obj.config;
+            if (cellConfig.rows || cellConfig.cols) {
+                var viewParent = obj.getParent();
+                if (!cellConfig.type && viewParent) {
+                    if (viewParent.config.type) {
+                        cellConfig.type = viewParent.config.type;
+                    }
+                    else {
+                        this._inheritTypes(viewParent);
+                    }
+                }
+            }
+        }
+    };
+    return Layout;
+}(Cell_1.Cell));
+exports.Layout = Layout;
+
+
+/***/ }),
+/* 44 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5317,7 +5923,7 @@ var LayoutEvents;
 
 
 /***/ }),
-/* 44 */
+/* 45 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5326,12 +5932,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(155));
-__export(__webpack_require__(69));
+__export(__webpack_require__(147));
+__export(__webpack_require__(68));
 
 
 /***/ }),
-/* 45 */
+/* 46 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5354,7 +5960,7 @@ var ListEvents;
 
 
 /***/ }),
-/* 46 */
+/* 47 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5370,7 +5976,7 @@ exports.default = {
 
 
 /***/ }),
-/* 47 */
+/* 48 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5402,7 +6008,7 @@ var MessageContainerPosition;
 
 
 /***/ }),
-/* 48 */
+/* 49 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5416,7 +6022,7 @@ exports.default = locale;
 
 
 /***/ }),
-/* 49 */
+/* 50 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5443,7 +6049,7 @@ exports.default = locale;
 
 
 /***/ }),
-/* 50 */
+/* 51 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5452,16 +6058,16 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(196));
-__export(__webpack_require__(84));
+__export(__webpack_require__(191));
 __export(__webpack_require__(83));
-__export(__webpack_require__(51));
-var en_1 = __webpack_require__(52);
+__export(__webpack_require__(82));
+__export(__webpack_require__(52));
+var en_1 = __webpack_require__(53);
 exports.locale = en_1.default;
 
 
 /***/ }),
-/* 51 */
+/* 52 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5590,7 +6196,7 @@ exports.isHex = isHex;
 
 
 /***/ }),
-/* 52 */
+/* 53 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5607,7 +6213,7 @@ exports.default = en;
 
 
 /***/ }),
-/* 53 */
+/* 54 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5624,9 +6230,9 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var AxisCreator_1 = __webpack_require__(207);
-var SvgScales_1 = __webpack_require__(85);
-var common_1 = __webpack_require__(7);
+var AxisCreator_1 = __webpack_require__(199);
+var SvgScales_1 = __webpack_require__(87);
+var common_1 = __webpack_require__(5);
 var renderScale = {
     left: SvgScales_1.left,
     right: SvgScales_1.right,
@@ -5766,7 +6372,7 @@ exports.Scale = Scale;
 
 
 /***/ }),
-/* 54 */
+/* 55 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5785,8 +6391,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var common_1 = __webpack_require__(7);
-var BaseSeria_1 = __webpack_require__(38);
+var common_1 = __webpack_require__(5);
+var BaseSeria_1 = __webpack_require__(35);
 var ScaleSeria = /** @class */ (function (_super) {
     __extends(ScaleSeria, _super);
     function ScaleSeria() {
@@ -5840,7 +6446,7 @@ exports.default = ScaleSeria;
 
 
 /***/ }),
-/* 55 */
+/* 56 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5870,8 +6476,8 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var common_1 = __webpack_require__(7);
-var BaseSeria_1 = __webpack_require__(38);
+var common_1 = __webpack_require__(5);
+var BaseSeria_1 = __webpack_require__(35);
 var NoScaleSeria = /** @class */ (function (_super) {
     __extends(NoScaleSeria, _super);
     function NoScaleSeria() {
@@ -5962,7 +6568,7 @@ exports.default = NoScaleSeria;
 
 
 /***/ }),
-/* 56 */
+/* 57 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -5993,8 +6599,8 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
-var ScaleSeria_1 = __webpack_require__(54);
+var common_1 = __webpack_require__(5);
+var ScaleSeria_1 = __webpack_require__(55);
 var Line = /** @class */ (function (_super) {
     __extends(Line, _super);
     function Line() {
@@ -6081,7 +6687,7 @@ exports.default = Line;
 
 
 /***/ }),
-/* 57 */
+/* 58 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6108,21 +6714,30 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var events_1 = __webpack_require__(3);
-var helper_1 = __webpack_require__(8);
-var ts_popup_1 = __webpack_require__(11);
-var types_1 = __webpack_require__(6);
-var label_1 = __webpack_require__(14);
 var core_1 = __webpack_require__(1);
-var Checkbox = /** @class */ (function (_super) {
-    __extends(Checkbox, _super);
-    function Checkbox(container, config) {
+var helper_1 = __webpack_require__(9);
+var label_1 = __webpack_require__(16);
+var events_1 = __webpack_require__(3);
+var types_1 = __webpack_require__(7);
+var Input = /** @class */ (function (_super) {
+    __extends(Input, _super);
+    function Input(container, config) {
         if (config === void 0) { config = {}; }
-        var _this = _super.call(this, container, config) || this;
+        var _this = _super.call(this, null, config) || this;
         _this.events = new events_1.EventSystem();
-        _this._isValid = true;
         _this._propsItem = [
+            "inputType",
             "required",
+            "validation",
+            "icon",
+            "placeholder",
+            "autocomplete",
+            "readOnly",
+            "maxlength",
+            "minlength",
+            "min",
+            "max",
+            "step",
             "label",
             "labelWidth",
             "labelPosition",
@@ -6131,30 +6746,33 @@ var Checkbox = /** @class */ (function (_super) {
             "preMessage",
             "successMessage",
             "errorMessage",
-            "text",
         ];
         _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        _this._isValid = true;
         _this._initView(config);
         _this._initHandlers();
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
         return _this;
     }
-    Checkbox.prototype.setProperties = function (propertyConfig, silent) {
-        if (silent === void 0) { silent = false; }
+    Input.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.events = this._uid = this._isValid = this._propsItem = this._propsItem = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    Input.prototype.setProperties = function (propertyConfig) {
         if (!propertyConfig ||
             core_1.isEmptyObj(propertyConfig) ||
-            (!silent && !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()])))
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
             return;
         for (var key in propertyConfig) {
             if (this._props.includes(key)) {
                 this.config[key] = propertyConfig[key];
             }
         }
-        !silent && this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
         this.paint();
     };
-    Checkbox.prototype.getProperties = function () {
+    Input.prototype.getProperties = function () {
         var obj = {};
         for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
             var prop = _a[_i];
@@ -6162,187 +6780,138 @@ var Checkbox = /** @class */ (function (_super) {
         }
         return obj;
     };
-    Checkbox.prototype.show = function () {
-        var hidden = this.config.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue()])) {
+    Input.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
             return;
         }
         this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue()]);
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
     };
-    Checkbox.prototype.hide = function (init) {
-        var hidden = this.config.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), init])) {
+    Input.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
             return;
         }
         this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), init]);
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
     };
-    Checkbox.prototype.isVisible = function () {
+    Input.prototype.isVisible = function () {
         return !this.config.hidden;
     };
-    Checkbox.prototype.disable = function () {
+    Input.prototype.disable = function () {
         this.config.disabled = true;
         this.paint();
     };
-    Checkbox.prototype.enable = function () {
+    Input.prototype.enable = function () {
         this.config.disabled = false;
         this.paint();
     };
-    Checkbox.prototype.isDisabled = function () {
-        return this.config.disabled;
+    Input.prototype.isDisabled = function () {
+        return !!this.config.disabled;
     };
-    Checkbox.prototype.validate = function (silent) {
+    Input.prototype.validate = function (silent, validateValue) {
         if (silent === void 0) { silent = false; }
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
+        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
             return;
-        if (this.config.required || this.config.$required) {
-            this._isValid = !!this.config.checked;
-        }
+        this._isValid = this.config.validation
+            ? helper_1.validateInput(value, this.config.validation)
+            : this.config.required
+                ? !!(helper_1.baseInputValidate(value, this.config) && String(value).trim().length)
+                : helper_1.baseInputValidate(value, this.config);
         if (!silent) {
             this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
+            this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
         }
         return this._isValid;
     };
-    Checkbox.prototype.clearValidate = function () {
+    Input.prototype.clearValidate = function () {
         this.config.$validationStatus = types_1.ValidationStatus.pre;
         this.paint();
     };
-    Checkbox.prototype.setValue = function (checked, silent) {
-        if (silent === void 0) { silent = false; }
-        if (typeof checked === "undefined" || checked === this.config.checked)
+    Input.prototype.clear = function () {
+        if (this.config.value === "" || !this.events.fire(types_1.ItemEvent.beforeChange, [""]))
             return;
-        this.config.checked = !!checked;
-        if (!silent) {
-            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-            helper_1.isVerify(this.config) && this.validate();
-        }
+        this.config.value = "";
+        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+        helper_1.isVerify(this.config) && this.validate();
     };
-    Checkbox.prototype.getValue = function () {
-        var _a = this.config, value = _a.value, checked = _a.checked;
-        return value ? (checked ? value : "") : !!checked;
-    };
-    Checkbox.prototype.clear = function (silent) {
-        if (!this.config.checked)
+    Input.prototype.setValue = function (value) {
+        if (typeof value === "undefined" ||
+            this.config.value === value ||
+            !this.events.fire(types_1.ItemEvent.beforeChange, [value]))
             return;
-        this.config.checked = false;
-        if (!silent) {
-            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+        this.config.value = value;
+        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+        helper_1.isVerify(this.config) && this.validate();
+    };
+    Input.prototype.getValue = function () {
+        var _a = this.config, inputType = _a.inputType, value = _a.value;
+        if ((inputType === "number" && typeof value === "number") || value === null) {
+            return value;
         }
+        if (inputType === "number" && typeof value === "string") {
+            return value.length ? Number(value) : "";
+        }
+        if (typeof value === "string") {
+            return value.length ? value : "";
+        }
+        return typeof value === "undefined" ? "" : String(value);
     };
-    Checkbox.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this._inGroup = this._propsItem = this._props = this._isValid = this._uid = this.events = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    Checkbox.prototype.focus = function () {
+    Input.prototype.focus = function () {
         var _this = this;
         dom_1.awaitRedraw().then(function () {
             _this.getRootView().refs.input.el.focus();
         });
     };
-    Checkbox.prototype.blur = function () {
+    Input.prototype.blur = function () {
         var _this = this;
         dom_1.awaitRedraw().then(function () {
             _this.getRootView().refs.input.el.blur();
         });
     };
-    Checkbox.prototype.isChecked = function () {
-        return !!this.config.checked;
-    };
-    Checkbox.prototype._initView = function (config) {
+    Input.prototype._initView = function (config) {
         var _this = this;
-        this._inGroup = this.config.$group;
-        if (!this._inGroup) {
-            this.config = {
-                type: config.type,
-                id: config.id,
-                name: config.name,
-                disabled: false,
-                required: false,
-                label: "",
-                labelWidth: "",
-                labelPosition: "top",
-                hiddenLabel: false,
-                helpMessage: "",
-                preMessage: "",
-                successMessage: "",
-                errorMessage: "",
-                width: "content",
-                height: "content",
-            };
-            for (var key in config) {
-                if (key !== "id" && key !== "type" && key !== "name") {
-                    this.config[key] = config[key];
-                }
-            }
-            if (this.config.helpMessage) {
-                this._helper = new ts_popup_1.Popup({
-                    css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
-                });
-                this._helper.attachHTML(this.config.helpMessage);
-            }
-            this._handlers = {
-                showHelper: function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    _this._helper.show(e.target, {
-                        mode: _this.config.labelPosition === "left" ? "bottom" : "right",
-                    });
-                },
-                hideHelper: function (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    _this._helper.hide();
-                },
-                onchange: function (e) {
-                    _this.config.checked = e.target.checked;
-                    _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-                    helper_1.isVerify(_this.config) && _this.validate();
-                },
-                onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]); },
-                onblur: function () { var _a; return (_a = _this.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.ItemEvent.blur, [_this.getValue()]); },
-                onkeydown: function (event) {
-                    _this.events.fire(types_1.ItemEvent.keydown, [event]);
-                },
-            };
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
         }
-        else {
-            this.config = {
-                type: config.type,
-                id: config.id,
-                text: "",
-                width: "content",
-                height: "content",
-                padding: 0,
-            };
-            for (var key in config) {
-                if (key !== "id" && key !== "type" && key !== "name") {
-                    this.config[key] = config[key];
-                }
+        this.config = {
+            type: "input",
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            inputType: "text",
+            required: false,
+            icon: "",
+            placeholder: "",
+            autocomplete: false,
+            readOnly: false,
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
             }
-            this._handlers = {
-                onchange: function (e) {
-                    _this.config.checked = e.target.checked;
-                    _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-                    helper_1.isVerify(_this.config) && _this.validate();
-                },
-                onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.getValue(), _this.config.id]); },
-                onblur: function () { var _a; return (_a = _this.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.ItemEvent.blur, [_this.getValue(), _this.config.id]); },
-                onkeydown: function (event) {
-                    _this.events.fire(types_1.ItemEvent.keydown, [event, _this.config.id]);
-                },
-            };
         }
         if (this.config.hidden) {
             dom_1.awaitRedraw().then(function () {
                 _this.hide(true);
             });
         }
+        this.paint();
     };
-    Checkbox.prototype._initHandlers = function () {
+    Input.prototype._initHandlers = function () {
         var _this = this;
         this.events.on(types_1.ItemEvent.change, function () { return _this.paint(); });
         this.events.on(types_1.ItemEvent.afterValidate, function () {
@@ -6350,70 +6919,93 @@ var Checkbox = /** @class */ (function (_super) {
             _this.paint();
         });
     };
-    Checkbox.prototype._draw = function () {
-        var _a = this.config, id = _a.id, value = _a.value, checked = _a.checked, disabled = _a.disabled, name = _a.name, required = _a.required, $required = _a.$required, text = _a.text, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage;
-        return dom_1.el("label.dhx_checkbox.dhx_form-group.dhx_form-group--checkbox", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config) || !!$required),
-        }, !this._inGroup
-            ? [
-                label || labelWidth || helpMessage || required ? this._drawLabel() : null,
-                dom_1.el(".dhx_checkbox__container", [
-                    dom_1.el(".dhx_checkbox__holder", [
-                        dom_1.el("input.dhx_checkbox__input", {
-                            type: "checkbox",
-                            "data-dhx-id": name || id,
-                            id: id,
-                            value: value,
-                            name: name,
-                            disabled: disabled,
-                            checked: checked,
-                            onchange: this._handlers.onchange,
-                            onfocus: this._handlers.onfocus,
-                            onblur: this._handlers.onblur,
-                            onkeydown: this._handlers.onkeydown,
-                            required: required,
-                            _ref: "input",
-                            "aria-label": label || "checkbox " + (text || ""),
-                            "aria-describedby": helpMessage
-                                ? "dhx_label__help_" + (id || this._uid)
-                                : null,
-                        }),
-                        dom_1.el("span.dhx_checkbox__visual-input"),
-                        dom_1.el("span.dhx_text", [text]),
-                    ]),
-                    required &&
-                        helper_1.getValidationMessage(this.config) &&
-                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
-                ]),
-            ]
-            : [
-                dom_1.el(".dhx_checkbox__holder", [
-                    dom_1.el("input.dhx_checkbox__input", {
-                        type: "checkbox",
-                        id: id,
-                        value: value || "",
+    Input.prototype._getHandlers = function () {
+        var _this = this;
+        return {
+            oninput: function (e) {
+                var value = e.target.value;
+                _this.events.fire(types_1.ItemEvent.input, [value]);
+            },
+            onchange: function (e) {
+                var value = e.target.value;
+                if (!_this.events.fire(types_1.ItemEvent.beforeChange, [value])) {
+                    return;
+                }
+                _this.config.value = value;
+                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
+                helper_1.isVerify(_this.config) && _this.validate();
+            },
+            onfocus: function () {
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+                _this.paint();
+            },
+            onblur: function () {
+                if (!_this._uid)
+                    return;
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+                _this.paint();
+            },
+            onkeydown: function (event) {
+                if (event.code === "Enter" && _this.config.type === "input")
+                    event.preventDefault();
+                _this.events.fire(types_1.ItemEvent.keydown, [event]);
+            },
+        };
+    };
+    Input.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, id = _d.id, value = _d.value, disabled = _d.disabled, name = _d.name, icon = _d.icon, placeholder = _d.placeholder, required = _d.required, inputType = _d.inputType, hidden = _d.hidden, autocomplete = _d.autocomplete, readOnly = _d.readOnly, maxlength = _d.maxlength, minlength = _d.minlength, max = _d.max, min = _d.min, label = _d.label, helpMessage = _d.helpMessage;
+        var visibility = hidden ? " dhx_form-group--hidden" : "";
+        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el("div.dhx_form-group", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus) + visibility,
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", {}, [
+                dom_1.el("div.dhx_input__container", {}, [
+                    this.config.icon
+                        ? dom_1.el(".dhx_input__icon", {
+                            class: this.config.icon,
+                        })
+                        : null,
+                    dom_1.el("input.dhx_input", {
+                        type: ["text", "number", "password"].includes(inputType) ? inputType : "text",
+                        "data-dhx-id": name || id,
+                        id: id || this._uid,
+                        placeholder: placeholder || "",
+                        value: core_1.isDefined(value) ? value : "",
                         name: name || "",
                         disabled: disabled,
-                        checked: checked,
+                        required: required,
+                        readOnly: readOnly,
+                        maxlength: maxlength,
+                        minlength: minlength,
+                        max: max,
+                        min: min,
+                        onblur: this._handlers.onblur,
+                        oninput: this._handlers.oninput,
                         onchange: this._handlers.onchange,
                         onfocus: this._handlers.onfocus,
-                        onblur: this._handlers.onblur,
                         onkeydown: this._handlers.onkeydown,
-                        required: required,
+                        class: icon ? "dhx_input--icon-padding" : "",
+                        autocomplete: autocomplete ? "on" : "off",
                         _ref: "input",
+                        "aria-label": label || helpMessage || "type " + (name || inputType || "text"),
+                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
                     }),
-                    dom_1.el("span.dhx_checkbox__visual-input"),
-                    dom_1.el("span.dhx_text", [text]),
                 ]),
-            ]);
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
     };
-    return Checkbox;
+    return Input;
 }(label_1.Label));
-exports.Checkbox = Checkbox;
+exports.Input = Input;
 
 
 /***/ }),
-/* 58 */
+/* 59 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6422,13 +7014,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(59));
-__export(__webpack_require__(178));
-__export(__webpack_require__(36));
+__export(__webpack_require__(60));
+__export(__webpack_require__(173));
+__export(__webpack_require__(38));
 
 
 /***/ }),
-/* 59 */
+/* 60 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6438,7 +7030,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var html_1 = __webpack_require__(2);
 var ts_data_1 = __webpack_require__(4);
-var types_1 = __webpack_require__(36);
+var types_1 = __webpack_require__(38);
 var Uploader = /** @class */ (function () {
     function Uploader(config, data, events) {
         if (config === void 0) { config = {}; }
@@ -6717,10 +7309,10 @@ var Uploader = /** @class */ (function () {
 }());
 exports.Uploader = Uploader;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 60 */
+/* 61 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -6745,11 +7337,11 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var events_1 = __webpack_require__(3);
-var loader_1 = __webpack_require__(138);
-var sort_1 = __webpack_require__(141);
-var dataproxy_1 = __webpack_require__(27);
-var helpers_1 = __webpack_require__(21);
-var types_1 = __webpack_require__(20);
+var loader_1 = __webpack_require__(130);
+var sort_1 = __webpack_require__(133);
+var dataproxy_1 = __webpack_require__(28);
+var helpers_1 = __webpack_require__(22);
+var types_1 = __webpack_require__(21);
 var core_1 = __webpack_require__(1);
 var DataCollection = /** @class */ (function () {
     function DataCollection(config, events) {
@@ -6948,7 +7540,7 @@ var DataCollection = /** @class */ (function () {
         if (rule) {
             this._applySorters(rule);
         }
-        this.events.fire(types_1.DataEvents.change);
+        this.events.fire(types_1.DataEvents.change, [undefined, "sort", rule]);
     };
     DataCollection.prototype.copy = function (id, index, target, targetId) {
         var _this = this;
@@ -7349,7 +7941,7 @@ exports.DataCollection = DataCollection;
 
 
 /***/ }),
-/* 61 */
+/* 62 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7366,9 +7958,9 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var JsonDriver_1 = __webpack_require__(62);
-var CsvDriver_1 = __webpack_require__(63);
-var XMLDriver_1 = __webpack_require__(139);
+var JsonDriver_1 = __webpack_require__(63);
+var CsvDriver_1 = __webpack_require__(64);
+var XMLDriver_1 = __webpack_require__(131);
 exports.dataDrivers = {
     json: JsonDriver_1.JsonDriver,
     csv: CsvDriver_1.CsvDriver,
@@ -7377,7 +7969,7 @@ exports.dataDriversPro = __assign(__assign({}, exports.dataDrivers), { xml: XMLD
 
 
 /***/ }),
-/* 62 */
+/* 63 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7404,7 +7996,7 @@ exports.JsonDriver = JsonDriver;
 
 
 /***/ }),
-/* 63 */
+/* 64 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7501,7 +8093,7 @@ exports.CsvDriver = CsvDriver;
 
 
 /***/ }),
-/* 64 */
+/* 65 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -7530,28 +8122,46 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
 var core_1 = __webpack_require__(1);
 var KeyManager_1 = __webpack_require__(12);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_data_1 = __webpack_require__(4);
-var Exporter_1 = __webpack_require__(144);
+var Exporter_1 = __webpack_require__(136);
 var data_1 = __webpack_require__(23);
-var cells_1 = __webpack_require__(34);
-var main_1 = __webpack_require__(16);
-var Selection_1 = __webpack_require__(145);
-var types_1 = __webpack_require__(9);
-var render_1 = __webpack_require__(65);
-var date_1 = __webpack_require__(22);
-var content_1 = __webpack_require__(168);
-var columnsResizer_1 = __webpack_require__(169);
+var cells_1 = __webpack_require__(36);
+var main_1 = __webpack_require__(14);
+var Selection_1 = __webpack_require__(137);
+var types_1 = __webpack_require__(8);
+var render_1 = __webpack_require__(24);
+var date_1 = __webpack_require__(15);
+var content_1 = __webpack_require__(160);
+var columnsResizer_1 = __webpack_require__(164);
 var ts_message_1 = __webpack_require__(13);
-var keys_1 = __webpack_require__(173);
-var FocusManager_1 = __webpack_require__(18);
-var Cells_1 = __webpack_require__(29);
+var keys_1 = __webpack_require__(168);
+var FocusManager_1 = __webpack_require__(19);
+var Cells_1 = __webpack_require__(30);
 var Grid = /** @class */ (function (_super) {
     __extends(Grid, _super);
     function Grid(container, config) {
@@ -7641,7 +8251,7 @@ var Grid = /** @class */ (function (_super) {
                 "dhx_grid-header-cell--sortable": function (e, id) {
                     var _a;
                     var isResizable = e.target.getAttribute("dhx_resized");
-                    var column = _this._getColumn(id);
+                    var column = _this.getColumn(id);
                     if (column &&
                         main_1.isSortable(_this.config, column) &&
                         !isResizable &&
@@ -7654,6 +8264,11 @@ var Grid = /** @class */ (function (_super) {
                 },
                 "dhx_grid-expand-cell": function (e, rowId) {
                     if (e.target.classList.contains("dhx_grid-expand-cell-icon")) {
+                        _this.events.fire(types_1.GridEvents.expand, [rowId]);
+                    }
+                },
+                "dhx_span-expand-cell": function (e, rowId) {
+                    if (e.target.classList.contains("dhx_span-expand-cell-icon")) {
                         _this.events.fire(types_1.GridEvents.expand, [rowId]);
                     }
                 },
@@ -7670,29 +8285,29 @@ var Grid = /** @class */ (function (_super) {
                 ".dhx_grid-cell.dhx_boolean-cell .dhx_checkbox.dhx_cell-editor__checkbox": function (e) {
                     var path = e.composedPath();
                     var row = _this.data.getItem(path[2].getAttribute("data-dhx-id"));
-                    var column = _this._getColumn(path[1].getAttribute("data-dhx-col-id"));
+                    var column = _this.getColumn(path[1].getAttribute("data-dhx-col-id"));
                     showCellTooltip(row, column, e.target);
                 },
                 ".dhx_grid-cell:not(.dhx_boolean-cell)": function (e) {
                     var row = _this.data.getItem(e.composedPath()[1].getAttribute("data-dhx-id"));
-                    var column = _this._getColumn(e.target.getAttribute("data-dhx-col-id"));
+                    var column = _this.getColumn(e.target.getAttribute("data-dhx-col-id"));
                     showCellTooltip(row, column, e.target);
                 },
                 ".dhx_grid-cell:not(.dhx_tree-cell) .dhx_grid-cell__content, .dhx_tree-cell :not(.dhx_grid-cell__content)": function (e) {
                     var path = e.composedPath();
                     var row = _this.data.getItem(path[2].getAttribute("data-dhx-id"));
-                    var column = _this._getColumn(path[1].getAttribute("data-dhx-col-id"));
+                    var column = _this.getColumn(path[1].getAttribute("data-dhx-col-id"));
                     showCellTooltip(row, column, e.target);
                 },
                 ".dhx_grid-cell.dhx_tree-cell .dhx_grid-cell__content": function (e) {
                     var path = e.composedPath();
                     var row = _this.data.getItem(path[3].getAttribute("data-dhx-id"));
-                    var column = _this._getColumn(path[2].getAttribute("data-dhx-col-id"));
+                    var column = _this.getColumn(path[2].getAttribute("data-dhx-col-id"));
                     showCellTooltip(row, column, path[2]);
                 },
                 ".dhx_span-cell:not(.dhx_grid-header-cell)": function (e) {
                     var row = _this.data.getItem(e.target.getAttribute("data-dhx-id"));
-                    var column = _this._getColumn(e.target.getAttribute("data-dhx-col-id"));
+                    var column = _this.getColumn(e.target.getAttribute("data-dhx-col-id"));
                     var span = _this.getSpan(row.id, column.id);
                     if (row && span && main_1.isTooltip(_this.config, span)) {
                         var value = span.text || data_1.toFormat(row[column.id], column.type, column.format);
@@ -7711,15 +8326,15 @@ var Grid = /** @class */ (function (_super) {
                     }
                 },
                 ".dhx_grid-header-cell:not(.dhx_span-cell)": function (e) {
-                    var column = _this._getColumn(e.target.getAttribute("data-dhx-id"));
+                    var column = _this.getColumn(e.target.getAttribute("data-dhx-id"));
                     showContentTootlip(e, column);
                 },
                 ".dhx_grid-footer-cell:not(.dhx_span-cell)": function (e) {
-                    var column = _this._getColumn(e.target.getAttribute("data-dhx-id"));
+                    var column = _this.getColumn(e.target.getAttribute("data-dhx-id"));
                     showContentTootlip(e, column);
                 },
                 ".dhx_grid-header-cell.dhx_span-cell": function (e) {
-                    var column = _this._getColumn(e.target.getAttribute("data-dhx-id"));
+                    var column = _this.getColumn(e.target.getAttribute("data-dhx-id"));
                     var headerSpan = column && column.header.find(function (item) { return !!(item.rowspan || item.colspan); });
                     if (column && headerSpan && main_1.isTooltip(_this.config, column)) {
                         var value = headerSpan.text || "";
@@ -7733,7 +8348,7 @@ var Grid = /** @class */ (function (_super) {
                 },
                 ".dhx_grid-header-cell-text_content": function (e) {
                     var path = e.composedPath();
-                    var column = _this._getColumn(path[1].getAttribute("data-dhx-id"));
+                    var column = _this.getColumn(path[1].getAttribute("data-dhx-id"));
                     if (column && main_1.isTooltip(_this.config, column)) {
                         var value = (path[2].querySelector(".dhx_grid-header-cell-text_content") &&
                             path[2].querySelector(".dhx_grid-header-cell-text_content").textContent) ||
@@ -7829,7 +8444,7 @@ var Grid = /** @class */ (function (_super) {
         this.paint();
     };
     Grid.prototype.addCellCss = function (rowId, colId, css) {
-        var column = this._getColumn(colId);
+        var column = this.getColumn(colId);
         var span = this.config.spans ? this.getSpan(rowId, colId) : null;
         if (span || column) {
             var cellStyle = span ? span.css : column.$cellCss[rowId];
@@ -7855,7 +8470,7 @@ var Grid = /** @class */ (function (_super) {
         }
     };
     Grid.prototype.removeCellCss = function (rowId, colId, css) {
-        var column = this._getColumn(colId);
+        var column = this.getColumn(colId);
         if (column) {
             if (column.$cellCss[rowId]) {
                 column.$cellCss[rowId] = column.$cellCss[rowId].replace(css, "");
@@ -7867,7 +8482,7 @@ var Grid = /** @class */ (function (_super) {
         }
     };
     Grid.prototype.showColumn = function (colId) {
-        var column = this._getColumn(colId);
+        var column = this.getColumn(colId);
         if (!column || !column.hidden) {
             return;
         }
@@ -7886,7 +8501,7 @@ var Grid = /** @class */ (function (_super) {
     };
     Grid.prototype.hideColumn = function (colId) {
         var _this = this;
-        var column = this._getColumn(colId);
+        var column = this.getColumn(colId);
         if (!column || column.hidden) {
             return;
         }
@@ -7920,7 +8535,7 @@ var Grid = /** @class */ (function (_super) {
         }
     };
     Grid.prototype.isColumnHidden = function (colId) {
-        var column = this._getColumn(colId);
+        var column = this.getColumn(colId);
         if (column) {
             return !!column.hidden;
         }
@@ -8052,9 +8667,12 @@ var Grid = /** @class */ (function (_super) {
         };
     };
     Grid.prototype.getColumn = function (colId) {
-        var id = core_1.findIndex(this.config.columns, function (col) { return col.id == colId; });
-        if (id >= 0) {
-            return this.config.columns[id];
+        var _a;
+        for (var _i = 0, _b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.columns; _i < _b.length; _i++) {
+            var col = _b[_i];
+            if (col.id == colId) {
+                return col;
+            }
         }
     };
     Grid.prototype.addSpan = function (spanObj) {
@@ -8133,6 +8751,7 @@ var Grid = /** @class */ (function (_super) {
         this.config.$editable = {
             row: row.id,
             col: col.id,
+            isSpan: !!this.getSpan(row.id, col.id),
             editorType: editorType,
         };
         if (!this.selection.config.disabled) {
@@ -8158,9 +8777,7 @@ var Grid = /** @class */ (function (_super) {
         var filter = null;
         col.header.forEach(function (cell) {
             if (cell.content) {
-                var filterEl = _this.content[cell.content].element[colId];
-                filter =
-                    cell.content === "comboFilter" ? filterEl : _this.getRootView().refs[colId + "_filter"].el;
+                filter = _this.content[cell.content].element[colId];
             }
         });
         return filter;
@@ -8206,16 +8823,15 @@ var Grid = /** @class */ (function (_super) {
     };
     Grid.prototype._setEventHandlers = function () {
         var _this = this;
-        var updater = function (updateObj) { return function (_a) {
-            var source = _a.source, target = _a.target;
-            if (source && source instanceof Array && source.length > 1) {
+        var updater = function (_a) {
+            var source = _a.source, target = _a.target, updateObj = __rest(_a, ["source", "target"]);
+            if (source === null || source === void 0 ? void 0 : source.length) {
                 source.map(function (selectedId) { return _this.data.exists(selectedId) && _this.data.update(selectedId, updateObj); });
-                return;
             }
             if (_this.data.exists(target)) {
                 _this.data.update(target, updateObj);
             }
-        }; };
+        };
         this.data.events.on(ts_data_1.DataEvents.load, function () {
             _this.data.filter(function (i) { return i; });
             _this._parseData();
@@ -8230,7 +8846,21 @@ var Grid = /** @class */ (function (_super) {
                 });
                 return;
             }
-            if (status === "add" || status === "update" || status === "remove") {
+            if (status === "sort") {
+                if (!obj.dir) {
+                    if (_this._sortBy === obj.by) {
+                        _this._sortDir = _this._sortDir === "asc" ? "desc" : "asc";
+                    }
+                    else {
+                        _this._sortDir = "asc";
+                    }
+                }
+                else {
+                    _this._sortDir = obj.dir;
+                }
+                _this._sortBy = obj.by;
+            }
+            else if (status === "add" || status === "update" || status === "remove") {
                 if (id && status === "remove") {
                     var removed = _this.selection.getCells().find(function (cell) { return cell.row.id === id; });
                     removed && _this.selection.removeCell(removed.row.id, removed.column.id);
@@ -8281,8 +8911,13 @@ var Grid = /** @class */ (function (_super) {
             }
         });
         this.events.on(ts_data_1.DragEvents.dragStart, function (data, events) {
-            updater({ $dragtarget: true });
-            if (_this.data.getItem(data.start)) {
+            var source = data.source, target = data.target, start = data.start;
+            updater({
+                source: source,
+                target: target,
+                $dragtarget: true,
+            });
+            if (_this.data.getItem(start)) {
                 _this.events.fire(types_1.GridEvents.dragRowStart, [data, events]);
             }
             else if (_this.config.dragItem === "column" || _this.config.dragItem === "both") {
@@ -8306,8 +8941,13 @@ var Grid = /** @class */ (function (_super) {
             }
         });
         this.events.on(ts_data_1.DragEvents.canDrop, function (data, events) {
-            updater({ $drophere: true });
-            if (_this.data.getItem(data.start) || _this.data.getItem(data.target)) {
+            var source = data.source, target = data.target, start = data.start;
+            updater({
+                source: source,
+                target: target,
+                $drophere: true,
+            });
+            if (_this.data.getItem(start)) {
                 _this.events.fire(types_1.GridEvents.canRowDrop, [data, events]);
             }
             else if (_this.config.dragItem === "column" || _this.config.dragItem === "both") {
@@ -8315,8 +8955,14 @@ var Grid = /** @class */ (function (_super) {
             }
         });
         this.events.on(ts_data_1.DragEvents.cancelDrop, function (data, events) {
-            updater({ $drophere: undefined });
-            if (_this.data.getItem(data.start)) {
+            var source = data.source, target = data.target, start = data.start;
+            updater({
+                source: source,
+                target: target,
+                $drophere: undefined,
+                $dragtarget: undefined,
+            });
+            if (_this.data.getItem(start)) {
                 _this.events.fire(types_1.GridEvents.cancelRowDrop, [data, events]);
             }
             else if (_this.config.dragItem === "column" || _this.config.dragItem === "both") {
@@ -8334,20 +8980,43 @@ var Grid = /** @class */ (function (_super) {
         });
         this.events.on(ts_data_1.DragEvents.afterDrop, function (data, events) {
             var _a;
+            var _b;
             if (_this.data.getItem(data.start)) {
                 _this.events.fire(types_1.GridEvents.afterRowDrop, [data, events]);
+                var source = data.source;
+                if (source.some(function (id) { return id == data.target; }))
+                    return;
                 var item = _this.data.getItem(data.start);
-                for (var _i = 0, _b = _this.config.columns; _i < _b.length; _i++) {
-                    var col = _b[_i];
+                for (var _i = 0, _c = _this.config.columns; _i < _c.length; _i++) {
+                    var col = _c[_i];
                     if (typeof item[col.id] === "undefined") {
                         _this.data.update(item.id, (_a = {}, _a[col.id] = null, _a), true);
                     }
                 }
                 var initData = _this.data.getInitialData();
-                var startIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id.toString() === data.start; });
-                var targetIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id.toString() === data.target; });
-                if (startIndex > -1 && targetIndex > -1)
-                    initData === null || initData === void 0 ? void 0 : initData.splice(targetIndex, 0, initData === null || initData === void 0 ? void 0 : initData.splice(startIndex, 1)[0]);
+                var startIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id == data.start; });
+                var targetIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id == data.target; });
+                if (startIndex > -1 && targetIndex > -1) {
+                    if (((_b = data.source) === null || _b === void 0 ? void 0 : _b.length) > 1) {
+                        var moveData = [];
+                        var _loop_1 = function (id) {
+                            var itemIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id == id; });
+                            var moveItem = initData === null || initData === void 0 ? void 0 : initData.splice(itemIndex, 1)[0];
+                            moveData.push(moveItem);
+                        };
+                        for (var _d = 0, source_1 = source; _d < source_1.length; _d++) {
+                            var id = source_1[_d];
+                            _loop_1(id);
+                        }
+                        targetIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id == data.target; });
+                        if (targetIndex > 0)
+                            ++targetIndex;
+                        initData === null || initData === void 0 ? void 0 : initData.splice.apply(initData, __spreadArrays([targetIndex, 0], moveData));
+                    }
+                    else {
+                        initData === null || initData === void 0 ? void 0 : initData.splice(targetIndex, 0, initData === null || initData === void 0 ? void 0 : initData.splice(startIndex, 1)[0]);
+                    }
+                }
                 _this.config.data = _this._prepareData(initData || _this.data.map(function (i) { return i; }));
                 _this.data.parse(_this.config.data);
                 for (var compare in _this._activeFilters) {
@@ -8359,8 +9028,13 @@ var Grid = /** @class */ (function (_super) {
             }
         });
         this.events.on(ts_data_1.DragEvents.afterDrag, function (data, events) {
-            updater({ $dragtarget: undefined });
-            if (_this.data.getItem(data.start)) {
+            var source = data.source, target = data.target, start = data.start;
+            updater({
+                source: source,
+                target: target,
+                $dragtarget: undefined,
+            });
+            if (_this.data.getItem(start)) {
                 _this.events.fire(types_1.GridEvents.afterRowDrag, [data, events]);
             }
             else if (_this.config.dragItem === "column" || _this.config.dragItem === "both") {
@@ -8408,6 +9082,9 @@ var Grid = /** @class */ (function (_super) {
         });
         this.events.on(types_1.GridEvents.filterChange, function (val, colId, filter) {
             var _a, _b, _c;
+            if (!_this.events.fire(types_1.GridEvents.beforeFilter, [val, colId])) {
+                return;
+            }
             val = val !== null && val !== void 0 ? val : "";
             if (_this.config.autoEmptyRow) {
                 var emptyRow = _this.data.find({ by: "$emptyRow", match: true });
@@ -8418,7 +9095,7 @@ var Grid = /** @class */ (function (_super) {
             if (!_this._activeFilters) {
                 _this._activeFilters = {};
             }
-            var columnConfig = _this._getColumn(colId);
+            var columnConfig = _this.getColumn(colId);
             var conf = columnConfig.header.filter(function (item) { return item.content === filter && item.customFilter !== undefined; })[0];
             if (val !== "") {
                 if ((columnConfig.editorType === "combobox" ||
@@ -8440,7 +9117,7 @@ var Grid = /** @class */ (function (_super) {
                     }
                 }
                 var match = function (colId) {
-                    var col = _this._getColumn(colId);
+                    var col = _this.getColumn(colId);
                     return function (val, match, obj, multi) {
                         return _this.content[filter].match({ val: val, match: match, obj: obj, multi: multi, col: col });
                     };
@@ -8465,7 +9142,10 @@ var Grid = /** @class */ (function (_super) {
             _this.editEnd();
             _this.paint();
         });
-        this.events.on(types_1.GridEvents.cellDblClick, function (row, col) {
+        this.events.on(types_1.GridEvents.cellDblClick, function (row, col, e) {
+            var targetCheckbox = html_1.locateNodeByClassName(e, "dhx_boolean-cell");
+            if (targetCheckbox)
+                return;
             if ((col.editable !== false && _this.config.editable) || col.editable) {
                 _this.editCell(row.id, col.id, col.editorType);
             }
@@ -8486,10 +9166,16 @@ var Grid = /** @class */ (function (_super) {
                 row = _this.config.$editable.row;
                 col = _this.config.$editable.col;
             }
-            var item = _this.data.getItem(row);
-            delete item.$emptyRow;
-            if (value !== undefined) {
-                _this.data.update(row, __assign(__assign({}, item), (_a = {}, _a[col] = value, _a)));
+            var span = _this.getSpan(row, col);
+            if (span && typeof span.text === "string") {
+                span.text = value;
+            }
+            else {
+                var item = _this.data.getItem(row);
+                delete item.$emptyRow;
+                if (value !== undefined) {
+                    _this.data.update(row, __assign(__assign({}, item), (_a = {}, _a[col] = value, _a)));
+                }
             }
             _this.config.$editable = null;
             _this._checkFilters();
@@ -8573,14 +9259,11 @@ var Grid = /** @class */ (function (_super) {
         var _this = this;
         if (!dir) {
             if (this._sortBy === by) {
-                this._sortDir = this._sortDir === "asc" ? "desc" : "asc";
+                dir = this._sortDir === "asc" ? "desc" : "asc";
             }
             else {
-                this._sortDir = "asc";
+                dir = "asc";
             }
-        }
-        else {
-            this._sortDir = dir;
         }
         var defaultAs = function (item) {
             var col = _this.getColumn(by);
@@ -8589,13 +9272,12 @@ var Grid = /** @class */ (function (_super) {
             }
             return item ? "" + item : "";
         };
-        this._sortBy = by;
         this.data.sort({
             by: by,
-            dir: this._sortDir,
+            dir: dir,
             as: sortAs !== null && sortAs !== void 0 ? sortAs : defaultAs,
         });
-        this.events.fire(types_1.GridEvents.afterSort, [this.getColumn(by), this._sortDir]);
+        this.events.fire(types_1.GridEvents.afterSort, [this.getColumn(by), dir]);
     };
     Grid.prototype._clearTouchTimer = function () {
         if (this._touch.timer) {
@@ -8630,7 +9312,7 @@ var Grid = /** @class */ (function (_super) {
                 }
             });
         });
-        var _loop_1 = function (compare) {
+        var _loop_2 = function (compare) {
             var col = this_1.config.columns.find(function (i) { return i.id === compare; });
             var filter = col.header.find(function (i) { return !!i.content; });
             var exist = false;
@@ -8653,7 +9335,7 @@ var Grid = /** @class */ (function (_super) {
         };
         var this_1 = this;
         for (var compare in this._activeFilters) {
-            _loop_1(compare);
+            _loop_2(compare);
         }
     };
     Grid.prototype._adjustColumns = function () {
@@ -8758,7 +9440,7 @@ var Grid = /** @class */ (function (_super) {
         var totalRow = [];
         for (var i = 0; i < data.length; i++) {
             var row = [];
-            for (var k = 0; k < ((_b = data[k]) === null || _b === void 0 ? void 0 : _b[type].length); k++) {
+            for (var k = 0; k < ((_b = data[i]) === null || _b === void 0 ? void 0 : _b[type].length); k++) {
                 var rowData = {};
                 if ((_d = (_c = data[i]) === null || _c === void 0 ? void 0 : _c[type][k]) === null || _d === void 0 ? void 0 : _d.text) {
                     rowData[data[i].id] = ((_f = (_e = data[i]) === null || _e === void 0 ? void 0 : _e[type][k]) === null || _f === void 0 ? void 0 : _f.text) || "";
@@ -8780,28 +9462,27 @@ var Grid = /** @class */ (function (_super) {
         }
         return totalRow;
     };
-    Grid.prototype._dragStart = function (e) {
+    Grid.prototype._dragStart = function (event) {
         if (this.config.dragMode &&
             (this.config.dragItem === "row" || this.config.dragItem === "both") &&
             !this.config.$editable) {
-            var column = this._getColumn(e.target.getAttribute("data-dhx-col-id"));
+            var column = this.getColumn(event.target.getAttribute("data-dhx-col-id"));
             if ((column === null || column === void 0 ? void 0 : column.draggable) === false)
                 return;
-            var item = html_1.locateNode(e, "data-dhx-id");
+            var item = html_1.locateNode(event, "data-dhx-id");
             var itemId = item && item.getAttribute("data-dhx-id");
-            if (e.targetTouches) {
+            if (event.targetTouches) {
                 this._touch.start = true;
             }
-            return ts_data_1.dragManager.onMouseDown(e, [itemId]);
+            return ts_data_1.dragManager.onMouseDown(event, [itemId], [this._getRowGhost([itemId])]);
         }
     };
-    Grid.prototype._getColumn = function (colId) {
-        for (var _i = 0, _a = this.config.columns; _i < _a.length; _i++) {
-            var col = _a[_i];
-            if (col.id == colId) {
-                return col;
-            }
-        }
+    Grid.prototype._getRowGhost = function (ids) {
+        var container = this._container || html_1.toNode(this._uid);
+        var rows = ids.map(function (id) { return container.querySelector(".dhx_grid-row[data-dhx-id=\"" + id + "\"]"); });
+        var ghostContainer = document.createElement("div");
+        rows.forEach(function (node) { return node && ghostContainer.appendChild(node.cloneNode(true)); });
+        return ghostContainer;
     };
     Grid.prototype._init = function () {
         this.events = new events_1.EventSystem(this);
@@ -8833,7 +9514,7 @@ var Grid = /** @class */ (function (_super) {
             row: row,
         }); });
         var colCellsData = this.data.map(function (row) { return row[col.id]; });
-        var _loop_2 = function (cell) {
+        var _loop_3 = function (cell) {
             var css = func(cell.data, colCellsData, cell.row, col);
             if (css) {
                 col.$cellCss = col.$cellCss || {};
@@ -8856,7 +9537,7 @@ var Grid = /** @class */ (function (_super) {
         var this_2 = this;
         for (var _i = 0, colCells_1 = colCells; _i < colCells_1.length; _i++) {
             var cell = colCells_1[_i];
-            _loop_2(cell);
+            _loop_3(cell);
         }
     };
     Grid.prototype._checkMarks = function () {
@@ -8946,434 +9627,6 @@ exports.Grid = Grid;
 
 
 /***/ }),
-/* 65 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var html_1 = __webpack_require__(2);
-var data_1 = __webpack_require__(23);
-var main_1 = __webpack_require__(16);
-var Cells_1 = __webpack_require__(29);
-var FixedCols_1 = __webpack_require__(78);
-var FixedRows_1 = __webpack_require__(79);
-var core_1 = __webpack_require__(1);
-var BORDERS = 2;
-function getRenderConfig(obj, data, wrapperSizes) {
-    var config = obj.config;
-    var columns = config.columns.filter(function (col) { return !col.hidden; });
-    var positions = data_1.calculatePositions(wrapperSizes.width, wrapperSizes.height, obj._scroll, config, data);
-    var currentColumns = columns.slice(positions.xStart, positions.xEnd);
-    var currentRows = data.slice(positions.yStart, positions.yEnd);
-    return __assign(__assign({}, config), { data: data,
-        columns: columns, scroll: obj._scroll, $positions: positions, headerHeight: config.$headerLevel * config.headerRowHeight, footerHeight: config.$footerLevel * config.footerRowHeight, firstColId: columns[0] && columns[0].id, events: obj.events, _events: obj._events, currentColumns: currentColumns,
-        currentRows: currentRows, sortBy: obj._sortBy, sortDir: obj._sortDir, content: obj.content, gridId: obj._uid, $renderFrom: "render" });
-}
-exports.getRenderConfig = getRenderConfig;
-function getElementSizes(element) {
-    if (!element)
-        return;
-    if (!element.tagName)
-        element = element._parent._container;
-    if (!element)
-        return;
-    var styles = element.currentStyle || window.getComputedStyle(element);
-    var paddingsByWidth = parseFloat(styles.paddingLeft) + parseFloat(styles.paddingRight) || 0;
-    var paddingsByHeight = parseFloat(styles.paddingTop) + parseFloat(styles.paddingBottom) || 0;
-    return {
-        width: element.clientWidth - paddingsByWidth,
-        height: element.clientHeight - paddingsByHeight,
-    };
-}
-function getGridData(renderConfig, shifts) {
-    var content = Cells_1.getCells(renderConfig);
-    var columns = renderConfig.columns, $resizing = renderConfig.$resizing, $totalHeight = renderConfig.$totalHeight, $totalWidth = renderConfig.$totalWidth, leftSplit = renderConfig.leftSplit, data = renderConfig.data, $positions = renderConfig.$positions, currentRows = renderConfig.currentRows, currentColumns = renderConfig.currentColumns, eventHandlers = renderConfig.eventHandlers;
-    var contentSpans = Cells_1.getSpans(renderConfig);
-    var getRowAriaAttrs = function (count) { return ({
-        role: "rowgroup",
-        "aria-rowcount": count,
-    }); };
-    var resizedLine;
-    if ($resizing) {
-        var colIndex = core_1.findIndex(columns, function (col) { return col.id === $resizing; });
-        var firstCellLeft = main_1.getTotalWidth(columns.slice(0, colIndex)) + columns[colIndex].$width;
-        resizedLine = dom_1.el(".dhx_grid-resize-line", {
-            style: {
-                top: 0,
-                left: firstCellLeft,
-                height: $totalHeight,
-            },
-        });
-    }
-    var selection = renderConfig.selection ? renderConfig.selection.toHTML() : null;
-    selection =
-        typeof selection === "string" ? dom_1.el("div.dhx_selection", { ".innerHTML": selection }) : selection;
-    var pos = $positions;
-    var events = {};
-    function getCellInfo(e) {
-        var rowId = html_1.locate(e, "data-dhx-id");
-        var colId = html_1.locate(e, "data-dhx-col-id");
-        var row = currentRows.filter(function (item) { return item.id.toString() === rowId; })[0];
-        var col = currentColumns.filter(function (item) { return item.id === colId; })[0];
-        return {
-            row: rowId ? row : {},
-            col: colId ? col : {},
-        };
-    }
-    if (eventHandlers) {
-        for (var key in eventHandlers) {
-            if (eventHandlers.hasOwnProperty(key)) {
-                var event_1 = eventHandlers[key];
-                events[key] = html_1.eventHandler(function (e) { return getCellInfo(e); }, __assign({}, event_1));
-            }
-        }
-    }
-    return dom_1.el(".dhx_data-wrap", __assign({ style: {
-            height: $totalHeight,
-            width: $totalWidth,
-            "padding-left": shifts.x,
-            "padding-top": shifts.y,
-        }, role: "presentation" }, events), [
-        dom_1.el(".dhx_grid_data" + (leftSplit ? ".dhx_grid_fixed_left" : ""), __assign(__assign({ _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(pos.yStart, pos.xStart, renderConfig)), getRowAriaAttrs(data.length)), content),
-        dom_1.el(".dhx_span-spans", { role: "presentation" }, contentSpans),
-        dom_1.el(".dhx_grid_selection", { _ref: "selection", "aria-hidden": "true" }, [selection, resizedLine]),
-    ]);
-}
-function getContentHeight(renderConfig, isSticky, wrapperSizes) {
-    var contentHeight = wrapperSizes.height - BORDERS;
-    contentHeight = isSticky ? contentHeight : contentHeight - renderConfig.headerHeight;
-    var isFooter = renderConfig.$footer;
-    return (contentHeight = isFooter
-        ? isSticky
-            ? contentHeight
-            : contentHeight - renderConfig.footerHeight
-        : contentHeight);
-}
-function applyAutoWidth(config, wrapperSizes, firstApply, resizer, scrollViewConfig) {
-    if (firstApply === void 0) { firstApply = true; }
-    if (resizer === void 0) { resizer = false; }
-    if (scrollViewConfig === void 0) { scrollViewConfig = false; }
-    var scrollbarY = !scrollViewConfig && config.$totalHeight >= wrapperSizes.height - config.headerRowHeight
-        ? html_1.getScrollbarWidth()
-        : 0;
-    var newTotalWidth = wrapperSizes.width - BORDERS - scrollbarY;
-    var columns = config.columns.filter(function (col) { return !col.hidden; });
-    var growingColumns = columns.filter(function (col) { return !col.width && !col.$fixed && main_1.isAutoWidth(config, col); });
-    var nonGrowingColumnsWidth = main_1.getTotalWidth(columns.filter(function (col) { return col.width || col.$fixed || !main_1.isAutoWidth(config, col); }));
-    var fullGravity = growingColumns.reduce(function (gravity, col) { return gravity + (col.gravity || 1); }, 0);
-    if (newTotalWidth < config.$totalWidth) {
-        var growingColumnsWidth_1 = growingColumns.reduce(function (width, col) { return width + (col.maxWidth || col.$width); }, 0);
-        if (growingColumns.length) {
-            growingColumns.forEach(function (col) {
-                var newWidth = 0;
-                if (firstApply) {
-                    newWidth =
-                        Math.abs(newTotalWidth - growingColumnsWidth_1) * ((col.gravity || 1) / fullGravity);
-                }
-                else {
-                    newWidth =
-                        Math.abs(newTotalWidth - nonGrowingColumnsWidth) * ((col.gravity || 1) / fullGravity);
-                }
-                var wrongMin = newWidth < col.minWidth;
-                var wrongMax = newWidth > col.maxWidth;
-                if (!wrongMin && !wrongMax) {
-                    col.$width = newWidth;
-                }
-                else if (wrongMin) {
-                    nonGrowingColumnsWidth += col.$width - newWidth;
-                    col.$fixed = true;
-                }
-                else if (wrongMax) {
-                    col.$width = col.maxWidth;
-                    col.$fixed = true;
-                }
-                if (col.$width < 20)
-                    col.$width = 20;
-            });
-        }
-    }
-    else {
-        growingColumns.forEach(function (col) {
-            var newWidth = Math.abs(newTotalWidth - nonGrowingColumnsWidth) * ((col.gravity || 1) / fullGravity);
-            var wrongMin = newWidth < col.minWidth;
-            var wrongMax = newWidth > col.maxWidth;
-            if (!wrongMin && !wrongMax) {
-                col.$width = newWidth;
-            }
-            else if (wrongMin) {
-                nonGrowingColumnsWidth += col.$width - newWidth;
-                if (resizer)
-                    col.$fixed = true;
-            }
-            else if (wrongMax) {
-                col.$width = col.maxWidth;
-                if (resizer)
-                    col.$fixed = true;
-            }
-            if (col.$width < 20)
-                col.$width = 20;
-            if (!firstApply && col.$fixed) {
-                delete col.$fixed;
-            }
-        });
-    }
-    if (firstApply) {
-        applyAutoWidth(config, wrapperSizes, false, resizer, scrollViewConfig);
-    }
-}
-function render(vm, obj, htmlEvents, selection, uid) {
-    if (!obj._container) {
-        obj.config.width = 1;
-        obj.config.height = 1;
-    }
-    // if grid placed inside another component, it will fit to its container
-    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
-        var parentNode = vm.node.parent.el;
-        var parentSizes = getElementSizes(parentNode);
-        obj.config.width = parentSizes.width;
-        obj.config.height = parentSizes.height;
-    }
-    var config = obj.config;
-    // when grid is destructing and user try to repaint it
-    if (!config) {
-        return dom_1.el("div");
-    }
-    if (!config.columns.length) {
-        return dom_1.el(".dhx_grid", {
-            "data-dhx-root-id": config.rootParent,
-        });
-    }
-    var data = obj.data.getRawData(0, -1, null, 2);
-    if (config.columns.reduce(function (check, col) { return (check = !col.hidden ? col.hidden : check); }, true)) {
-        config.$totalHeight = 0;
-    }
-    else {
-        config.$totalHeight = data.reduce(function (total, _a) {
-            var $height = _a.$height;
-            return (total += $height || 0);
-        }, 0);
-    }
-    var sizes = getElementSizes(obj._container);
-    var wrapperSizes = {
-        width: (config.width ? config.width : sizes && sizes.width) || 0,
-        height: (config.height ? config.height : sizes && sizes.height) || 0,
-    };
-    // TODO: Remove scroll
-    if (main_1.isAutoWidth(config)) {
-        applyAutoWidth(config, wrapperSizes);
-        config.$totalWidth = main_1.getTotalWidth(config.columns.filter(function (col) { return !col.hidden; }));
-    }
-    config.width = wrapperSizes.width;
-    config.height = wrapperSizes.height;
-    var renderConfig = getRenderConfig(obj, data, wrapperSizes);
-    renderConfig.selection = selection;
-    renderConfig.datacollection = obj.data;
-    var shifts = Cells_1.getShifts(renderConfig);
-    var isSticky = main_1.isCssSupport("position", "sticky");
-    var gridBodyHeight = getContentHeight(renderConfig, isSticky, wrapperSizes);
-    var layoutState = {
-        wrapper: wrapperSizes,
-        sticky: isSticky,
-        shifts: shifts,
-        gridBodyHeight: gridBodyHeight,
-    };
-    var header = FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "header", position: "top" }));
-    var footer = renderConfig.$footer
-        ? FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "footer", position: "bottom" }))
-        : null;
-    var lessByWidth = renderConfig.$totalWidth + BORDERS < wrapperSizes.width ? "dhx_grid-less-width" : "";
-    var lessByHeight = renderConfig.$totalHeight + BORDERS < wrapperSizes.height ? "dhx_grid-less-height" : "";
-    var getGridAriaAttrs = function (rows, cols, isEditable, isMultiselectable) { return ({
-        role: "grid",
-        "aria-rowcount": rows.length,
-        "aria-colcount": cols.filter(function (col) { return !col.hidden; }).length,
-        "aria-readonly": isEditable ? "false" : "true",
-        "aria-multiselectable": isMultiselectable ? "true" : "false",
-    }); };
-    // dirty: but work. Change checking of rendering Grid
-    if (!vm.node) {
-        var _a = obj.getScrollState(), x_1 = _a.x, y_1 = _a.y;
-        dom_1.awaitRedraw().then(function () {
-            obj.scroll(x_1, y_1);
-        });
-    }
-    return dom_1.el(".dhx_grid.dhx_widget", __assign({ class: (renderConfig.css || "") +
-            (!isSticky ? " dhx_grid_border" : "") +
-            (config.multiselection ? " dhx_no-select--pointer" : ""), "data-dhx-widget-id": uid, "data-dhx-root-id": config.rootParent }, getGridAriaAttrs(renderConfig.data, config.columns, renderConfig.editable, renderConfig.multiselection)), [
-        dom_1.resizer(function (changeWith) {
-            if (main_1.isAutoWidth(obj.config) && !!changeWith) {
-                config.$totalWidth = 0;
-                applyAutoWidth(config, wrapperSizes, true, true);
-            }
-            return obj.paint();
-        }),
-        dom_1.el(".dhx_grid-content", {
-            style: __assign({}, wrapperSizes),
-            onclick: htmlEvents.onclick,
-            onmouseover: htmlEvents.onmouseover,
-            class: (lessByWidth + " " + lessByHeight).trim(),
-            role: "presentation",
-        }, [
-            isSticky ? null : header,
-            dom_1.el(".dhx_grid-body", {
-                style: {
-                    height: gridBodyHeight,
-                    width: wrapperSizes.width - BORDERS,
-                },
-                onscroll: htmlEvents.onscroll,
-                _ref: "grid_body",
-                role: "presentation",
-            }, [
-                dom_1.el("div", {}, [
-                    isSticky ? header : null,
-                    getGridData(renderConfig, shifts),
-                    isSticky ? footer : null,
-                ]),
-            ]),
-            FixedCols_1.getFixedColsHeader(renderConfig, layoutState),
-            FixedCols_1.getFixedCols(renderConfig, layoutState),
-            FixedRows_1.getFixedDataRows(renderConfig, layoutState),
-            isSticky ? null : footer,
-        ]),
-    ]);
-}
-exports.render = render;
-function proRender(vm, obj, htmlEvents, selection, uid) {
-    if (!obj._container) {
-        obj.config.width = 1;
-        obj.config.height = 1;
-    }
-    // if grid placed inside another component, it will fit to its container
-    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
-        var parentNode = vm.node.parent.el;
-        var parentSizes = getElementSizes(parentNode);
-        obj.config.width = parentSizes.width;
-        obj.config.height = parentSizes.height;
-    }
-    var config = obj.config;
-    // when grid is destructing and user try to repaint it
-    if (!config) {
-        return dom_1.el("div");
-    }
-    if (!config.columns.length) {
-        return dom_1.el(".dhx_grid", {
-            "data-dhx-root-id": config.rootParent,
-        });
-    }
-    var data = obj.data.getRawData(0, -1, null, 2);
-    if (config.columns.reduce(function (check, col) { return (check = !col.hidden ? col.hidden : check); }, true)) {
-        config.$totalHeight = 0;
-    }
-    else {
-        config.$totalHeight = data.reduce(function (total, _a) {
-            var $height = _a.$height;
-            return (total += $height || 0);
-        }, 0);
-    }
-    var sizes = getElementSizes(obj._container);
-    var wrapperSizes = {
-        width: (config.width ? config.width : sizes && sizes.width) || 0,
-        height: (config.height ? config.height : sizes && sizes.height) || 0,
-    };
-    // TODO: Remove scroll
-    if (main_1.isAutoWidth(config)) {
-        applyAutoWidth(config, wrapperSizes, true, false, obj.scrollView && obj.scrollView.config.enable);
-        config.$totalWidth = main_1.getTotalWidth(config.columns.filter(function (col) { return !col.hidden; }));
-    }
-    config.width = wrapperSizes.width;
-    config.height = wrapperSizes.height;
-    var renderConfig = getRenderConfig(obj, data, wrapperSizes);
-    renderConfig.selection = selection;
-    renderConfig.datacollection = obj.data;
-    var shifts = Cells_1.getShifts(renderConfig);
-    var isSticky = main_1.isCssSupport("position", "sticky");
-    var gridBodyHeight = getContentHeight(renderConfig, isSticky, wrapperSizes);
-    var layoutState = {
-        wrapper: wrapperSizes,
-        sticky: isSticky,
-        shifts: shifts,
-        gridBodyHeight: gridBodyHeight,
-    };
-    var header = FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "header", position: "top" }));
-    var footer = renderConfig.$footer
-        ? FixedRows_1.getFixedRows(renderConfig, __assign(__assign({}, layoutState), { name: "footer", position: "bottom" }))
-        : null;
-    var lessByWidth = renderConfig.$totalWidth + BORDERS < wrapperSizes.width ? "dhx_grid-less-width" : "";
-    var lessByHeight = renderConfig.$totalHeight + BORDERS < wrapperSizes.height ? "dhx_grid-less-height" : "";
-    // dirty: but work. Change checking of rendering Grid
-    if (!vm.node) {
-        var _a = obj.getScrollState(), x_2 = _a.x, y_2 = _a.y;
-        dom_1.awaitRedraw().then(function () {
-            obj.scroll(x_2, y_2);
-        });
-    }
-    var gridContent = dom_1.el("div", {}, [
-        isSticky ? header : null,
-        getGridData(renderConfig, shifts),
-        isSticky ? footer : null,
-    ]);
-    return dom_1.el(".dhx_grid.dhx_widget", {
-        class: (renderConfig.css || "") +
-            (!isSticky ? " dhx_grid_border" : "") +
-            (config.multiselection ? " dhx_no-select--pointer" : ""),
-        "data-dhx-widget-id": uid,
-        "data-dhx-root-id": config.rootParent,
-        role: "grid",
-        "aria-rowcount": renderConfig.data.length,
-        "aria-colcount": config.columns.filter(function (col) { return !col.hidden; }).length,
-    }, [
-        dom_1.resizer(function (changeWith) {
-            if (main_1.isAutoWidth(obj.config) && !!changeWith) {
-                config.$totalWidth = 0;
-                applyAutoWidth(config, wrapperSizes, true, true);
-            }
-            return obj.paint();
-        }),
-        dom_1.el(".dhx_grid-content", {
-            style: __assign({}, wrapperSizes),
-            onclick: htmlEvents.onclick,
-            onmouseover: htmlEvents.onmouseover,
-            class: (lessByWidth + " " + lessByHeight).trim(),
-            role: "presentation",
-        }, [
-            isSticky ? null : header,
-            dom_1.el(".dhx_grid-body", {
-                style: {
-                    height: gridBodyHeight,
-                    width: wrapperSizes.width - BORDERS,
-                },
-                onscroll: htmlEvents.onscroll,
-                _ref: "grid_body",
-                role: "presentation",
-            }, [
-                obj.scrollView && obj.scrollView.config.enable
-                    ? obj.scrollView.render([gridContent])
-                    : gridContent,
-            ]),
-            FixedCols_1.getFixedColsHeader(renderConfig, layoutState),
-            FixedCols_1.getFixedCols(renderConfig, layoutState),
-            FixedRows_1.getFixedDataRows(renderConfig, layoutState),
-            isSticky ? null : footer,
-        ]),
-    ]);
-}
-exports.proRender = proRender;
-
-
-/***/ }),
 /* 66 */
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -9392,218 +9645,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(43);
-var Cell_1 = __webpack_require__(67);
-var dom_1 = __webpack_require__(0);
-var Layout = /** @class */ (function (_super) {
-    __extends(Layout, _super);
-    function Layout(parent, config) {
-        var _this = _super.call(this, parent, config) || this;
-        // root layout
-        _this._root = _this.config.parent || _this;
-        _this._all = {};
-        _this._parseConfig();
-        if (_this.config.activeTab) {
-            _this.config.activeView = _this.config.activeTab;
-        }
-        // Need replace to tabbar
-        if (_this.config.views) {
-            _this.config.activeView = _this.config.activeView || _this._cells[0].id;
-            _this._isViewLayout = true;
-        }
-        if (!config.parent) {
-            var view = dom_1.create({ render: function () { return _this.toVDOM(); } }, _this);
-            _this.mount(parent, view);
-        }
-        return _this;
-    }
-    Layout.prototype.destructor = function () {
-        for (var _i = 0, _a = this._all; _i < _a.length; _i++) {
-            var key = _a[_i];
-            this._all[key].destructor();
-        }
-        this.config = this._cells = this._root = this._xLayout = this._isViewLayout = null;
-        this._all = {};
-        this.unmount();
-    };
-    Layout.prototype.toVDOM = function () {
-        if (this._isViewLayout) {
-            var roots = [this.getCell(this.config.activeView).toVDOM()];
-            return _super.prototype.toVDOM.call(this, roots);
-        }
-        var nodes = [];
-        this._inheritTypes();
-        this._cells.forEach(function (cell) {
-            var node = cell.toVDOM();
-            if (Array.isArray(node)) {
-                nodes = nodes.concat(node);
-            }
-            else {
-                nodes.push(node);
-            }
-        });
-        return _super.prototype.toVDOM.call(this, nodes);
-    };
-    Layout.prototype.removeCell = function (id) {
-        if (!this.events.fire(types_1.LayoutEvents.beforeRemove, [id])) {
-            return;
-        }
-        var root = this.config.parent || this;
-        if (root !== this) {
-            return root.removeCell(id);
-        }
-        // this === root layout
-        var view = this.getCell(id);
-        if (view) {
-            var parent_1 = view.getParent();
-            delete this._all[id];
-            parent_1._cells = parent_1._cells.filter(function (cell) { return cell.id != id; });
-            parent_1.paint();
-        }
-        this.events.fire(types_1.LayoutEvents.afterRemove, [id]);
-    };
-    Layout.prototype.addCell = function (config, index) {
-        if (index === void 0) { index = -1; }
-        if (!this.events.fire(types_1.LayoutEvents.beforeAdd, [config.id])) {
-            return;
-        }
-        var view = this._createCell(config);
-        if (index < 0) {
-            index = this._cells.length + index + 1;
-        }
-        this._cells.splice(index, 0, view);
-        this.paint();
-        if (!this.events.fire(types_1.LayoutEvents.afterAdd, [config.id])) {
-            return;
-        }
-    };
-    Layout.prototype.getId = function (index) {
-        if (index < 0) {
-            index = this._cells.length + index;
-        }
-        return this._cells[index] ? this._cells[index].id : undefined;
-    };
-    Layout.prototype.getRefs = function (name) {
-        return this._root.getRootView().refs[name];
-    };
-    Layout.prototype.getCell = function (id) {
-        var _a;
-        return (_a = this._root) === null || _a === void 0 ? void 0 : _a._all[id];
-    };
-    Layout.prototype.forEach = function (callback, parent, level) {
-        if (level === void 0) { level = Infinity; }
-        if (!this._haveCells(parent) || level < 1) {
-            return;
-        }
-        var array;
-        if (parent) {
-            array = this._root._all[parent]._cells;
-        }
-        else {
-            array = this._root._cells;
-        }
-        for (var index = 0; index < array.length; index++) {
-            var cell = array[index];
-            callback.call(this, cell, index, array);
-            if (this._haveCells(cell.id)) {
-                cell.forEach(callback, cell.id, --level);
-            }
-        }
-    };
-    /** @deprecated See a documentation: https://docs.dhtmlx.com/ */
-    Layout.prototype.cell = function (id) {
-        return this.getCell(id);
-    };
-    Layout.prototype._getCss = function (content) {
-        var layoutCss = this._xLayout ? "dhx_layout-columns" : "dhx_layout-rows";
-        var directionCss = this.config.align ? " " + layoutCss + "--" + this.config.align : "";
-        if (content) {
-            return (layoutCss +
-                " dhx_layout-cell" +
-                (this.config.align ? " dhx_layout-cell--" + this.config.align : ""));
-        }
-        else {
-            var cellCss = this.config.parent ? _super.prototype._getCss.call(this) : "dhx_widget dhx_layout";
-            var fullModeCss = this.config.parent ? "" : " dhx_layout-cell";
-            return cellCss + (this.config.full ? fullModeCss : " " + layoutCss) + directionCss;
-        }
-    };
-    Layout.prototype._parseConfig = function () {
-        var _this = this;
-        var config = this.config;
-        var cells = config.rows || config.cols || config.views || [];
-        this._xLayout = !config.rows;
-        this._cells = cells.map(function (a) { return _this._createCell(a); });
-    };
-    Layout.prototype._createCell = function (cell) {
-        var view;
-        if (cell.rows || cell.cols || cell.views) {
-            cell.parent = this._root;
-            view = new Layout(this, cell);
-        }
-        else {
-            view = new Cell_1.Cell(this, cell);
-        }
-        // FIxME
-        this._root._all[view.id] = view;
-        if (cell.init) {
-            cell.init(view, cell);
-        }
-        return view;
-    };
-    Layout.prototype._haveCells = function (id) {
-        if (id) {
-            var array = this._root._all[id];
-            return array._cells && array._cells.length > 0;
-        }
-        return Object.keys(this._all).length > 0;
-    };
-    Layout.prototype._inheritTypes = function (obj) {
-        var _this = this;
-        if (obj === void 0) { obj = this._cells; }
-        if (Array.isArray(obj)) {
-            obj.forEach(function (cell) { return _this._inheritTypes(cell); });
-        }
-        else {
-            var cellConfig = obj.config;
-            if (cellConfig.rows || cellConfig.cols) {
-                var viewParent = obj.getParent();
-                if (!cellConfig.type && viewParent) {
-                    if (viewParent.config.type) {
-                        cellConfig.type = viewParent.config.type;
-                    }
-                    else {
-                        this._inheritTypes(viewParent);
-                    }
-                }
-            }
-        }
-    };
-    return Layout;
-}(Cell_1.Cell));
-exports.Layout = Layout;
-
-
-/***/ }),
-/* 67 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -9618,11 +9659,12 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(43);
-var helpers_1 = __webpack_require__(152);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(44);
+var helpers_1 = __webpack_require__(144);
 var events_1 = __webpack_require__(3);
-var ts_grid_1 = __webpack_require__(28);
+var ts_grid_1 = __webpack_require__(29);
+var Layout_1 = __webpack_require__(43);
 var Cell = /** @class */ (function (_super) {
     __extends(Cell, _super);
     function Cell(parent, config) {
@@ -9649,6 +9691,8 @@ var Cell = /** @class */ (function (_super) {
         _this._afterWindowResized = _this._resizedWindow.bind(_this);
         _this._initHandlers();
         _this.id = _this.config.id || core_1.uid();
+        _this._progress = !!_this.config.progressDefault;
+        _this._stopProgressDefault = false;
         if (_this._isXDirection() && !config.width)
             config.$autoWidth = true;
         if (!_this._isXDirection() && !config.height)
@@ -9656,17 +9700,19 @@ var Cell = /** @class */ (function (_super) {
         return _this;
     }
     Cell.prototype.paint = function () {
+        var _a;
         if (this.isVisible()) {
             var view = this.getRootView();
             if (view) {
                 view.redraw();
             }
             else {
-                this._parent.paint();
+                (_a = this._parent) === null || _a === void 0 ? void 0 : _a.paint();
             }
         }
     };
     Cell.prototype.isVisible = function () {
+        var _a;
         // top level node
         if (!this._parent) {
             if (this._container && this._container.tagName) {
@@ -9675,7 +9721,7 @@ var Cell = /** @class */ (function (_super) {
             return Boolean(this.getRootNode());
         }
         // check active view in case of multiview
-        var active = this._parent.config.activeView;
+        var active = (_a = this._parent.config) === null || _a === void 0 ? void 0 : _a.activeView;
         if (active && active !== this.id) {
             return false;
         }
@@ -9687,6 +9733,7 @@ var Cell = /** @class */ (function (_super) {
             return;
         }
         this.config.hidden = true;
+        this._resetCellsSize();
         if (this._parent && this._parent.paint) {
             this._parent.paint();
         }
@@ -9810,8 +9857,31 @@ var Cell = /** @class */ (function (_super) {
         this.config.html = html;
         this.paint();
     };
+    Cell.prototype.detach = function () {
+        this._stopProgressDefault = false;
+        this._ui = this.config.html = null;
+        this.paint();
+    };
+    Cell.prototype.progressShow = function () {
+        if (this.config.progressDefault) {
+            this._stopProgressDefault = false;
+        }
+        this._progress = true;
+        this.paint();
+    };
+    Cell.prototype.progressHide = function () {
+        if (this.config.progressDefault) {
+            this._stopProgressDefault = true;
+        }
+        this._progress = false;
+        this.paint();
+    };
+    Cell.prototype.isVisibleProgress = function () {
+        return this._progress;
+    };
     Cell.prototype.toVDOM = function (nodes) {
         var _a;
+        var _b;
         if (this.config === null) {
             this.config = {};
         }
@@ -9870,85 +9940,107 @@ var Cell = /** @class */ (function (_super) {
                     break;
             }
         }
-        var cell = dom_1.el("div", __assign(__assign((_a = { _key: this._uid, _ref: this._uid }, _a["aria-label"] = this.config.id ? "tab-content-" + this.config.id : null, _a), handlers), { class: this._getCss(false) +
+        var cell = dom_1.el("div", __assign(__assign((_a = { _key: this._uid, _ref: this._uid }, _a["aria-label"] = this.config.id ? "tab-content-" + this.config.id : null, _a["data-cell-id"] = (_b = this.config.id) !== null && _b !== void 0 ? _b : null, _a), handlers), { class: this._getCss(false) +
                 (this.config.css ? " " + this.config.css : "") +
                 (this.config.collapsed ? " dhx_layout-cell--collapsed" : "") +
                 (this.config.resizable ? " dhx_layout-cell--resizable" : "") +
-                (this.config.type && !this.config.full ? typeClass : ""), style: fullStyle }), this.config.full
-            ? [
-                dom_1.el("div", {
-                    tabindex: this.config.collapsable ? "0" : "-1",
-                    role: this.config.collapsable ? "button" : null,
-                    "aria-label": this.config.collapsable
-                        ? "click to " + (this.config.collapsed ? "expand" : "collapse")
-                        : null,
-                    class: "dhx_layout-cell-header" +
-                        (this._isXDirection()
-                            ? " dhx_layout-cell-header--col"
-                            : " dhx_layout-cell-header--row") +
-                        (this.config.collapsable ? " dhx_layout-cell-header--collapseble" : "") +
-                        (this.config.collapsed ? " dhx_layout-cell-header--collapsed" : "") +
-                        (((this.getParent() || {}).config || {}).isAccordion
-                            ? " dhx_layout-cell-header--accordion"
-                            : ""),
-                    style: {
-                        height: this.config.headerHeight,
-                    },
-                    onclick: this._handlers.toggle,
-                    onkeydown: this._handlers.enterCollapse,
-                }, [
-                    this.config.headerIcon &&
-                        dom_1.el("span.dhx_layout-cell-header__icon", {
-                            class: this.config.headerIcon,
-                        }),
-                    this.config.headerImage &&
-                        dom_1.el(".dhx_layout-cell-header__image-wrapper", [
-                            dom_1.el("img", {
-                                src: this.config.headerImage,
-                                class: "dhx_layout-cell-header__image",
-                            }),
-                        ]),
-                    this.config.header &&
-                        dom_1.el("h3.dhx_layout-cell-header__title", this.config.header),
-                    this.config.collapsable
-                        ? dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
-                            class: this._getCollapseIcon(),
-                        })
-                        : dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
-                            class: "dxi dxi-empty",
-                        }),
-                ]),
-                !this.config.collapsed
-                    ? dom_1.el("div", {
-                        style: __assign(__assign({}, stylePadding), { height: "calc(100% - " + (this.config.headerHeight || 37) + "px)" }),
-                        class: this._getCss(true) +
-                            " dhx_layout-cell-content" +
-                            (this.config.type ? typeClass : ""),
-                    }, this.config.html
-                        ? [
-                            dom_1.el("div", {
-                                ".innerHTML": this.config.html,
-                                class: "dhx_layout-cell dhx_layout-cell-inner_html",
-                            }),
-                        ]
-                        : kids)
-                    : null,
-            ]
-            : this.config.html &&
-                !(this.config.rows &&
-                    this.config.cols &&
-                    this.config.views)
+                (this.config.type && !this.config.full ? typeClass : ""), style: fullStyle }), [
+            this.config.full
                 ? [
-                    !this.config.collapsed
-                        ? dom_1.el(".dhx_layout-cell-content", { style: stylePadding }, [
-                            dom_1.el(".dhx_layout-cell-inner_html", {
-                                ".innerHTML": this.config.html,
+                    dom_1.el("div", {
+                        tabindex: this.config.collapsable ? "0" : "-1",
+                        role: this.config.collapsable ? "button" : null,
+                        "aria-label": this.config.collapsable
+                            ? "click to " + (this.config.collapsed ? "expand" : "collapse")
+                            : null,
+                        class: "dhx_layout-cell-header" +
+                            (this._isXDirection()
+                                ? " dhx_layout-cell-header--col"
+                                : " dhx_layout-cell-header--row") +
+                            (this.config.collapsable
+                                ? " dhx_layout-cell-header--collapseble"
+                                : "") +
+                            (this.config.collapsed ? " dhx_layout-cell-header--collapsed" : "") +
+                            (((this.getParent() || {}).config || {}).isAccordion
+                                ? " dhx_layout-cell-header--accordion"
+                                : ""),
+                        style: {
+                            height: this.config.headerHeight,
+                        },
+                        onclick: this._handlers.toggle,
+                        onkeydown: this._handlers.enterCollapse,
+                    }, [
+                        this.config.headerIcon &&
+                            dom_1.el("span.dhx_layout-cell-header__icon", {
+                                class: this.config.headerIcon,
                             }),
-                        ])
+                        this.config.headerImage &&
+                            dom_1.el(".dhx_layout-cell-header__image-wrapper", [
+                                dom_1.el("img", {
+                                    src: this.config.headerImage,
+                                    class: "dhx_layout-cell-header__image",
+                                }),
+                            ]),
+                        this.config.header &&
+                            dom_1.el("h3.dhx_layout-cell-header__title", this.config.header),
+                        this.config.collapsable
+                            ? dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
+                                class: this._getCollapseIcon(),
+                            })
+                            : dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
+                                class: "dxi dxi-empty",
+                            }),
+                    ]),
+                    !this.config.collapsed
+                        ? dom_1.el("div", {
+                            style: __assign(__assign({}, stylePadding), { height: "calc(100% - " + (this.config.headerHeight || 37) + "px)" }),
+                            class: this._getCss(true) +
+                                " dhx_layout-cell-content" +
+                                (this.config.type ? typeClass : ""),
+                        }, this.config.html
+                            ? [
+                                dom_1.el("div", {
+                                    ".innerHTML": this.config.html,
+                                    class: "dhx_layout-cell dhx_layout-cell-inner_html",
+                                }),
+                            ]
+                            : kids)
                         : null,
                 ]
-                : kids);
+                : this.config.html &&
+                    !(this.config.rows &&
+                        this.config.cols &&
+                        this.config.views)
+                    ? [
+                        !this.config.collapsed
+                            ? dom_1.el(".dhx_layout-cell-content", { style: stylePadding }, [
+                                dom_1.el(".dhx_layout-cell-inner_html", {
+                                    ".innerHTML": this.config.html,
+                                }),
+                            ])
+                            : null,
+                    ]
+                    : kids,
+            this._checkProgress() && this._getProgressBar(),
+        ]);
         return resizer ? [cell, resizer] : cell;
+    };
+    Cell.prototype._getProgressBar = function () {
+        return dom_1.el("div", {
+            class: "dhx_progress-bar",
+        }, [
+            dom_1.sv("svg", {
+                viewBox: "25 25 50 50",
+                class: "dhx_spinner",
+            }, [
+                dom_1.sv("circle", {
+                    cx: "50",
+                    cy: "50",
+                    r: "20",
+                    class: "path",
+                }),
+            ]),
+        ]);
     };
     Cell.prototype._getCss = function (_content) {
         return "dhx_layout-cell";
@@ -10193,6 +10285,33 @@ var Cell = /** @class */ (function (_super) {
     Cell.prototype._isXDirection = function () {
         return this._parent && this._parent._xLayout;
     };
+    Cell.prototype._checkProgress = function () {
+        if (this instanceof Layout_1.Layout) {
+            return this.isVisibleProgress();
+        }
+        this._calculateProgressState();
+        return ((this._progress || this._checkAutoProgress()) &&
+            !this.config.collapsed &&
+            !this.config.hidden &&
+            !this._parent.isVisibleProgress());
+    };
+    Cell.prototype._checkAutoProgress = function () {
+        if (this._stopProgressDefault)
+            return false;
+        var _a = this.config, html = _a.html, progressDefault = _a.progressDefault;
+        return progressDefault && !this._ui && !html;
+    };
+    Cell.prototype._calculateProgressState = function () {
+        if (this._stopProgressDefault)
+            return;
+        var _a = this.config, html = _a.html, progressDefault = _a.progressDefault;
+        if (progressDefault && !this._ui && !html) {
+            this._progress = true;
+        }
+        if (progressDefault && (this._ui || html)) {
+            this._progress = false;
+        }
+    };
     Cell.prototype._calculateStyle = function () {
         var config = this.config;
         if (!config) {
@@ -10310,13 +10429,27 @@ var Cell = /** @class */ (function (_super) {
             this.paint();
         }
     };
+    Cell.prototype._resetCellsSize = function () {
+        var _this = this;
+        var cells = this._parent._cells.filter(function (cell) {
+            return cell !== _this && !cell.config.hidden && !cell.config.collapsed;
+        });
+        var direction = this._isXDirection();
+        var autoSize = direction ? "$autoWidth" : "$autoHeight";
+        var size = direction ? "width" : "height";
+        cells.forEach(function (cell) {
+            if (cell.config[autoSize]) {
+                cell.config[size] = undefined;
+            }
+        });
+    };
     return Cell;
 }(view_1.View));
 exports.Cell = Cell;
 
 
 /***/ }),
-/* 68 */
+/* 67 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10333,7 +10466,7 @@ var PopupEvents;
 
 
 /***/ }),
-/* 69 */
+/* 68 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10341,6 +10474,7 @@ var PopupEvents;
 Object.defineProperty(exports, "__esModule", { value: true });
 var SliderEvents;
 (function (SliderEvents) {
+    SliderEvents["beforeChange"] = "beforeChange";
     SliderEvents["change"] = "change";
     SliderEvents["focus"] = "focus";
     SliderEvents["blur"] = "blur";
@@ -10351,7 +10485,7 @@ var SliderEvents;
 
 
 /***/ }),
-/* 70 */
+/* 69 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10366,7 +10500,7 @@ exports.default = locale;
 
 
 /***/ }),
-/* 71 */
+/* 70 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10374,6 +10508,7 @@ exports.default = locale;
 Object.defineProperty(exports, "__esModule", { value: true });
 var TimepickerEvents;
 (function (TimepickerEvents) {
+    TimepickerEvents["beforeChange"] = "beforeChange";
     TimepickerEvents["change"] = "change";
     TimepickerEvents["beforeApply"] = "beforeApply";
     TimepickerEvents["afterApply"] = "afterApply";
@@ -10389,7 +10524,7 @@ var TimepickerEvents;
 
 
 /***/ }),
-/* 72 */
+/* 71 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10410,7 +10545,7 @@ var CalendarEvents;
 
 
 /***/ }),
-/* 73 */
+/* 72 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -10440,17 +10575,17 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
-var keycodes_1 = __webpack_require__(161);
-var view_1 = __webpack_require__(5);
+var keycodes_1 = __webpack_require__(153);
+var view_1 = __webpack_require__(6);
 var ts_data_1 = __webpack_require__(4);
 var ts_layout_1 = __webpack_require__(10);
-var ts_list_1 = __webpack_require__(30);
+var ts_list_1 = __webpack_require__(31);
 var ts_popup_1 = __webpack_require__(11);
-var keyListener_1 = __webpack_require__(165);
-var en_1 = __webpack_require__(46);
-var types_1 = __webpack_require__(31);
-var helper_1 = __webpack_require__(76);
-var types_2 = __webpack_require__(77);
+var keyListener_1 = __webpack_require__(157);
+var en_1 = __webpack_require__(47);
+var types_1 = __webpack_require__(32);
+var helper_1 = __webpack_require__(75);
+var types_2 = __webpack_require__(76);
 function itemsCountTemplate(count, templateFN) {
     if (typeof templateFN === "function") {
         return templateFN(count);
@@ -10702,6 +10837,7 @@ var Combobox = /** @class */ (function (_super) {
                 e.stopPropagation();
                 _this._helper.show(e.target, {
                     mode: _this.config.labelPosition === "left" ? "bottom" : "right",
+                    theme: e.target,
                 });
             },
             selectAll: function () {
@@ -10886,10 +11022,21 @@ var Combobox = /** @class */ (function (_super) {
             }
             _this._changePopupPosition();
         });
+        this.list.selection.events.on(types_1.SelectionEvents.beforeSelect, function (id) {
+            var value = _this.config.multiselection
+                ? __spreadArrays(_this.getValue(_this.config.multiselection), [id]) : id;
+            return _this.events.fire(types_2.ComboboxEvents.beforeChange, [value]);
+        });
         this.list.selection.events.on(types_1.SelectionEvents.afterSelect, function () {
             var value = _this.getValue(_this.config.multiselection);
             _this.events.fire(types_2.ComboboxEvents.change, [value]);
             _this._updateSelectedItem(value);
+        });
+        this.list.selection.events.on(types_1.SelectionEvents.beforeUnSelect, function (id) {
+            var value = _this.config.multiselection
+                ? _this.getValue(_this.config.multiselection).filter(function (i) { return i != id; })
+                : id;
+            return _this.events.fire(types_2.ComboboxEvents.beforeChange, [value]);
         });
         this.list.selection.events.on(types_1.SelectionEvents.afterUnSelect, function () {
             var multi = _this.config.multiselection;
@@ -11219,7 +11366,10 @@ var Combobox = /** @class */ (function (_super) {
                     : 0) +
                 (this._state.creatingState ? this._layout.getCell("not-found").height : 0) +
                 "px";
-        this.popup.show(holderNode, { mode: "bottom" });
+        this.popup.show(holderNode, {
+            mode: "bottom",
+            theme: this.getRootNode(),
+        });
     };
     return Combobox;
 }(view_1.View));
@@ -11227,7 +11377,7 @@ exports.Combobox = Combobox;
 
 
 /***/ }),
-/* 74 */
+/* 73 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11268,12 +11418,12 @@ var core_1 = __webpack_require__(1);
 var ts_data_1 = __webpack_require__(4);
 var dom_1 = __webpack_require__(0);
 var KeyManager_1 = __webpack_require__(12);
-var types_1 = __webpack_require__(31);
-var view_1 = __webpack_require__(5);
-var Selection_1 = __webpack_require__(75);
+var types_1 = __webpack_require__(32);
+var view_1 = __webpack_require__(6);
+var Selection_1 = __webpack_require__(74);
 var html_1 = __webpack_require__(2);
-var types_2 = __webpack_require__(45);
-var editors_1 = __webpack_require__(162);
+var types_2 = __webpack_require__(46);
+var editors_1 = __webpack_require__(154);
 exports.MOVE_UP = 1;
 exports.MOVE_DOWN = 2;
 var List = /** @class */ (function (_super) {
@@ -11766,13 +11916,13 @@ exports.List = List;
 
 
 /***/ }),
-/* 75 */
+/* 74 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(31);
+var types_1 = __webpack_require__(32);
 var ts_data_1 = __webpack_require__(4);
 var Selection = /** @class */ (function () {
     function Selection(config, data, events) {
@@ -11929,14 +12079,14 @@ exports.Selection = Selection;
 
 
 /***/ }),
-/* 76 */
+/* 75 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var en_1 = __webpack_require__(46);
+var en_1 = __webpack_require__(47);
 function selectAllView() {
     return dom_1.el(".dhx_list-item.dhx_combobox-options__item.dhx_combobox-options__item--select-all.dhx_combobox__action-select-all", en_1.default.selectAll);
 }
@@ -11964,7 +12114,7 @@ exports.emptyListHeight = emptyListHeight;
 
 
 /***/ }),
-/* 77 */
+/* 76 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -11972,6 +12122,7 @@ exports.emptyListHeight = emptyListHeight;
 Object.defineProperty(exports, "__esModule", { value: true });
 var ComboboxEvents;
 (function (ComboboxEvents) {
+    ComboboxEvents["beforeChange"] = "beforeChange";
     ComboboxEvents["change"] = "change";
     ComboboxEvents["focus"] = "focus";
     ComboboxEvents["blur"] = "blur";
@@ -11992,6 +12143,156 @@ var ComboState;
     ComboState[ComboState["error"] = 1] = "error";
     ComboState[ComboState["success"] = 2] = "success";
 })(ComboState = exports.ComboState || (exports.ComboState = {}));
+
+
+/***/ }),
+/* 77 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var types_1 = __webpack_require__(8);
+var Cells_1 = __webpack_require__(30);
+var FixedRows_1 = __webpack_require__(78);
+var main_1 = __webpack_require__(14);
+var render_1 = __webpack_require__(24);
+function getFixedColsHeader(renderConfig, layout, mode) {
+    if ((mode === types_1.Split.left &&
+        (typeof renderConfig.leftSplit !== "number" || !renderConfig.fixedColumns.left.length)) ||
+        (mode === types_1.Split.right &&
+            (typeof renderConfig.rightSplit !== "number" || !renderConfig.fixedColumns.right.length))) {
+        return;
+    }
+    var leftSplit = renderConfig.leftSplit, rightSplit = renderConfig.rightSplit, $positions = renderConfig.$positions, $totalWidth = renderConfig.$totalWidth, $scrollBarWidth = renderConfig.$scrollBarWidth;
+    var isRightSplit = mode === types_1.Split.right;
+    var columns = isRightSplit ? renderConfig.fixedColumns.right : renderConfig.fixedColumns.left;
+    var width = main_1.getTotalWidth(columns);
+    var getRowAriaAttrs = function (count) { return ({
+        role: "rowgroup",
+        "aria-rowcount": count,
+    }); };
+    var frozenHeaderCols = FixedRows_1.getFixedRows(__assign(__assign({}, renderConfig), { currentColumns: columns, $positions: __assign(__assign({}, $positions), { xStart: 0, xEnd: isRightSplit ? rightSplit : leftSplit }), scroll: { top: 0, left: 0 }, columns: columns }), __assign(__assign({}, layout), { name: "header", position: "top", shifts: { x: 0, y: 0 } }));
+    var headerRowsConfig = __assign(__assign({}, layout), { name: "header", position: "top" });
+    return dom_1.el(".dhx_" + headerRowsConfig.name + "-fixed-cols", __assign({ onwheel: main_1.scrollFixedColsAndRows, class: isRightSplit ? "dhx_grid__cols_right--fixed" : "dhx_grid__cols_left--fixed", style: {
+            position: "absolute",
+            top: 0,
+            left: isRightSplit
+                ? $totalWidth < layout.wrapper.width - $scrollBarWidth.y - render_1.BORDERS
+                    ? $totalWidth - width
+                    : layout.wrapper.width - width - $scrollBarWidth.y - render_1.BORDERS
+                : 0,
+            width: width,
+            overflow: "hidden",
+        } }, getRowAriaAttrs(frozenHeaderCols.length)), frozenHeaderCols.body);
+}
+exports.getFixedColsHeader = getFixedColsHeader;
+function getFixedCols(renderConfig, layout, mode) {
+    if ((mode === types_1.Split.left &&
+        (typeof renderConfig.leftSplit !== "number" || !renderConfig.fixedColumns.left.length)) ||
+        (mode === types_1.Split.right &&
+            (typeof renderConfig.rightSplit !== "number" || !renderConfig.fixedColumns.right.length))) {
+        return;
+    }
+    var leftSplit = renderConfig.leftSplit, rightSplit = renderConfig.rightSplit, $totalWidth = renderConfig.$totalWidth, $totalHeight = renderConfig.$totalHeight, headerHeight = renderConfig.headerHeight, configFooterHeight = renderConfig.footerHeight, $positions = renderConfig.$positions, scroll = renderConfig.scroll, data = renderConfig.data, $scrollBarWidth = renderConfig.$scrollBarWidth;
+    var isRightSplit = mode === types_1.Split.right;
+    var fixedContentHeight = $totalHeight + headerHeight + configFooterHeight;
+    var fixedColsHeight;
+    if (fixedContentHeight > layout.gridBodyHeight) {
+        fixedColsHeight = renderConfig.$footer
+            ? fixedContentHeight - $scrollBarWidth.x
+            : layout.gridBodyHeight;
+    }
+    else if (fixedContentHeight < layout.gridBodyHeight - $scrollBarWidth.x) {
+        fixedColsHeight = fixedContentHeight;
+    }
+    else {
+        fixedColsHeight = renderConfig.$footer
+            ? layout.gridBodyHeight
+            : layout.gridBodyHeight - $scrollBarWidth.x;
+    }
+    var columns = isRightSplit ? renderConfig.fixedColumns.right : renderConfig.fixedColumns.left;
+    var width = main_1.getTotalWidth(columns);
+    var renderFrom = "fixedCols";
+    var fixedCols = Cells_1.getCells(__assign(__assign({}, renderConfig), { columns: columns, $renderFrom: renderFrom, $positions: __assign(__assign({}, $positions), { xStart: 0, xEnd: isRightSplit ? rightSplit : leftSplit }) }));
+    var isSticky = layout.sticky;
+    var footerRowsConfig = __assign(__assign({}, layout), { name: "footer", position: "bottom" });
+    var frozenFooterCols = FixedRows_1.getRows(__assign(__assign({}, renderConfig), { currentColumns: columns, $positions: __assign(__assign({}, $positions), { xStart: 0, xEnd: isRightSplit ? rightSplit : leftSplit }) }), __assign(__assign({}, layout), { name: "footer", position: "bottom" }));
+    var footerHeight = 0;
+    frozenFooterCols.forEach(function (node) { return (footerHeight += node.attrs.style.height); });
+    var getRowAriaAttrs = function (count) { return ({
+        role: "rowgroup",
+        "aria-rowcount": count,
+    }); };
+    var frozenFooter = isSticky
+        ? dom_1.el(".dhx_" + footerRowsConfig.name + "-fixed-cols", __assign({ onwheel: main_1.scrollFixedColsAndRows, class: isRightSplit ? "dhx_grid__cols_right--fixed" : "dhx_grid__cols_left--fixed", style: {
+                position: "absolute",
+                top: fixedColsHeight < layout.gridBodyHeight ? fixedColsHeight - footerHeight : null,
+                left: isRightSplit
+                    ? $totalWidth < layout.wrapper.width - $scrollBarWidth.y - render_1.BORDERS
+                        ? $totalWidth - width
+                        : layout.wrapper.width - width - $scrollBarWidth.y - render_1.BORDERS
+                    : 0,
+                bottom: fixedColsHeight >= layout.gridBodyHeight
+                    ? (isSticky ? $scrollBarWidth.x : 0) + "px"
+                    : null,
+            } }, getRowAriaAttrs(frozenFooterCols.length)), frozenFooterCols)
+        : null;
+    var pos = $positions;
+    var events = render_1.getEvents(renderConfig, isRightSplit ? types_1.Split.right : types_1.Split.left);
+    var spans = Cells_1.getSpans(__assign(__assign({}, renderConfig), { $renderFrom: renderFrom }), isRightSplit ? types_1.Split.right : types_1.Split.left);
+    var getFixedColAriaAttrs = function () { return ({
+        role: "presentation",
+        "aria-label": "Fixed column",
+    }); };
+    return [
+        dom_1.el(".dhx_grid-fixed-cols-wrap", __assign(__assign({ style: {
+                left: isRightSplit
+                    ? $totalWidth < layout.wrapper.width - $scrollBarWidth.y - render_1.BORDERS
+                        ? $totalWidth - width
+                        : layout.wrapper.width - width - $scrollBarWidth.y - render_1.BORDERS
+                    : 0,
+                height: fixedColsHeight >= layout.gridBodyHeight
+                    ? (isSticky ? layout.gridBodyHeight : layout.gridBodyHeight + headerHeight) -
+                        $scrollBarWidth.x
+                    : fixedColsHeight,
+                paddingTop: headerHeight,
+                overflow: "hidden",
+                width: width,
+            } }, events), getFixedColAriaAttrs()), [
+            dom_1.el(".dhx_grid-fixed-cols", __assign(__assign({ onwheel: main_1.scrollFixedColsAndRows, class: isRightSplit ? "dhx_grid__cols_right--fixed" : "dhx_grid__cols_left--fixed", style: {
+                    top: -scroll.top + headerHeight - 1 + "px",
+                    paddingTop: layout.shifts.y,
+                    height: $totalHeight,
+                    position: "absolute",
+                }, _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(pos.yStart, pos.xStart, renderConfig)), getRowAriaAttrs(data.length)), __spreadArrays(fixedCols, [spans && dom_1.el("span.dhx_span-spans", { role: "presentation" }, [spans])])),
+            isRightSplit
+                ? dom_1.el(".dhx_grid__cols-border--frozen", { role: "presentation", style: { left: 0 } })
+                : dom_1.el(".dhx_grid__cols-border--frozen", { role: "presentation", style: { right: 0 } }),
+        ]),
+        renderConfig.$footer ? frozenFooter : null,
+    ];
+}
+exports.getFixedCols = getFixedCols;
 
 
 /***/ }),
@@ -12020,161 +12321,12 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var html_1 = __webpack_require__(2);
-var Cells_1 = __webpack_require__(29);
-var FixedRows_1 = __webpack_require__(79);
-var main_1 = __webpack_require__(16);
-function getFixedColsHeader(renderConfig, layout) {
-    if (typeof renderConfig.leftSplit !== "number") {
-        return;
-    }
-    var splitHidden = 0;
-    for (var index = 0; index < renderConfig.leftSplit; index++) {
-        if (renderConfig.columns[index].hidden)
-            splitHidden++;
-    }
-    if (splitHidden === renderConfig.leftSplit) {
-        return;
-    }
-    var columns = renderConfig.columns.slice(0, renderConfig.leftSplit - splitHidden);
-    var width = 0;
-    for (var _i = 0, columns_1 = columns; _i < columns_1.length; _i++) {
-        var col = columns_1[_i];
-        width += col.$width;
-    }
-    var getRowAriaAttrs = function (count) { return ({
-        role: "rowgroup",
-        "aria-rowcount": count,
-    }); };
-    var frozenHeaderCols = renderConfig.leftSplit >= 0 &&
-        FixedRows_1.getFixedRows(__assign(__assign({}, renderConfig), { currentColumns: columns, $positions: __assign(__assign({}, renderConfig.$positions), { xStart: 0, xEnd: renderConfig.leftSplit }), scroll: { top: 0, left: 0 }, columns: columns }), __assign(__assign({}, layout), { name: "header", position: "top", shifts: { x: 0, y: 0 } }));
-    var headerRowsConfig = __assign(__assign({}, layout), { name: "header", position: "top" });
-    return (frozenHeaderCols &&
-        dom_1.el(".dhx_" + headerRowsConfig.name + "-fixed-cols", __assign({ onwheel: main_1.scrollFixedColsAndRows, style: {
-                position: "absolute",
-                top: 0,
-                left: 0,
-                maxWidth: width,
-                overflow: "hidden",
-            } }, getRowAriaAttrs(frozenHeaderCols.length)), frozenHeaderCols.body));
-}
-exports.getFixedColsHeader = getFixedColsHeader;
-function getFixedCols(renderConfig, layout) {
-    var leftSplit = renderConfig.leftSplit, $totalWidth = renderConfig.$totalWidth, configColumns = renderConfig.columns, $totalHeight = renderConfig.$totalHeight, headerHeight = renderConfig.headerHeight, configFooterHeight = renderConfig.footerHeight, $positions = renderConfig.$positions, scroll = renderConfig.scroll, data = renderConfig.data;
-    if (typeof leftSplit !== "number") {
-        return;
-    }
-    var splitHidden = 0;
-    for (var index = 0; index < leftSplit; index++) {
-        if (configColumns[index].hidden)
-            splitHidden++;
-    }
-    if (splitHidden === leftSplit) {
-        return;
-    }
-    var scrollBarWidth = $totalWidth <= layout.wrapper.width ? 0 : html_1.getScrollbarWidth();
-    var fixedContentHeight = $totalHeight + headerHeight + configFooterHeight;
-    var fixedColsHeight;
-    if (fixedContentHeight > layout.gridBodyHeight) {
-        fixedColsHeight = renderConfig.$footer ? fixedContentHeight - scrollBarWidth : layout.gridBodyHeight;
-    }
-    else if (fixedContentHeight < layout.gridBodyHeight - scrollBarWidth) {
-        fixedColsHeight = fixedContentHeight;
-    }
-    else {
-        fixedColsHeight = renderConfig.$footer
-            ? layout.gridBodyHeight
-            : layout.gridBodyHeight - scrollBarWidth;
-    }
-    var columns = configColumns.slice(0, leftSplit - splitHidden);
-    renderConfig.fixedColumnsWidth = main_1.getTotalWidth(columns);
-    var renderFrom = "fixedCols";
-    var fixedCols = Cells_1.getCells(__assign(__assign({}, renderConfig), { columns: columns, $renderFrom: renderFrom, $positions: __assign(__assign({}, $positions), { xStart: 0, xEnd: leftSplit }) }));
-    var isSticky = layout.sticky;
-    var footerRowsConfig = __assign(__assign({}, layout), { name: "footer", position: "bottom" });
-    var frozenFooterCols = leftSplit >= 0 &&
-        FixedRows_1.getRows(__assign(__assign({}, renderConfig), { currentColumns: columns, $positions: __assign(__assign({}, $positions), { xStart: 0, xEnd: leftSplit }) }), __assign(__assign({}, layout), { name: "footer", position: "bottom" }));
-    var footerHeight = 0;
-    if (frozenFooterCols) {
-        frozenFooterCols.forEach(function (node) { return (footerHeight += node.attrs.style.height); });
-    }
-    var getRowAriaAttrs = function (count) { return ({
-        role: "rowgroup",
-        "aria-rowcount": count,
-    }); };
-    var frozenFooter = isSticky
-        ? frozenFooterCols &&
-            dom_1.el(".dhx_" + footerRowsConfig.name + "-fixed-cols", __assign({ onwheel: main_1.scrollFixedColsAndRows, style: {
-                    position: "absolute",
-                    top: fixedColsHeight < layout.gridBodyHeight ? fixedColsHeight - footerHeight : null,
-                    left: 0,
-                    bottom: fixedColsHeight >= layout.gridBodyHeight
-                        ? 0 + (isSticky ? scrollBarWidth : 0) + "px"
-                        : null,
-                } }, getRowAriaAttrs(frozenFooterCols.length)), frozenFooterCols)
-        : null;
-    var pos = $positions;
-    var spans = Cells_1.getSpans(__assign(__assign({}, renderConfig), { $renderFrom: renderFrom }), true);
-    var getFixedColAriaAttrs = function () { return ({
-        role: "presentation",
-        "aria-label": "Fixed column",
-    }); };
-    return [
-        dom_1.el(".dhx_grid-fixed-cols-wrap", __assign({ style: {
-                height: fixedColsHeight >= layout.gridBodyHeight
-                    ? (isSticky ? layout.gridBodyHeight : layout.gridBodyHeight + headerHeight) -
-                        scrollBarWidth
-                    : fixedColsHeight,
-                paddingTop: headerHeight,
-                overflow: "hidden",
-                width: renderConfig.fixedColumnsWidth,
-            } }, getFixedColAriaAttrs()), [
-            dom_1.el(".dhx_grid-fixed-cols", __assign(__assign({ onwheel: main_1.scrollFixedColsAndRows, style: {
-                    top: -scroll.top + headerHeight - 1 + "px",
-                    paddingTop: layout.shifts.y,
-                    height: $totalHeight,
-                    position: "absolute",
-                }, _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(pos.yStart, pos.xStart, renderConfig)), getRowAriaAttrs(data.length)), __spreadArrays(fixedCols, [spans && dom_1.el("span.dhx_span-spans", { role: "presentation" }, [spans])])),
-            dom_1.el(".dhx_frozen-cols-border", { role: "presentation" }),
-        ]),
-        renderConfig.$footer ? frozenFooter : null,
-    ];
-}
-exports.getFixedCols = getFixedCols;
-
-
-/***/ }),
-/* 79 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var html_1 = __webpack_require__(2);
-var cells_1 = __webpack_require__(34);
-var main_1 = __webpack_require__(16);
-var types_1 = __webpack_require__(9);
-var Cells_1 = __webpack_require__(29);
-var FixedCols_1 = __webpack_require__(78);
+var cells_1 = __webpack_require__(36);
+var main_1 = __webpack_require__(14);
+var types_1 = __webpack_require__(8);
+var Cells_1 = __webpack_require__(30);
+var FixedCols_1 = __webpack_require__(77);
+var render_1 = __webpack_require__(24);
 var BORDERS = 2;
 function handleMouse(col, config, type, e) {
     if (!type)
@@ -12286,12 +12438,18 @@ function getRows(config, rowsConfig) {
             css += isFirstCol + " " + isLastCol;
             var resizable = column.resizable !== undefined ? column.resizable : config.resizable;
             if (resizable) {
+                var isLeftResize = config.rightSplit &&
+                    config.$scrollBarWidth.x &&
+                    config.fixedColumns.right.includes(column);
                 resizable = dom_1.el("div", {
                     class: "dhx_resizer_grip_wrap",
                     "aria-hidden": "true",
                 }, [
                     dom_1.el("div", {
-                        class: "dhx_resizer_grip",
+                        class: "dhx_resizer_grip" +
+                            (isLeftResize
+                                ? " dhx_resizer_grip--left"
+                                : " dhx_resizer_grip--right"),
                         dhx_resized: column.id,
                         style: {
                             height: rows.length * 100 + "%",
@@ -12393,7 +12551,11 @@ function getFixedSpans(config, rowsConfig) {
             if (cell.rowspan) {
                 spanHeight = spanHeight * cell.rowspan - 1;
             }
-            var sortIconVisible = main_1.isSortable(config, col) && cell.rowspan && cell.text && rowsConfig.name !== "footer";
+            var sortIconVisible = main_1.isSortable(config, col) &&
+                cell.rowspan &&
+                cell.text &&
+                rowsConfig.name !== "footer" &&
+                cell.headerSort !== false;
             var sortIconCss = "dxi dxi-sort-variant dhx_grid-sort-icon";
             if (config.sortBy && "" + col.id === config.sortBy && !cell.content) {
                 sortIconCss += " dhx_grid-sort-icon--" + (config.sortDir || "asc");
@@ -12425,7 +12587,7 @@ function getFixedSpans(config, rowsConfig) {
             }
             var borderLeft = "";
             if (leftShift - col.$width > 0) {
-                borderLeft = "1px solid #e4e4e4";
+                borderLeft = "var(--dhx-border)";
             }
             var cellCss = "dhx_grid-header-cell-text_content";
             if (config.autoHeight)
@@ -12464,13 +12626,22 @@ function getRowAriaAttrs(rowCount) {
 }
 function getFixedRows(config, rowsConfig) {
     var _a;
+    var leftSplit = config.leftSplit, $totalWidth = config.$totalWidth;
     var rows = getRows(config, rowsConfig);
     var spans = getFixedSpans(config, rowsConfig);
     var fixedCols = null;
     if (rowsConfig.name === "footer" && !rowsConfig.sticky) {
-        fixedCols =
-            config.leftSplit >= 0 &&
-                getRows(__assign(__assign({}, config), { currentColumns: config.columns.slice(0, config.leftSplit), $positions: __assign(__assign({}, config.$positions), { xStart: 0, xEnd: config.leftSplit }) }), rowsConfig);
+        var rightSplit_1 = config.rightSplit, configColumns_1 = config.columns;
+        var getCols = function (isRightSplit) {
+            if (isRightSplit === void 0) { isRightSplit = false; }
+            var columns = isRightSplit
+                ? configColumns_1.slice(-rightSplit_1)
+                : configColumns_1.slice(0, leftSplit);
+            return (!isRightSplit && leftSplit >= 0) || (isRightSplit && rightSplit_1 >= 0)
+                ? getRows(__assign(__assign({}, config), { columns: columns, $positions: __assign(__assign({}, config.$positions), { xStart: 0, xEnd: isRightSplit ? rightSplit_1 : leftSplit }) }), rowsConfig)
+                : [];
+        };
+        fixedCols = __spreadArrays(getCols(), getCols(true));
     }
     var styles = (_a = {
             position: "sticky"
@@ -12483,21 +12654,21 @@ function getFixedRows(config, rowsConfig) {
         left = -config.scroll.left;
         styles.position = "relative";
     }
-    return dom_1.el(".dhx_" + rowsConfig.name + "-wrapper", {
+    return dom_1.el(".dhx_" + rowsConfig.name + "-wrapper" + (config.rightSplit ? ".dhx_grid__rows_right--fixed" : ""), {
         class: rowsConfig.sticky ? "" : "dhx_compatible-" + rowsConfig.name,
         style: __assign(__assign({}, styles), { left: rowsConfig.sticky ? left : 0, height: rowsConfig.name === "footer"
                 ? config[rowsConfig.name + "Height"] + BORDERS / 2
-                : config[rowsConfig.name + "Height"], width: rowsConfig.sticky ? config.$totalWidth : rowsConfig.wrapper.width - BORDERS }),
+                : config[rowsConfig.name + "Height"], width: rowsConfig.sticky ? $totalWidth : rowsConfig.wrapper.width - BORDERS }),
         role: "presentation",
     }, [
-        dom_1.el(".dhx_grid-" + rowsConfig.name + (config.leftSplit ? ".dhx_grid_fixed_left" : ""), {
+        dom_1.el(".dhx_grid-" + rowsConfig.name + (leftSplit ? ".dhx_grid_fixed_left" : ""), {
             style: {
                 height: rowsConfig.name === "footer"
                     ? config[rowsConfig.name + "Height"] + BORDERS / 2
                     : config[rowsConfig.name + "Height"],
                 left: left,
                 paddingLeft: rowsConfig.shifts.x,
-                width: config.$totalWidth,
+                width: $totalWidth,
             },
             role: "presentation",
         }, [
@@ -12519,32 +12690,46 @@ function getFixedRows(config, rowsConfig) {
                     },
                 }, fixedCols),
         ]),
-        dom_1.el("div", { style: { width: config.$totalWidth }, role: "presentation" }),
+        dom_1.el("div", { style: { width: $totalWidth }, role: "presentation" }),
     ]);
 }
 exports.getFixedRows = getFixedRows;
-function getFixedDataRows(config, layout) {
-    if (typeof config.topSplit !== "number") {
+function getFixedDataRows(config, layout, mode) {
+    if ((mode === types_1.Split.top && typeof config.topSplit !== "number") ||
+        (mode === types_1.Split.bottom && typeof config.bottomSplit !== "number")) {
         return;
     }
-    var $totalWidth = config.$totalWidth, topSplit = config.topSplit, $positions = config.$positions, data = config.data, $totalHeight = config.$totalHeight, width = config.width;
-    var splitedData = data.slice(0, topSplit);
+    var $totalWidth = config.$totalWidth, topSplit = config.topSplit, bottomSplit = config.bottomSplit, $positions = config.$positions, data = config.data, $totalHeight = config.$totalHeight, width = config.width, headerHeight = config.headerHeight, footerHeight = config.footerHeight, $scrollBarWidth = config.$scrollBarWidth;
+    var isBottomSplit = mode === types_1.Split.bottom;
+    var splitedData = isBottomSplit ? config.fixedRows.bottom : config.fixedRows.top;
     var $renderFrom = "fixedRows";
-    var fixedRows = Cells_1.getCells(__assign(__assign({}, config), { data: splitedData, $renderFrom: $renderFrom, $positions: __assign(__assign({}, $positions), { yStart: 0, yEnd: topSplit }) }));
+    var fixedRows = Cells_1.getCells(__assign(__assign({}, config), { data: splitedData, $renderFrom: $renderFrom, $positions: __assign(__assign({}, $positions), { yStart: 0, yEnd: isBottomSplit ? bottomSplit : topSplit }) }));
+    var events = render_1.getEvents(config, isBottomSplit ? types_1.Split.bottom : types_1.Split.top);
     var fixedRowsHeight = splitedData.reduce(function (acc, item) { return acc + item.$height; }, 0);
-    var spans = Cells_1.getSpans(__assign(__assign({}, config), { $renderFrom: $renderFrom, data: data }), true);
-    var fixedCols = FixedCols_1.getFixedCols(__assign(__assign({}, config), { headerHeight: 0, data: splitedData, $renderFrom: $renderFrom, scroll: __assign(__assign({}, config.scroll), { top: -1 }), $positions: __assign(__assign({}, $positions), { yStart: 0, yEnd: topSplit }), $totalHeight: fixedRowsHeight }), __assign(__assign({}, layout), { shifts: __assign(__assign({}, layout.shifts), { y: 0 }) })) || [];
+    var spans = Cells_1.getSpans(__assign(__assign({}, config), { $renderFrom: $renderFrom, data: data }), isBottomSplit ? types_1.Split.bottom : types_1.Split.top);
+    var bottomSplitHeight = main_1.getTotalHeight(config.fixedRows.bottom);
+    var getCols = function (mode) {
+        return (FixedCols_1.getFixedCols(__assign(__assign({}, config), { headerHeight: 0, data: splitedData, $renderFrom: $renderFrom, scroll: __assign(__assign({}, config.scroll), { top: -1 }), $positions: __assign(__assign({}, $positions), { yStart: 0, yEnd: isBottomSplit ? bottomSplit : topSplit }), $totalHeight: fixedRowsHeight }), __assign(__assign({}, layout), { shifts: __assign(__assign({}, layout.shifts), { y: 0 }) }), mode) || []);
+    };
+    var fixedCols = __spreadArrays(getCols(types_1.Split.left), getCols(types_1.Split.right));
     return [
         dom_1.el(".dhx_grid-fixed-data-rows-wrap", {
+            class: isBottomSplit ? "dhx_grid__rows_bottom--fixed" : "",
             style: {
-                top: config.headerHeight,
+                top: isBottomSplit
+                    ? $totalHeight < layout.wrapper.height - $scrollBarWidth.x - BORDERS
+                        ? $totalHeight + headerHeight - bottomSplitHeight + BORDERS / 2
+                        : layout.wrapper.height -
+                            bottomSplitHeight -
+                            footerHeight -
+                            BORDERS / 2 -
+                            $scrollBarWidth.x
+                    : headerHeight,
                 overflow: "hidden",
                 height: fixedRowsHeight > layout.wrapper.height ? layout.wrapper.height : fixedRowsHeight,
-                width: $totalWidth < width
+                width: $totalWidth + $scrollBarWidth.y + BORDERS < width
                     ? $totalWidth
-                    : $totalHeight >= layout.gridBodyHeight
-                        ? width - html_1.getScrollbarWidth() - 2
-                        : width - 2,
+                    : width - $scrollBarWidth.y - BORDERS,
             },
         }, __spreadArrays([
             dom_1.el(".dhx_grid-fixed-cols", __assign(__assign({ onwheel: main_1.scrollFixedColsAndRows, style: {
@@ -12552,15 +12737,19 @@ function getFixedDataRows(config, layout) {
                     paddingLeft: layout.shifts.x,
                     position: "absolute",
                     width: $totalWidth,
-                }, _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(0, $positions.xStart, config)), getRowAriaAttrs(data.length)), __spreadArrays(fixedRows, [spans && dom_1.el(".dhx_span-spans", { role: "presentation" }, [spans])]))
-        ], fixedCols)),
+                }, _flags: dom_1.KEYED_LIST }, Cells_1.getHandlers(0, $positions.xStart, config)), getRowAriaAttrs(data.length)), [
+                dom_1.el(".dhx_grid-fixed-rows", __assign({ class: config.rightSplit ? "dhx_grid__rows_right--fixed" : "" }, events), __spreadArrays(fixedRows, [spans && dom_1.el(".dhx_span-spans", { role: "presentation" }, [spans])])),
+            ])
+        ], fixedCols, [
+            config.bottomSplit ? dom_1.el(".dhx_grid__rows-border--frozen", { role: "presentation" }) : null,
+        ])),
     ];
 }
 exports.getFixedDataRows = getFixedDataRows;
 
 
 /***/ }),
-/* 80 */
+/* 79 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12590,7 +12779,7 @@ exports.blockScreen = blockScreen;
 
 
 /***/ }),
-/* 81 */
+/* 80 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12608,7 +12797,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var html_1 = __webpack_require__(2);
-var types_1 = __webpack_require__(47);
+var types_1 = __webpack_require__(48);
 var DEFAULT_SHOW_DELAY = 750;
 var DEFAULT_HIDE_DELAY = 200;
 function findPosition(targetRect, position, width, height, margin, recursion) {
@@ -12835,7 +13024,7 @@ exports.disableTooltip = disableTooltip;
 
 
 /***/ }),
-/* 82 */
+/* 81 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -12869,12 +13058,13 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
 var ts_message_1 = __webpack_require__(13);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_navbar_1 = __webpack_require__(20);
 var Toolbar = /** @class */ (function (_super) {
     __extends(Toolbar, _super);
     function Toolbar(element, config) {
         var _this = _super.call(this, element, core_1.extend({
             navigationType: "click",
+            $name: "toolbar",
         }, config)) || this;
         _this._currentRoot = null;
         var render = function () { return _this._draw(element); };
@@ -12937,6 +13127,16 @@ var Toolbar = /** @class */ (function (_super) {
         for (var key in state) {
             _loop_1(key);
         }
+    };
+    Toolbar.prototype.setFocus = function (id) {
+        if (!this.data.getItem(id) || this.data.getItem(id).type !== "input") {
+            return;
+        }
+        var inputEl = this.getRootNode().querySelector("[data-dhx-id=\"" + id + "\"]");
+        if (!inputEl) {
+            return;
+        }
+        inputEl.focus();
     };
     Toolbar.prototype._customHandlers = function () {
         var _this = this;
@@ -13047,7 +13247,7 @@ exports.Toolbar = Toolbar;
 
 
 /***/ }),
-/* 83 */
+/* 82 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13080,7 +13280,7 @@ exports.palette = [
 
 
 /***/ }),
-/* 84 */
+/* 83 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13088,6 +13288,7 @@ exports.palette = [
 Object.defineProperty(exports, "__esModule", { value: true });
 var ColorpickerEvents;
 (function (ColorpickerEvents) {
+    ColorpickerEvents["beforeChange"] = "beforeChange";
     ColorpickerEvents["change"] = "change";
     ColorpickerEvents["apply"] = "apply";
     ColorpickerEvents["cancelClick"] = "cancelClick";
@@ -13102,7 +13303,702 @@ var ColorpickerEvents;
 
 
 /***/ }),
+/* 84 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
+Object.defineProperty(exports, "__esModule", { value: true });
+__export(__webpack_require__(85));
+__export(__webpack_require__(213));
+__export(__webpack_require__(27));
+
+
+/***/ }),
 /* 85 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var events_1 = __webpack_require__(3);
+var view_1 = __webpack_require__(6);
+var ts_data_1 = __webpack_require__(4);
+var ComposeLayer_1 = __webpack_require__(194);
+var Legend_1 = __webpack_require__(86);
+var types_1 = __webpack_require__(27);
+var index_1 = __webpack_require__(197);
+var index_2 = __webpack_require__(88);
+var Stacker_1 = __webpack_require__(93);
+var common_1 = __webpack_require__(5);
+var Tooltip_1 = __webpack_require__(211);
+var core_1 = __webpack_require__(1);
+var Export_1 = __webpack_require__(212);
+var Chart = /** @class */ (function (_super) {
+    __extends(Chart, _super);
+    function Chart(node, config) {
+        if (config === void 0) { config = {}; }
+        var _a;
+        var _this = _super.call(this, null, config) || this;
+        // using zero values ensure that widget will not attempt to render self in the hidden state
+        _this._width = 0;
+        _this._height = 0;
+        _this._left = 0;
+        _this._top = 0;
+        var dataConfig = {};
+        if (config.maxPoints) {
+            dataConfig.approximate = {
+                value: (_a = config.series) === null || _a === void 0 ? void 0 : _a.map(function (a) { return a.value; }),
+                maxNum: config.maxPoints,
+            };
+        }
+        if (Array.isArray(config.data)) {
+            _this.events = new events_1.EventSystem(_this);
+            _this.data =
+                config.type === "treeMap"
+                    ? new ts_data_1.TreeCollection(dataConfig, _this.events)
+                    : new ts_data_1.DataCollection(dataConfig, _this.events);
+            _this.data.parse(config.data);
+        }
+        else if (config.data && config.data.events) {
+            _this.data = config.data;
+            _this.events = _this.data.events;
+            _this.events.context = _this;
+        }
+        else {
+            _this.events = new events_1.EventSystem(_this);
+            _this.data =
+                config.type === "treeMap"
+                    ? new ts_data_1.TreeCollection(dataConfig, _this.events)
+                    : new ts_data_1.DataCollection(dataConfig, _this.events);
+        }
+        _this._globalHTMLHandlers = {
+            onmousemove: function (e) {
+                var _a = _this._layers.getSizes(), left = _a.left, top = _a.top, bottom = _a.bottom, right = _a.right;
+                var pageX = e.pageX, pageY = e.pageY;
+                var rects = _this.getRootView().node.el.getBoundingClientRect();
+                _this._left = rects.left + window.pageXOffset;
+                _this._top = rects.top + window.pageYOffset;
+                var x = pageX - left - _this._left;
+                var y = pageY - top - _this._top;
+                if (x >= 0 && x <= _this._width - right - left && y >= 0 && y <= _this._height - bottom - top) {
+                    _this.events.fire(types_1.ChartEvents.chartMouseMove, [x, y, _this._left + left, _this._top + top]);
+                }
+                else {
+                    _this.events.fire(types_1.ChartEvents.chartMouseLeave);
+                }
+            },
+            onmouseleave: function () { return _this.events.fire(types_1.ChartEvents.chartMouseLeave); },
+        };
+        _this._layers = new ComposeLayer_1.ComposeLayer();
+        _this.setConfig(config);
+        _this._initEvents();
+        _this._tooltip = new Tooltip_1.Tooltip(_this);
+        var render = function () {
+            if (!_this.data.getLength()) {
+                return dom_1.el("div");
+            }
+            var getChartAriaLabel = function (config) {
+                /*  Full example (without symbols of new line):
+                    Type chart "Title". X/Y Scale Name: bottom axis from Min to Max. Scale Name: left axis Name from Min to Max.
+                    Series: seria A, seria B, seria C, ...
+                 */
+                var scales = _this._scales;
+                var series = config.series;
+                var type = config.type;
+                if (!type) {
+                    // scatter chart
+                    type = series && series.length && series[0] ? series[0].type || "" : "";
+                }
+                var label = (type || "") + " chart.";
+                var getAxisName = function (cfg) { return (cfg._isXDirection ? "X" : "Y"); };
+                var getAxisTitle = function (cfg) { return cfg.title || cfg.text || cfg.value || ""; };
+                var getAxisMin = function (cfg) { return (cfg.steps && cfg.steps.length ? cfg.steps[0] : cfg.min || 0); };
+                var getAxisMax = function (cfg) {
+                    return cfg.steps && cfg.steps.length
+                        ? cfg.steps[cfg.steps.length - 1]
+                        : cfg.max || cfg.maxPoints || "max";
+                };
+                var getRadialAxisValue = function (attr, point) { return point[attr]; };
+                if (scales) {
+                    Object.keys(scales).forEach(function (direction) {
+                        var scale = scales[direction];
+                        var cfg = scale._axis || scale.config;
+                        if (direction === "radial") {
+                            var xData = scale._data._order;
+                            label += " X scale " + getAxisTitle(scale.config) + ": " + direction + " axis from " + getRadialAxisValue(scale.config.value, xData[0]) + " to " + getRadialAxisValue(scale.config.value, xData[xData.length - 1]) + ".";
+                            label += " " + getAxisName(scale) + " scale: axis from " + getAxisMin(cfg) + " to " + getAxisMax(cfg) + ".";
+                        }
+                        else {
+                            label += " " + getAxisName(scale) + " scale " + getAxisTitle(scale.config) + ": " + direction + " axis from " + getAxisMin(cfg) + " to " + getAxisMax(cfg) + ".";
+                        }
+                    });
+                }
+                if (series && series.length) {
+                    label += " Series:";
+                    series.forEach(function (seria, index) {
+                        label += " " + (type === "pie" || type === "pie3D" || type === "donut" ? seria.text : seria.value);
+                        label += index === series.length - 1 ? "." : ",";
+                    });
+                }
+                return label;
+            };
+            var getChartAriaAttrs = function (config) { return ({
+                "aria-label": getChartAriaLabel(config),
+            }); };
+            var content = [
+                dom_1.resizer(function (x, y) {
+                    _this._width = x;
+                    _this._height = y || 400; // if height is not provided, use default value
+                    var view = _this.getRootView();
+                    if (view && view.node && view.node.el) {
+                        var rects = view.node.el.getBoundingClientRect();
+                        _this._left = rects.left + window.pageXOffset;
+                        _this._top = rects.top + window.pageYOffset;
+                    }
+                    _this.events.fire(types_1.ChartEvents.resize, [_this._width, _this._height]);
+                    _this.paint();
+                    if (!document.querySelector(".dhx_widget.dhx_chart") && _this._tooltip) {
+                        _this._tooltip.destructor();
+                    }
+                }),
+            ];
+            if (_this._width && _this._height) {
+                content.push(_this._layers.toVDOM(_this._width, _this._height));
+            }
+            return dom_1.el(".dhx_widget.dhx_chart", __assign(__assign({ class: config.css ? config.css : "", onmousemove: _this._globalHTMLHandlers.onmousemove, onmouseleave: _this._globalHTMLHandlers.onmouseleave }, getChartAriaAttrs(config)), { tabIndex: 0 }), content);
+        };
+        var view = dom_1.create({
+            render: render,
+            hooks: {
+                didMount: function (vm) {
+                    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
+                        _this._width = vm.node.parent.el.offsetWidth;
+                        _this._height = vm.node.parent.el.offsetHeight || 400;
+                        _this.paint();
+                    }
+                },
+            },
+        });
+        _this.mount(node, view);
+        _this.export = new Export_1.Exporter("chart", _this);
+        return _this;
+    }
+    Chart.prototype.getSeries = function (key) {
+        return this._series[key];
+    };
+    Chart.prototype.eachSeries = function (handler) {
+        var result = [];
+        for (var key in this._series) {
+            result.push(handler.call(this, this._series[key]));
+        }
+        return result;
+    };
+    Chart.prototype.destructor = function () {
+        this._tooltip.destructor();
+        this.events.clear();
+        this.unmount();
+    };
+    Chart.prototype.setConfig = function (config) {
+        var _this = this;
+        var _a;
+        if (config.type === "calendarHeatMap") {
+            throw new TypeError("The calendarHeatMap chart type is a pro functionality");
+        }
+        this.config = config;
+        this._layers.clear();
+        this._series = {};
+        this._scales = {};
+        var min;
+        // let baseLine;
+        if (config.scales) {
+            for (var key in config.scales) {
+                var scale = __assign({}, config.scales[key]);
+                if (config.scales[key].min !== undefined) {
+                    min = config.scales[key].min;
+                }
+                scale.type = scale.type || this._detectScaleType(scale, key);
+                if (config.scales.radial && key !== "radial") {
+                    scale.hidden = true;
+                }
+                this._setScale(scale, key);
+            }
+        }
+        var stack = new Stacker_1.default();
+        this._layers.add(stack);
+        (_a = config.series) === null || _a === void 0 ? void 0 : _a.forEach(function (cfg, ind) {
+            var _a, _b, _c, _d;
+            if (cfg.baseLine !== undefined && cfg.baseLine < min) {
+                cfg.baseLine = undefined;
+            }
+            var serieConfig = __assign({}, cfg);
+            serieConfig.type = serieConfig.type || config.type;
+            switch (serieConfig.type) {
+                case "bar":
+                case "xbar":
+                case "area":
+                case "splineArea":
+                    if (!serieConfig.color)
+                        serieConfig.color = serieConfig.fill || common_1.getDefaultColor(ind);
+                    if (!serieConfig.fill)
+                        serieConfig.fill = serieConfig.color || common_1.getDefaultColor(ind);
+                    break;
+                case "treeMap":
+                    serieConfig.legendType = ((_a = config.legend) === null || _a === void 0 ? void 0 : _a.type) || "groupName";
+                    (_c = (_b = config.legend) === null || _b === void 0 ? void 0 : _b.treeSeries) === null || _c === void 0 ? void 0 : _c.map(function (serie, index) {
+                        var _a, _b;
+                        serie.active = (_a = serie.active) !== null && _a !== void 0 ? _a : true;
+                        serie.id = (_b = serie.id) !== null && _b !== void 0 ? _b : core_1.uid();
+                        if (!serie.color)
+                            serie.color = common_1.getDefaultColor(index, serieConfig.legendType === "range");
+                    });
+                    serieConfig.treeSeries = (_d = config.legend) === null || _d === void 0 ? void 0 : _d.treeSeries;
+                    break;
+                case "scatter":
+                    if (!serieConfig.pointColor)
+                        serieConfig.pointColor = serieConfig.color || common_1.getDefaultColor(ind);
+                    break;
+            }
+            var chartFactory = index_2.default[serieConfig.type];
+            if (serieConfig.barWidth || _this.config.barWidth) {
+                serieConfig.barWidth = serieConfig.barWidth || _this.config.barWidth;
+            }
+            var chart = new chartFactory(_this.data, serieConfig, _this.events);
+            var scales = common_1.getScales(config.scales);
+            var chartScales = scales.length > 1 && scales[0] !== "radial"
+                ? scales
+                : scales[0] === "radial"
+                    ? scales
+                    : ["bottom", "left"];
+            chartScales.forEach(function (type) {
+                var scale = _this._scales[type];
+                if (!scale) {
+                    return;
+                }
+                chart.addScale(type, scale);
+                if (!serieConfig.stacked) {
+                    scale.add(chart);
+                }
+                else {
+                    scale.add(stack);
+                }
+            });
+            _this._series[chart.id] = chart;
+            if (serieConfig.stacked) {
+                stack.add(chart);
+            }
+            else {
+                _this._layers.add(chart);
+            }
+        });
+        if (config.legend) {
+            var legendConfig = __assign({}, config.legend);
+            if (legendConfig.series) {
+                legendConfig.$seriesInfo = legendConfig.series.map(function (id) { return _this._series[id]; });
+            }
+            var legend = new Legend_1.Legend(this.data, legendConfig, this.events);
+            this._layers.add(legend);
+        }
+        this.paint();
+    };
+    Chart.prototype._setScale = function (config, position) {
+        if (!config.type)
+            return;
+        var scale = new index_1.default[config.type](this.data, config, position);
+        if (scale.config.type !== "radial") {
+            this._layers.add(scale.scaleGrid());
+        }
+        this._layers.add(scale);
+        this._scales[position] = scale;
+    };
+    Chart.prototype._detectScaleType = function (config, key) {
+        if (key === "radial") {
+            return key;
+        }
+        if (config.text) {
+            return "text";
+        }
+        return "numeric";
+    };
+    Chart.prototype._initEvents = function () {
+        var _this = this;
+        // hide/show series on legend click
+        this.events.on(types_1.ChartEvents.toggleSeries, function (id, pieLike) {
+            if (_this.config.type === "treeMap") {
+                Object.values(_this._series)[0].toggle(id);
+                _this.paint();
+            }
+            else if (pieLike) {
+                var serie = _this._series[Object.keys(_this._series)[0]];
+                if (serie) {
+                    serie.toggle(id);
+                    _this.paint();
+                }
+            }
+            else if (_this._series[id]) {
+                _this._series[id].toggle();
+                _this.paint();
+            }
+        }, this);
+        // repaint on data change
+        this.events.on(ts_data_1.DataEvents.change, function () { return _this.paint(); });
+    };
+    return Chart;
+}(view_1.View));
+exports.Chart = Chart;
+
+
+/***/ }),
+/* 86 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var ts_data_1 = __webpack_require__(4);
+var types_1 = __webpack_require__(27);
+var dom_1 = __webpack_require__(0);
+var common_1 = __webpack_require__(5);
+var legend_1 = __webpack_require__(196);
+var core_1 = __webpack_require__(1);
+function getDefaultMargin(halign, valign, isTreeMap, form) {
+    switch (valign) {
+        case "middle": {
+            switch (halign) {
+                case "right":
+                    return isTreeMap ? 20 : 60;
+                case "left":
+                    return 120;
+                case "center":
+                    throw new Error("cant place legend on center, middle");
+            }
+        }
+        // eslint-disable-next-line no-fallthrough
+        case "top":
+            return 20;
+        case "bottom":
+            return isTreeMap || form === "line" ? 20 : 60;
+    }
+}
+var Legend = /** @class */ (function () {
+    function Legend(_data, config, _events) {
+        var _this = this;
+        this._data = _data;
+        this._events = _events;
+        var defaults = {
+            form: "rect",
+            itemPadding: 20,
+            halign: "right",
+            valign: "top",
+            direction: "row",
+            type: "groupName",
+        };
+        this.config = __assign(__assign({}, defaults), config);
+        this.config.margin =
+            config.margin ||
+                getDefaultMargin(this.config.halign, this.config.valign, ts_data_1.isTreeCollection(this._data), this.config.form);
+        this._handlers = {
+            onclick: function (id, pieLike) {
+                return _this._events.fire(types_1.ChartEvents.toggleSeries, [id, pieLike]);
+            },
+            onkeyup: function (id, pieLike, event) {
+                // FIXME: set handler correctly according app code style
+                event.preventDefault();
+                // enter or space
+                if (event.key === "Enter" || event.key === " ") {
+                    _this._events.fire(types_1.ChartEvents.toggleSeries, [id, pieLike]);
+                }
+            },
+        };
+    }
+    Legend.prototype.scaleReady = function (sizes) {
+        var isColumnInCorner = this.config.direction === "column" &&
+            (this.config.halign === "left" || this.config.halign === "right");
+        switch (this.config.valign) {
+            case "middle":
+                if (this.config.halign === "right") {
+                    sizes.right += this.config.size >= 0 ? this.config.size : 200;
+                }
+                else if (this.config.halign === "left") {
+                    sizes.left += this.config.size >= 0 ? this.config.size : 200;
+                }
+                break;
+            case "top":
+                if (isColumnInCorner) {
+                    sizes[this.config.halign] += this.config.size >= 0 ? this.config.size : 200;
+                }
+                else {
+                    sizes.top += this.config.size >= 0 ? this.config.size : 40;
+                }
+                break;
+            case "bottom":
+                if (isColumnInCorner) {
+                    sizes[this.config.halign] += this.config.size >= 0 ? this.config.size : 200;
+                }
+                else {
+                    sizes.bottom += this.config.size >= 0 ? this.config.size : 40;
+                }
+                break;
+        }
+    };
+    Legend.prototype.paint = function (width, height) {
+        var _this = this;
+        var getLegendAriaAttrs = function (item) { return ({
+            role: "button",
+            "aria-label": item.active ? "Hide chart " + item.text : "Show chart " + item.text,
+        }); };
+        var data = this._getData();
+        var config = this.config;
+        config.$sizes = {
+            width: 0,
+            height: 0,
+        };
+        var positionX;
+        var positionY;
+        var font = common_1.getFontStyle("legend-text");
+        var figureWidth = 10; // get Figure width from config ??
+        var lineWidth = 500; // get Figure width from config ??
+        var margin = config.margin, itemPadding = config.itemPadding;
+        var svg = [];
+        var isMid = config.valign === "middle";
+        var xPadding = 0;
+        var yPadding = 0;
+        var xPaddingMax = 0;
+        var yPaddingMax = 0;
+        data.forEach(function (item, index) {
+            if (!isMid && config.direction === "row") {
+                var textWidth = common_1.getTextWidth(item.text, font);
+                if (xPadding + textWidth + figureWidth * 1.5 > width && index !== 0) {
+                    xPadding = 0;
+                    yPadding += itemPadding + 2;
+                }
+            }
+            svg.push(dom_1.sv("g", __assign(__assign({ transform: "translate(" + xPadding + "," + yPadding + ")", onclick: [_this._handlers.onclick, item.id, _this.config.values], onkeyup: [_this._handlers.onkeyup, item.id, _this.config.values], class: "legend-item " + (!item.active ? "not-active" : "") }, getLegendAriaAttrs(item)), { tabindex: 0 }), [
+                dom_1.sv("text", {
+                    x: item.maxValue ? 0 : figureWidth / 2 + 5,
+                    y: 0,
+                    class: "start-text legend-text",
+                }, [common_1.verticalCenteredText(item.text)]),
+                [
+                    legend_1.legendShape(config.form, item),
+                    !isNaN(item.maxValue) && !isNaN(item.minValue) && legend_1.legendTicks(config.form, item),
+                ],
+            ]));
+            var itemWidth = config.form !== "line" ? figureWidth * 1.5 + common_1.getTextWidth(item.text, font) : 0;
+            if (!isMid && config.direction === "row") {
+                xPadding += itemWidth + itemPadding;
+                xPaddingMax = xPaddingMax > xPadding ? xPaddingMax : xPadding;
+            }
+            else {
+                xPadding = 0;
+                xPaddingMax = xPaddingMax > itemWidth ? xPaddingMax : itemWidth;
+                yPadding += itemPadding + 2;
+                yPaddingMax = yPaddingMax > yPadding ? yPaddingMax : yPadding;
+            }
+        });
+        switch (config.valign) {
+            case "top":
+                if (config.direction === "row") {
+                    positionY = -margin - yPadding - figureWidth / 2 - (config.form === "line" ? 15 : 0);
+                }
+                else {
+                    positionY =
+                        config.halign === "center"
+                            ? -yPaddingMax + figureWidth / 2
+                            : margin + figureWidth / 2;
+                }
+                break;
+            case "middle":
+                positionY = (height - yPaddingMax) / 2 + itemPadding / 2;
+                break;
+            case "bottom":
+                if (config.direction === "row") {
+                    positionY = height + (config.form !== "line" ? margin : 10);
+                }
+                else {
+                    positionY =
+                        height + figureWidth - (config.halign === "center" ? 0 : margin + yPaddingMax);
+                }
+                break;
+        }
+        switch (config.halign) {
+            case "left":
+                positionX = isMid
+                    ? -xPaddingMax
+                    : figureWidth / 2 - (config.direction === "row" ? 0 : config.size || 200);
+                break;
+            case "center":
+                positionX = (width - xPaddingMax - (config.form === "line" ? lineWidth : 0)) / 2;
+                break;
+            case "right":
+                if (isMid) {
+                    positionX = width + margin + figureWidth / 2;
+                }
+                else if (config.direction === "row") {
+                    positionX =
+                        width -
+                            xPaddingMax +
+                            itemPadding +
+                            (config.form === "line" ? -lineWidth - margin : figureWidth / 2);
+                }
+                else {
+                    positionX = width + margin + figureWidth / 2;
+                }
+                break;
+        }
+        return dom_1.sv("g", {
+            transform: "translate(" + (positionX > 0 ? positionX : 0) + ", " + positionY + ")",
+            "aria-label": "Legend",
+            tabindex: 0,
+        }, svg);
+    };
+    Legend.prototype._getData = function () {
+        var drawData = [];
+        if (this.config.type === "scale") {
+            var _a = this.config.values, color = _a.color, positiveColor = _a.positiveColor, negativeColor = _a.negativeColor, text = _a.text, minValue = _a.minValue, maxValue = _a.maxValue, tick = _a.tick, majorTick = _a.majorTick, step = _a.step, tickTemplate = _a.tickTemplate;
+            var _b = this.setCriticals(), minValueCalc = _b[0], maxValueCalc = _b[1];
+            drawData.push({
+                id: core_1.uid(),
+                text: text,
+                alpha: 1,
+                fill: color,
+                minValue: minValue !== null && minValue !== void 0 ? minValue : minValueCalc,
+                maxValue: maxValue !== null && maxValue !== void 0 ? maxValue : maxValueCalc,
+                positiveColor: positiveColor,
+                negativeColor: negativeColor,
+                active: true,
+                tick: tick,
+                majorTick: majorTick,
+                step: step,
+                tickTemplate: tickTemplate,
+            });
+        }
+        else if (this.config.values) {
+            var text_1 = common_1.locator(this.config.values.text);
+            var fill_1 = common_1.locator(this.config.values.color);
+            this._data.map(function (item, index) {
+                drawData.push({
+                    id: item.id,
+                    text: text_1(item).toString(),
+                    alpha: 1,
+                    fill: fill_1(item).toString() || common_1.getDefaultColor(index),
+                    active: !item.$hidden,
+                });
+            });
+        }
+        else if (this.config.treeSeries) {
+            var series = this.config.treeSeries;
+            if (this.config.type === "groupName") {
+                series.forEach(function (serie) {
+                    drawData.push({
+                        id: serie.id,
+                        text: serie.name || serie.id,
+                        alpha: 1,
+                        fill: serie.color,
+                        active: serie.active,
+                    });
+                });
+            }
+            else {
+                var getText_1 = function (serie) {
+                    if (serie.from && serie.to)
+                        return serie.from + " - " + serie.to;
+                    if (serie.less)
+                        return "<= " + serie.less;
+                    if (serie.greater)
+                        return ">= " + serie.greater;
+                };
+                series.forEach(function (serie) {
+                    drawData.push({
+                        id: serie.id,
+                        text: getText_1(serie),
+                        alpha: 1,
+                        fill: serie.color,
+                        active: serie.active,
+                    });
+                });
+            }
+        }
+        else {
+            var series = this.config.$seriesInfo;
+            for (var _i = 0, series_1 = series; _i < series_1.length; _i++) {
+                var serie = series_1[_i];
+                var seriaConfig = serie.config;
+                var useColor = seriaConfig.fill && seriaConfig.color;
+                drawData.push({
+                    id: seriaConfig.id,
+                    text: seriaConfig.name || seriaConfig.value,
+                    alpha: seriaConfig.alpha,
+                    fill: seriaConfig.fill || seriaConfig.color,
+                    color: useColor && seriaConfig.color,
+                    active: seriaConfig.active,
+                });
+            }
+        }
+        return drawData;
+    };
+    Legend.prototype.setCriticals = function () {
+        var value = this.config.values.value;
+        var min;
+        var max;
+        this._data.forEach(function (item) {
+            if (item[value]) {
+                min = !min || item[value] < min ? item[value] : min;
+                max = !max || item[value] > max ? item[value] : max;
+            }
+        });
+        max = Math.ceil(max / 10) * 10;
+        min = Math.floor(min / 10) * 10;
+        if (min === max)
+            min -= 10;
+        return [min, max];
+    };
+    return Legend;
+}());
+exports.Legend = Legend;
+
+
+/***/ }),
+/* 87 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13121,7 +14017,7 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
+var common_1 = __webpack_require__(5);
 var defaultTextTemplate = function (item) { return item.toString(); };
 var getScaleAriaAttrs = function (axis, text) { return ({
     role: "graphics-object",
@@ -13422,7 +14318,45 @@ exports.rightGrid = rightGrid;
 
 
 /***/ }),
-/* 86 */
+/* 88 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var Area_1 = __webpack_require__(89);
+var Bar_1 = __webpack_require__(91);
+var BarX_1 = __webpack_require__(201);
+var Donut_1 = __webpack_require__(202);
+var Line_1 = __webpack_require__(57);
+var Pie_1 = __webpack_require__(203);
+var Pie3D_1 = __webpack_require__(204);
+var Radar_1 = __webpack_require__(205);
+var Scatter_1 = __webpack_require__(206);
+var Spline_1 = __webpack_require__(207);
+var SplineArea_1 = __webpack_require__(208);
+var TreeMap_1 = __webpack_require__(209);
+var CalendarHeatMap_1 = __webpack_require__(210);
+var seriesTypes = {
+    line: Line_1.default,
+    spline: Spline_1.default,
+    area: Area_1.default,
+    splineArea: SplineArea_1.default,
+    scatter: Scatter_1.default,
+    pie: Pie_1.default,
+    pie3D: Pie3D_1.default,
+    donut: Donut_1.default,
+    radar: Radar_1.default,
+    bar: Bar_1.default,
+    xbar: BarX_1.default,
+    treeMap: TreeMap_1.default,
+    calendarHeatMap: CalendarHeatMap_1.default,
+};
+exports.default = seriesTypes;
+
+
+/***/ }),
+/* 89 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13453,8 +14387,8 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
-var ScaleSeria_1 = __webpack_require__(54);
+var common_1 = __webpack_require__(5);
+var ScaleSeria_1 = __webpack_require__(55);
 var Area = /** @class */ (function (_super) {
     __extends(Area, _super);
     function Area() {
@@ -13569,14 +14503,14 @@ exports.default = Area;
 
 
 /***/ }),
-/* 87 */
+/* 90 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
+var common_1 = __webpack_require__(5);
 var forms = {
     circle: function (color, fill, _alpha, x, y, id) {
         var config = {
@@ -13718,7 +14652,7 @@ exports.getShadeHTMLHelper = getShadeHTMLHelper;
 
 
 /***/ }),
-/* 88 */
+/* 91 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13750,8 +14684,8 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
-var ScaleSeria_1 = __webpack_require__(54);
+var common_1 = __webpack_require__(5);
+var ScaleSeria_1 = __webpack_require__(55);
 var Bar = /** @class */ (function (_super) {
     __extends(Bar, _super);
     function Bar() {
@@ -13891,7 +14825,7 @@ exports.default = Bar;
 
 
 /***/ }),
-/* 89 */
+/* 92 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13948,7 +14882,61 @@ exports.default = spline;
 
 
 /***/ }),
-/* 90 */
+/* 93 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var Stacker = /** @class */ (function () {
+    function Stacker() {
+        this._series = [];
+    }
+    Stacker.prototype.add = function (seria) {
+        this._series.push(seria);
+    };
+    Stacker.prototype.dataReady = function (prev) {
+        this._toPaint = this._series.filter(function (serie) {
+            var next = serie.dataReady(prev);
+            if (next.length) {
+                prev = next;
+                return true;
+            }
+            return false;
+        });
+        return prev || [];
+    };
+    Stacker.prototype.getPoints = function () {
+        if (this._toPaint.length) {
+            return this._toPaint[0].getPoints().concat(this._toPaint[this._toPaint.length - 1].getPoints());
+        }
+        return [];
+    };
+    Stacker.prototype.paint = function (width, height, prev) {
+        var svg = [];
+        var markers = [];
+        this._toPaint.forEach(function (seria) {
+            if (seria.paintformAndMarkers) {
+                var _a = seria.paintformAndMarkers(width, height, prev), content = _a[0], seriesMarkers = _a[1];
+                svg.push(content);
+                markers.push(seriesMarkers);
+            }
+            else {
+                var content = seria.paint(width, height, prev);
+                svg.push(content);
+            }
+            prev = seria.getPoints();
+        });
+        return dom_1.sv("g", svg.concat(markers));
+    };
+    return Stacker;
+}());
+exports.default = Stacker;
+
+
+/***/ }),
+/* 94 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13957,13 +14945,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(91));
-__export(__webpack_require__(223));
-__export(__webpack_require__(92));
+__export(__webpack_require__(95));
+__export(__webpack_require__(216));
+__export(__webpack_require__(96));
 
 
 /***/ }),
-/* 91 */
+/* 95 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -13995,8 +14983,8 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var ts_list_1 = __webpack_require__(30);
-var editors_1 = __webpack_require__(221);
+var ts_list_1 = __webpack_require__(31);
+var editors_1 = __webpack_require__(214);
 var DataView = /** @class */ (function (_super) {
     __extends(DataView, _super);
     function DataView(node, config) {
@@ -14154,7 +15142,7 @@ exports.DataView = DataView;
 
 
 /***/ }),
-/* 92 */
+/* 96 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14177,7 +15165,7 @@ var DataViewEvents;
 
 
 /***/ }),
-/* 93 */
+/* 97 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14186,15 +15174,15 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(94));
-__export(__webpack_require__(225));
-__export(__webpack_require__(6));
-var types_1 = __webpack_require__(6);
+__export(__webpack_require__(98));
+__export(__webpack_require__(231));
+__export(__webpack_require__(7));
+var types_1 = __webpack_require__(7);
 exports.FormEvents = types_1.FormEvents;
 
 
 /***/ }),
-/* 94 */
+/* 98 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -14243,26 +15231,26 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var events_1 = __webpack_require__(3);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_layout_1 = __webpack_require__(10);
 var core_1 = __webpack_require__(1);
-var dateinput_1 = __webpack_require__(95);
-var button_1 = __webpack_require__(96);
-var checkbox_1 = __webpack_require__(57);
-var checkboxGroup_1 = __webpack_require__(97);
-var input_1 = __webpack_require__(39);
-var radioGroup_1 = __webpack_require__(98);
-var select_1 = __webpack_require__(99);
-var textarea_1 = __webpack_require__(100);
-var textinput_1 = __webpack_require__(101);
-var combo_1 = __webpack_require__(102);
-var sliderform_1 = __webpack_require__(103);
-var helper_1 = __webpack_require__(8);
-var simplevault_1 = __webpack_require__(104);
-var timeinput_1 = __webpack_require__(106);
-var colorpicker_1 = __webpack_require__(107);
-var spacer_1 = __webpack_require__(108);
-var types_1 = __webpack_require__(6);
+var dateinput_1 = __webpack_require__(217);
+var button_1 = __webpack_require__(218);
+var checkbox_1 = __webpack_require__(99);
+var checkboxGroup_1 = __webpack_require__(219);
+var input_1 = __webpack_require__(58);
+var radioGroup_1 = __webpack_require__(220);
+var select_1 = __webpack_require__(222);
+var textarea_1 = __webpack_require__(223);
+var textinput_1 = __webpack_require__(224);
+var combo_1 = __webpack_require__(225);
+var sliderform_1 = __webpack_require__(226);
+var helper_1 = __webpack_require__(9);
+var simplevault_1 = __webpack_require__(227);
+var timeinput_1 = __webpack_require__(228);
+var colorpicker_1 = __webpack_require__(229);
+var spacer_1 = __webpack_require__(230);
+var types_1 = __webpack_require__(7);
 var dom_1 = __webpack_require__(0);
 var Form = /** @class */ (function (_super) {
     __extends(Form, _super);
@@ -14553,26 +15541,47 @@ var Form = /** @class */ (function (_super) {
         return this.layout.getRootView();
     };
     Form.prototype._addLayoutItem = function (item) {
-        var _this = this;
         var id = (item.id = item.id || core_1.uid());
         var name = (item.name = item.name || id.toString());
         item.type = item.type && item.type.toLowerCase();
-        var width = item.width, height = item.height;
         var css = item.css, padding = item.padding, config = __rest(item, ["css", "padding"]);
+        var width = item.width, height = item.height;
         var classList = css ? css + " dhx_form-element" : "dhx_form-element";
-        var autoSize = !(item.type === "spacer" || item.type === undefined);
-        if (autoSize && !width) {
+        var autoSize = item.type !== "spacer";
+        if (autoSize && !width)
             width = "content";
-        }
-        if (autoSize && !height) {
+        if (autoSize && !height)
             height = "content";
-        }
         switch (config.type) {
             case "button":
+                if (config.full)
+                    classList += " dhx_button--full-gravity";
+                break;
+            case "text":
+                if (width === "content")
+                    classList += " dhx_form-element--fit-content";
+                break;
+            case "simplevault":
+                config.$vaultHeight = height;
+                break;
+        }
+        this._initItemHandlers(item, name);
+        var cell = {
+            id: name,
+            width: width,
+            height: height,
+            padding: padding,
+            css: classList,
+        };
+        if ("gravity" in item)
+            cell.gravity = item.gravity;
+        return cell;
+    };
+    Form.prototype._initItemHandlers = function (item, name) {
+        var _this = this;
+        switch (item.type) {
+            case "button":
                 {
-                    if (config.full) {
-                        classList += " dhx_button--full-gravity";
-                    }
                     var button_2 = (this._attachments[name] = new button_1.Button(null, item));
                     button_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
                         return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
@@ -14619,15 +15628,18 @@ var Form = /** @class */ (function (_super) {
                 break;
             case "datepicker": {
                 var datePicker_1 = (this._attachments[name] = new dateinput_1.DatePicker(null, item));
-                this._state[name] = datePicker_1.getValue(config.valueFormat === "Date");
+                this._state[name] = datePicker_1.getValue(item.valueFormat === "Date");
                 datePicker_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
                     return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
                 });
                 datePicker_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
                     _this._changeProps(name, props);
-                    _this._state[name] = datePicker_1.getValue(config.valueFormat === "Date");
+                    _this._state[name] = datePicker_1.getValue(item.valueFormat === "Date");
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
+                });
+                datePicker_1.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 datePicker_1.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -14678,6 +15690,9 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                checkbox_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 checkbox_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
@@ -14727,25 +15742,28 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                checkboxGroup_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 checkboxGroup_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
                 });
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
+                checkboxGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, id, init) {
                     if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
+                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value, id]);
                     }
                 });
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
+                checkboxGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value, id) {
+                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value, id]);
                 });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
+                checkboxGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, id, init) {
+                    !checkboxGroup_2.isVisible() && _this.layout.getCell(name).hide();
+                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value, id]);
                 });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterShow, function (value) {
+                checkboxGroup_2.events.on(types_1.ItemEvent.afterShow, function (value, id) {
                     _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
+                    _this.events.fire(types_1.FormEvents.afterShow, [name, value, id]);
                 });
                 checkboxGroup_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
                     return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
@@ -14775,6 +15793,9 @@ var Form = /** @class */ (function (_super) {
                     _this._state[name] = combo_2.getValue();
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
+                });
+                combo_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 combo_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -14825,6 +15846,9 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                input_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 input_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
@@ -14874,25 +15898,28 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                radioGroup_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 radioGroup_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
                 });
-                radioGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
+                radioGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, id, init) {
                     if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
+                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value, id]);
                     }
                 });
-                radioGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
+                radioGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value, id) {
+                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value, id]);
                 });
-                radioGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
+                radioGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, id, init) {
+                    !radioGroup_2.isVisible() && _this.layout.getCell(name).hide();
+                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value, id]);
                 });
-                radioGroup_2.events.on(types_1.ItemEvent.afterShow, function (value) {
+                radioGroup_2.events.on(types_1.ItemEvent.afterShow, function (value, id) {
                     _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
+                    _this.events.fire(types_1.FormEvents.afterShow, [name, value, id]);
                 });
                 radioGroup_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
                     return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
@@ -14925,6 +15952,9 @@ var Form = /** @class */ (function (_super) {
                 });
                 select_2.events.on(types_1.ItemEvent.changeOptions, function (options) {
                     _this.layout.getCell(name).config.options = __spreadArrays(options);
+                });
+                select_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 select_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -14964,7 +15994,6 @@ var Form = /** @class */ (function (_super) {
                 break;
             }
             case "simplevault": {
-                config.$vaultHeight = height;
                 var simpleVault_1 = (this._attachments[name] = new simplevault_1.SimpleVault(null, item));
                 this._state[name] = simpleVault_1.getValue();
                 simpleVault_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
@@ -14975,6 +16004,9 @@ var Form = /** @class */ (function (_super) {
                     _this._state[name] = simpleVault_1.getValue();
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
+                });
+                simpleVault_1.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 simpleVault_1.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -15007,6 +16039,9 @@ var Form = /** @class */ (function (_super) {
             case "slider": {
                 var sliderForm = (this._attachments[name] = new sliderform_1.SliderForm(null, item));
                 this._state[name] = sliderForm.getValue();
+                sliderForm.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 sliderForm.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
@@ -15050,6 +16085,9 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                textarea_2.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 textarea_2.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
@@ -15088,9 +16126,6 @@ var Form = /** @class */ (function (_super) {
                 break;
             }
             case "text": {
-                if (width === "content") {
-                    classList += " dhx_form-element--fit-content";
-                }
                 var text_1 = (this._attachments[name] = new textinput_1.Text(null, item));
                 this._state[name] = text_1.getValue();
                 text_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
@@ -15101,6 +16136,9 @@ var Form = /** @class */ (function (_super) {
                     _this._state[name] = text_1.getValue();
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
+                });
+                text_1.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 text_1.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -15133,15 +16171,18 @@ var Form = /** @class */ (function (_super) {
             case "timepicker": {
                 var timePicker_1 = (this._attachments[name] = new timeinput_1.TimePicker(null, item));
                 this._state[name] =
-                    (config.value && timePicker_1.getValue(config.valueFormat === "timeObject")) || "";
+                    (item.value && timePicker_1.getValue(item.valueFormat === "timeObject")) || "";
                 timePicker_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
                     return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
                 });
                 timePicker_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
                     _this._changeProps(name, props);
-                    _this._state[name] = timePicker_1.getValue(config.valueFormat === "timeObject");
+                    _this._state[name] = timePicker_1.getValue(item.valueFormat === "timeObject");
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
+                });
+                timePicker_1.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
                 });
                 timePicker_1.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
@@ -15192,6 +16233,9 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
+                colorPicker_1.events.on(types_1.ItemEvent.beforeChange, function (value) {
+                    return _this.events.fire(types_1.FormEvents.beforeChange, [name, value]);
+                });
                 colorPicker_1.events.on(types_1.ItemEvent.change, function (value) {
                     _this._state[name] = value;
                     _this.events.fire(types_1.FormEvents.change, [name, value]);
@@ -15240,36 +16284,25 @@ var Form = /** @class */ (function (_super) {
                     _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
                     _this.paint();
                 });
-                spacer.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
+                spacer.events.on(types_1.ItemEvent.beforeHide, function (init) {
                     if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
+                        return _this.events.fire(types_1.FormEvents.beforeHide, [name]);
                     }
                 });
-                spacer.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
+                spacer.events.on(types_1.ItemEvent.beforeShow, function () {
+                    return _this.events.fire(types_1.FormEvents.beforeShow, [name]);
                 });
-                spacer.events.on(types_1.ItemEvent.afterHide, function (value, init) {
+                spacer.events.on(types_1.ItemEvent.afterHide, function (init) {
                     _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
+                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name]);
                 });
-                spacer.events.on(types_1.ItemEvent.afterShow, function (value) {
+                spacer.events.on(types_1.ItemEvent.afterShow, function () {
                     _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
+                    _this.events.fire(types_1.FormEvents.afterShow, [name]);
                 });
                 break;
             }
         }
-        var cell = {
-            id: name,
-            width: width,
-            height: height,
-            padding: padding,
-            css: classList,
-        };
-        if ("gravity" in item) {
-            cell.gravity = item.gravity;
-        }
-        return cell;
     };
     Form.prototype._changeProps = function (name, props) {
         var properties = ["width", "height", "css", "padding"];
@@ -15335,17 +16368,6 @@ var Form = /** @class */ (function (_super) {
             layout.getCell(name_1).attach(attachments[name_1]);
         }
     };
-    Form.prototype._initHandlers = function () {
-        var _this = this;
-        this.events.on(types_1.FormEvents.afterShow, function () {
-            _this._formContainerShow();
-        });
-        this.events.on(types_1.FormEvents.afterHide, function () {
-            if (!Object.values(_this._attachments).some(function (item) { return !item.config.hidden; })) {
-                _this._formContainerHide();
-            }
-        });
-    };
     Form.prototype._clear = function () {
         this._state = {};
         for (var key in this._attachments) {
@@ -15390,1346 +16412,7 @@ var Form = /** @class */ (function (_super) {
 }(view_1.View));
 exports.Form = Form;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
-
-/***/ }),
-/* 95 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var ts_calendar_1 = __webpack_require__(35);
-var date_1 = __webpack_require__(22);
-var events_1 = __webpack_require__(3);
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var label_1 = __webpack_require__(14);
-var ts_popup_1 = __webpack_require__(11);
-var types_1 = __webpack_require__(6);
-var helper_1 = __webpack_require__(8);
-var KeyManager_1 = __webpack_require__(12);
-var DatePicker = /** @class */ (function (_super) {
-    __extends(DatePicker, _super);
-    function DatePicker(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._isValid = true;
-        _this._popupIsFocus = false;
-        _this._propsItem = [
-            "required",
-            "validation",
-            "valueFormat",
-            "icon",
-            "placeholder",
-            "editable",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._propsCalendar = [
-            "mode",
-            "mark",
-            "disabledDates",
-            "weekStart",
-            "weekNumbers",
-            "timePicker",
-            "dateFormat",
-            "timeFormat",
-            "thisMonthOnly",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsCalendar);
-        _this._keyManager = new KeyManager_1.KeyManager(function () {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            return element === activeEl || _this._popup.isVisible();
-        });
-        _this._initView(config);
-        _this._initHandlers();
-        _this._initHotkeys();
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    DatePicker.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.calendar && this.calendar.destructor();
-        this._popup && this._popup.destructor();
-        this.events = this._uid = this._propsCalendar = this._propsItem = this._props = this._isValid = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    DatePicker.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-                if (this._propsCalendar.includes(key)) {
-                    this.calendar.config[key] = propertyConfig[key];
-                }
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.calendar.paint();
-        this.paint();
-    };
-    DatePicker.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    DatePicker.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    DatePicker.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    DatePicker.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    DatePicker.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    DatePicker.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    DatePicker.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    DatePicker.prototype.validate = function (silent, validateValue) {
-        if (silent === void 0) { silent = false; }
-        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
-        var checkValue = this.config.valueFormat === "Date"
-            ? value instanceof Date
-            : date_1.stringToDate(value, this.calendar.config.dateFormat, true);
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return;
-        this._isValid = this.config.validation ? this.config.validation(value) : !!checkValue;
-        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        return this._isValid;
-    };
-    DatePicker.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this.paint();
-    };
-    DatePicker.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || value === this.config.value)
-            return;
-        this.calendar.setValue(value);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    DatePicker.prototype.getValue = function (asDateObject) {
-        var _a = this.config, value = _a.value, valueFormat = _a.valueFormat;
-        if ((!(value instanceof Date) && asDateObject && value !== "") ||
-            (!(value instanceof Date) && valueFormat === "Date" && value !== "")) {
-            return date_1.stringToDate(value, this.calendar.config.dateFormat) || "";
-        }
-        return value || "";
-    };
-    DatePicker.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.input.el.focus();
-        });
-    };
-    DatePicker.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this._popup.hide();
-            _this.getRootView().refs.input.el.blur();
-        });
-    };
-    DatePicker.prototype.clear = function () {
-        if (this.config.value === "")
-            return;
-        this.config.value = "";
-        this.calendar.clear();
-        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-    };
-    DatePicker.prototype.getWidget = function () {
-        return this.calendar;
-    };
-    DatePicker.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.calendar) {
-            this.calendar.destructor();
-        }
-        if (this._popup) {
-            this._popup.destructor();
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            editable: false,
-            hidden: false,
-            value: "",
-            mode: "calendar",
-            weekStart: "sunday",
-            weekNumbers: false,
-            timePicker: false,
-            dateFormat: "%d/%m/%y",
-            timeFormat: 24,
-            thisMonthOnly: false,
-            valueFormat: "string",
-            required: false,
-            icon: "",
-            placeholder: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        this._popup = new ts_popup_1.Popup();
-        this.calendar = new ts_calendar_1.Calendar(null, helper_1.widgetConfig(config));
-        this._popup.attach(this.calendar);
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-    };
-    DatePicker.prototype._initHandlers = function () {
-        var _this = this;
-        this.calendar.events.on(ts_calendar_1.CalendarEvents.change, function () {
-            var value = _this.calendar.getValue(_this.config.valueFormat === "Date");
-            if (_this.config.value === value)
-                return;
-            _this.config.value = value;
-            _this.events.fire(types_1.ItemEvent.change, [value]);
-            _this._popup.hide();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.blur, function () {
-            _this._popupIsFocus = false;
-            _this.paint();
-        });
-        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
-            if (document.activeElement !== _this.getRootView().refs.input.el) {
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-            }
-            _this.paint();
-        });
-        document.addEventListener("keydown", function (event) {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            if (element === activeEl || _this._popup.isVisible()) {
-                _this.events.fire(types_1.ItemEvent.keydown, [event]);
-            }
-        });
-        document.addEventListener("mousedown", function () {
-            var popup = _this._popup.getContainer();
-            var activeEl = document.activeElement;
-            if (popup !== activeEl)
-                _this._popupIsFocus = false;
-        });
-    };
-    DatePicker.prototype._getHandlers = function () {
-        var _this = this;
-        return {
-            onblur: function () {
-                if (!_this._popup.isVisible()) {
-                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-                }
-                _this.paint();
-            },
-            onfocus: function () {
-                if (_this._popup.isVisible()) {
-                    return;
-                }
-                var node = _this.getRootView().refs.input.el;
-                _this._popup.show(node);
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-                _this.paint();
-            },
-            oninput: function (e) {
-                var value = e.target.value;
-                _this.events.fire(types_1.ItemEvent.input, [value]);
-            },
-            onchange: function (e) {
-                var value = e.target.value;
-                if (_this.config.editable && date_1.stringToDate(value, _this.calendar.config.dateFormat, true)) {
-                    _this.setValue(value);
-                }
-                else if (value === "") {
-                    _this.clear();
-                    helper_1.isVerify(_this.config) && _this.validate();
-                    _this.paint();
-                }
-                else {
-                    helper_1.isVerify(_this.config) && _this.validate();
-                    _this.paint();
-                }
-            },
-        };
-    };
-    DatePicker.prototype._initHotkeys = function () {
-        var _this = this;
-        var handlers = {
-            "shift+tab": function () {
-                _this._applyTab();
-            },
-            tab: function () {
-                _this._applyTab();
-            },
-            escape: function () {
-                if (_this._popup.isVisible()) {
-                    _this.getRootView().refs.input.el.focus();
-                }
-                _this._popup.hide();
-            },
-            enter: function (event) {
-                event.preventDefault();
-                if (!_this._popup.isVisible()) {
-                    var node = _this.getRootView().refs.input.el;
-                    _this._popup.show(node);
-                }
-            },
-            arrowRight: function (event) {
-                var focusElement = _this._popup.getContainer();
-                if (_this._popup.isVisible() && !_this._popupIsFocus) {
-                    event.preventDefault();
-                    focusElement.focus();
-                    _this._popupIsFocus = true;
-                }
-            },
-        };
-        for (var key in handlers) {
-            this._keyManager.addHotKey(key, handlers[key]);
-        }
-    };
-    DatePicker.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, icon = _d.icon, required = _d.required, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
-        var value = this.config.value instanceof Date ? this.calendar.getValue() : this.config.value;
-        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el("div.dhx_form-group", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", [
-                dom_1.el("div.dhx_input__container", {}, [
-                    dom_1.el(".dhx_input__icon", {
-                        class: icon || "dxi dxi-calendar-today",
-                    }),
-                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
-                        tabindex: 0,
-                        "data-dhx-id": name || id,
-                        _key: this._uid,
-                        _ref: "input",
-                        value: value,
-                        type: "text",
-                        required: required,
-                        disabled: disabled,
-                        class: activeFocus && "dhx_input--focus",
-                        placeholder: placeholder || "",
-                        name: name || "",
-                        id: id || this._uid,
-                        onfocus: this._handlers.onfocus,
-                        oninput: this._handlers.oninput,
-                        onchange: this._handlers.onchange,
-                        onblur: this._handlers.onblur,
-                        autocomplete: "off",
-                        readOnly: !editable,
-                        "aria-label": label || (editable ? "type or" : "") + " select date",
-                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
-                    }),
-                ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    DatePicker.prototype._applyTab = function () {
-        var _a, _b, _c;
-        var activeEl = document.activeElement;
-        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
-        if (activeEl !== popup && !this._popupIsFocus) {
-            this._popup.hide();
-        }
-    };
-    return DatePicker;
-}(label_1.Label));
-exports.DatePicker = DatePicker;
-
-
-/***/ }),
-/* 96 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(6);
-var events_1 = __webpack_require__(3);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var Button = /** @class */ (function (_super) {
-    __extends(Button, _super);
-    function Button(container, config) {
-        var _this = _super.call(this, container, __assign({ disabled: false, hidden: false, submit: false, full: false, circle: false, loading: false, view: "flat", size: "medium", color: "primary", width: "content", height: "content", url: "", text: "", icon: "" }, config)) || this;
-        _this._propsItem = [
-            "submit",
-            "url",
-            "text",
-            "icon",
-            "view",
-            "size",
-            "color",
-            "full",
-            "circle",
-            "loading",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        _this.config.text = _this.config.text || _this.config.value || "";
-        _this.events = new events_1.EventSystem();
-        _this._handlers = {
-            onclick: function (event) { return _this.events.fire(types_1.ItemEvent.click, [event]); },
-            onblur: function () { return _this.events.fire(types_1.ItemEvent.blur, [_this.config.text]); },
-            onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.config.text]); },
-            onkeydown: function (event) { return _this.events.fire(types_1.ItemEvent.keydown, [event]); },
-        };
-        if (_this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    Button.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.config = this._propsItem = this._props = this.events = this._handlers = this._uid = null;
-        this.unmount();
-    };
-    Button.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this.config.text = this.config.text || this.config.value;
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    Button.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Button.prototype.show = function () {
-        var _a = this.config, text = _a.text, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [text])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [text]);
-    };
-    Button.prototype.hide = function (init) {
-        var _a = this.config, text = _a.text, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [text, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [text, init]);
-    };
-    Button.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    Button.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    Button.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    Button.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    Button.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.button.el.focus();
-        });
-    };
-    Button.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.button.el.blur();
-        });
-    };
-    Button.prototype._draw = function () {
-        var _a = this.config, color = _a.color, size = _a.size, view = _a.view, full = _a.full, loading = _a.loading, circle = _a.circle, icon = _a.icon, text = _a.text, disabled = _a.disabled, submit = _a.submit, id = _a.id, name = _a.name;
-        var colorsCss = {
-            danger: " dhx_button--color_danger",
-            secondary: " dhx_button--color_secondary",
-            primary: " dhx_button--color_primary",
-            success: " dhx_button--color_success",
-        }[color] || " dhx_button--color_primary";
-        var sizeCss = {
-            small: " dhx_button--size_small",
-            medium: " dhx_button--size_medium",
-        }[size] || " dhx_button--size_medium";
-        var viewCss = {
-            flat: " dhx_button--view_flat",
-            link: " dhx_button--view_link",
-        }[view] || " dhx_button--view_flat";
-        var fullCss = full ? " dhx_button--width_full" : "";
-        var circleCss = circle ? " dhx_button--circle" : "";
-        var loadingCss = loading ? " dhx_button--loading" : "";
-        var iconViewCss = icon && !text ? " dhx_button--icon" : "";
-        return dom_1.el("button", {
-            disabled: disabled,
-            id: id,
-            "data-dhx-id": name || id,
-            onclick: this._handlers.onclick,
-            onfocus: this._handlers.onfocus,
-            onblur: this._handlers.onblur,
-            onkeydown: this._handlers.onkeydown,
-            type: submit ? "submit" : "button",
-            class: "dhx_button" +
-                colorsCss +
-                sizeCss +
-                viewCss +
-                fullCss +
-                circleCss +
-                loadingCss +
-                iconViewCss,
-            _ref: "button",
-        }, [
-            icon &&
-                dom_1.el("span.dhx_button__icon", {
-                    class: icon,
-                }),
-            text && dom_1.el("span.dhx_button__text", text),
-            loading &&
-                dom_1.el("span.dhx_button__loading", [dom_1.el("span.dhx_button__loading-icon.dxi.dxi-loading")]),
-        ]);
-    };
-    return Button;
-}(view_1.View));
-exports.Button = Button;
-
-
-/***/ }),
-/* 97 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var ts_layout_1 = __webpack_require__(10);
-var events_1 = __webpack_require__(3);
-var checkbox_1 = __webpack_require__(57);
-var label_1 = __webpack_require__(14);
-var types_1 = __webpack_require__(6);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var ts_popup_1 = __webpack_require__(11);
-var CheckboxGroup = /** @class */ (function (_super) {
-    __extends(CheckboxGroup, _super);
-    function CheckboxGroup(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._buttons = [];
-        _this._isValid = true;
-        _this._propsItem = [
-            "required",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-            "options",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        _this._initView(config);
-        _this._initHandlers();
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    CheckboxGroup.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.layout && this.layout.destructor();
-        this.events = this._uid = this._propsItem = this._props = this._isValid = this._buttons = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    CheckboxGroup.prototype.setProperties = function (arg, props) {
-        if (typeof arg === "undefined" ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()])) {
-            return;
-        }
-        if (typeof arg === "object" && !core_1.isEmptyObj(arg)) {
-            for (var key in arg) {
-                if (this._props.includes(key)) {
-                    this.config[key] = arg[key];
-                }
-            }
-            if (arg.hasOwnProperty("options")) {
-                this._initView(this.config);
-                this._initHandlers();
-            }
-        }
-        if (typeof arg === "string" && props && !core_1.isEmptyObj(props)) {
-            var checkbox = this._buttons.find(function (item) { return item.config.id === arg; });
-            checkbox && checkbox.setProperties(props, true);
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    CheckboxGroup.prototype.getProperties = function (id) {
-        if (typeof id === "undefined") {
-            var obj = {};
-            for (var key in this.config) {
-                if (this._props.includes(key)) {
-                    obj[key] = this.config[key];
-                }
-            }
-            return obj;
-        }
-        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
-        return checkbox.getProperties();
-    };
-    CheckboxGroup.prototype.getValue = function (id) {
-        if (typeof id === "undefined") {
-            var valueList_1 = {};
-            this._buttons.forEach(function (item) {
-                valueList_1[item.config.id] = item.getValue();
-            });
-            return valueList_1;
-        }
-        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
-        if (id && checkbox) {
-            return checkbox.getValue();
-        }
-    };
-    CheckboxGroup.prototype.setValue = function (newValue) {
-        if (typeof newValue === "undefined" || core_1.isEmptyObj(newValue))
-            return;
-        var isSet = false;
-        var _loop_1 = function (id, value) {
-            var checkbox = this_1._buttons.find(function (item) { return item.config.id === id; });
-            if (checkbox) {
-                checkbox.setValue(!!value, true);
-                isSet = true;
-            }
-        };
-        var this_1 = this;
-        for (var _i = 0, _a = Object.entries(newValue); _i < _a.length; _i++) {
-            var _b = _a[_i], id = _b[0], value = _b[1];
-            _loop_1(id, value);
-        }
-        if (isSet) {
-            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-            helper_1.isVerify(this.config) && this.validate();
-        }
-    };
-    CheckboxGroup.prototype.isChecked = function (id) {
-        if (typeof id === "undefined") {
-            var checkedList_1 = {};
-            this._buttons.forEach(function (item) {
-                checkedList_1[item.config.id] = item.isChecked();
-            });
-            return checkedList_1;
-        }
-        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
-        if (id && checkbox) {
-            return checkbox.isChecked();
-        }
-    };
-    CheckboxGroup.prototype.focus = function (id) {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!_this._buttons.length) {
-                return;
-            }
-            if (!id) {
-                return _this._buttons[0].focus();
-            }
-            var checkbox = _this._buttons.find(function (item) { return item.config.id === id; });
-            checkbox && checkbox.focus();
-        });
-    };
-    CheckboxGroup.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!_this._buttons.length) {
-                return;
-            }
-            _this._buttons.forEach(function (checkbox) {
-                checkbox.blur();
-            });
-        });
-    };
-    CheckboxGroup.prototype.show = function () {
-        var hidden = this.config.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue()])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue()]);
-    };
-    CheckboxGroup.prototype.hide = function (init) {
-        var hidden = this.config.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), init]);
-    };
-    CheckboxGroup.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    CheckboxGroup.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    CheckboxGroup.prototype.enable = function () {
-        this.config.disabled = false;
-        if (this._buttons.length) {
-            this._buttons.forEach(function (button) {
-                button.enable();
-            });
-        }
-        this.paint();
-    };
-    CheckboxGroup.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    CheckboxGroup.prototype.clear = function () {
-        if (this._buttons.some(function (item) { return item.isChecked(); })) {
-            this._buttons.forEach(function (element) {
-                element.clear(true);
-            });
-            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-        }
-    };
-    CheckboxGroup.prototype.validate = function (silent) {
-        var _this = this;
-        if (silent === void 0) { silent = false; }
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
-            return;
-        if (this.config.required) {
-            this._isValid = this._buttons.some(function (element) { return element.config.$required && !!element.config.checked; });
-        }
-        if (!silent) {
-            this._buttons.forEach(function (element) {
-                element.config.$validationStatus = _this._isValid
-                    ? types_1.ValidationStatus.success
-                    : types_1.ValidationStatus.error;
-            });
-            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
-        }
-        return this._isValid;
-    };
-    CheckboxGroup.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this._buttons.forEach(function (element) {
-            element.clearValidate();
-        });
-        this.paint();
-    };
-    CheckboxGroup.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config) || !config.options || core_1.isEmptyObj(config.options)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.layout) {
-            this.layout.destructor();
-        }
-        if (this._buttons.length) {
-            this._buttons.forEach(function (button) {
-                button.destructor();
-            });
-            this._buttons = [];
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            options: {},
-            required: false,
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.helpMessage) {
-            this._helper = new ts_popup_1.Popup({
-                css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
-            });
-            this._helper.attachHTML(this.config.helpMessage);
-        }
-        var checkboxesConfig = this.config.options.rows || this.config.options.cols;
-        checkboxesConfig.forEach(function (option) {
-            option.id = option.id || core_1.uid();
-            option.$group = true;
-        });
-        this.layout = new ts_layout_1.Layout(null, this.config.options);
-        checkboxesConfig.forEach(function (option) {
-            var checkbox = new checkbox_1.Checkbox(null, __assign(__assign({}, option), { disabled: config.disabled, name: config.name, $required: config.required }));
-            _this._buttons.push(checkbox);
-            _this.layout.getCell(option.id).attach(checkbox);
-            checkbox.events.on(types_1.ItemEvent.change, function () {
-                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-                helper_1.isVerify(_this.config) && _this.validate();
-            });
-            checkbox.events.on(types_1.ItemEvent.focus, function (_value, id) {
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue(), id]);
-            });
-            checkbox.events.on(types_1.ItemEvent.blur, function (_value, id) {
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue(), id]);
-            });
-            checkbox.events.on(types_1.ItemEvent.keydown, function (event, id) {
-                _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
-            });
-        });
-        this.config.value && this.setValue(this.config.value);
-        this.clearValidate();
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-    };
-    CheckboxGroup.prototype._initHandlers = function () {
-        var _this = this;
-        this.events.on(types_1.ItemEvent.change, function () {
-            _this.config.value = _this.getValue();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-    };
-    CheckboxGroup.prototype._draw = function () {
-        var visibility = this.config.hidden ? " dhx_form-group--hidden" : "";
-        var _a = this.config, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage, required = _a.required, name = _a.name, id = _a.id;
-        return dom_1.el("fieldset.dhx_form-group-fieldset", {}, [
-            dom_1.el("div.dhx_form-group.dhx_form-group--checkbox-group", {
-                class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)) + visibility,
-                "data-dhx-id": name || id,
-                role: "radiogroup",
-            }, [
-                label || labelWidth || helpMessage || required ? this._drawLabel() : null,
-                dom_1.el("div.dhx_checkbox-group--container", {}, [
-                    this.layout && dom_1.inject(this.layout.getRootView()),
-                    required &&
-                        helper_1.getValidationMessage(this.config) &&
-                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
-                ]),
-            ]),
-        ]);
-    };
-    return CheckboxGroup;
-}(label_1.Label));
-exports.CheckboxGroup = CheckboxGroup;
-
-
-/***/ }),
-/* 98 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var ts_layout_1 = __webpack_require__(10);
-var ts_popup_1 = __webpack_require__(11);
-var events_1 = __webpack_require__(3);
-var radiobutton_1 = __webpack_require__(224);
-var helper_1 = __webpack_require__(8);
-var label_1 = __webpack_require__(14);
-var types_1 = __webpack_require__(6);
-var RadioGroup = /** @class */ (function (_super) {
-    __extends(RadioGroup, _super);
-    function RadioGroup(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._buttons = [];
-        _this._isValid = true;
-        _this._propsItem = [
-            "required",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-            "options",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        _this._initView(config);
-        _this._initHandlers();
-        _this.config.value && _this._setValue(_this.config.value);
-        _this.clearValidate();
-        if (_this.config.helpMessage) {
-            _this._helper = new ts_popup_1.Popup({
-                css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
-            });
-            _this._helper.attachHTML(_this.config.helpMessage);
-        }
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    RadioGroup.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.layout && this.layout.destructor();
-        this.events = this._uid = this._propsItem = this._props = this._isValid = this._buttons = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    RadioGroup.prototype.setProperties = function (arg, props) {
-        if (typeof arg === "undefined" ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        if (typeof arg === "object" && !core_1.isEmptyObj(arg)) {
-            for (var key in arg) {
-                if (this._props.includes(key)) {
-                    this.config[key] = arg[key];
-                }
-            }
-            if (arg.hasOwnProperty("options")) {
-                this._initView(this.config);
-                this._initHandlers();
-            }
-        }
-        if (typeof arg === "string" && props && !core_1.isEmptyObj(props)) {
-            var radio = this._buttons.find(function (item) { return item.config.id === arg; });
-            radio && radio.setProperties(props);
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    RadioGroup.prototype.getProperties = function (id) {
-        if (typeof id === "undefined") {
-            var obj = {};
-            for (var key in this.config) {
-                if (this._props.includes(key)) {
-                    obj[key] = this.config[key];
-                }
-            }
-            return obj;
-        }
-        var radio = this._buttons.find(function (item) { return item.config.id === id; });
-        return radio.getProperties();
-    };
-    RadioGroup.prototype.getValue = function () {
-        var _this = this;
-        this._buttons.forEach(function (element) {
-            if (element.getValue()) {
-                _this.config.value = element.getValue() || "";
-            }
-        });
-        return this.config.value || "";
-    };
-    RadioGroup.prototype.setValue = function (value) {
-        if (value === this.config.value)
-            return;
-        this._setValue(value);
-        this.events.fire(types_1.ItemEvent.change, [value]);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    RadioGroup.prototype.focus = function (id) {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!_this._buttons.length) {
-                return;
-            }
-            if (!id) {
-                return _this._buttons[0].focus();
-            }
-            var radiobutton = _this._buttons.find(function (i) { return i.config.id === id; });
-            if (!radiobutton) {
-                return;
-            }
-            return radiobutton.focus();
-        });
-    };
-    RadioGroup.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!_this._buttons.length) {
-                return;
-            }
-            _this._buttons.forEach(function (radioButton) { return radioButton.blur(); });
-        });
-    };
-    RadioGroup.prototype.show = function () {
-        var hidden = this.config.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue()])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue()]);
-    };
-    RadioGroup.prototype.hide = function (init) {
-        var hidden = this.config.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), init]);
-    };
-    RadioGroup.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    RadioGroup.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    RadioGroup.prototype.enable = function () {
-        this.config.disabled = false;
-        if (this._buttons.length) {
-            this._buttons.forEach(function (button) {
-                button.enable();
-            });
-        }
-        this.paint();
-    };
-    RadioGroup.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    RadioGroup.prototype.clear = function () {
-        if (this.config.value === "")
-            return;
-        this._buttons.forEach(function (element) {
-            element.clear();
-        });
-        this.config.value = "";
-        this.events.fire(types_1.ItemEvent.change, [this.config.value]);
-    };
-    RadioGroup.prototype.validate = function (silent) {
-        var _this = this;
-        if (silent === void 0) { silent = false; }
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
-            return;
-        if (this.config.required) {
-            this._isValid = this._buttons.some(function (element) { return _this.config.required && !!element.config.checked; });
-        }
-        if (!silent) {
-            this._buttons.forEach(function (element) {
-                element.config.$validationStatus = _this._isValid
-                    ? types_1.ValidationStatus.success
-                    : types_1.ValidationStatus.error;
-            });
-            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
-        }
-        return this._isValid;
-    };
-    RadioGroup.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this._buttons.map(function (element) {
-            element.clearValidate();
-        });
-        this.paint();
-    };
-    RadioGroup.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config) || !config.options || core_1.isEmptyObj(config.options)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.layout) {
-            this.layout.destructor();
-        }
-        if (this._buttons.length) {
-            this._buttons.forEach(function (button) {
-                button.destructor();
-            });
-            this._buttons = [];
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            options: {},
-            required: false,
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        var radioButtonsConfig = this.config.options.rows || this.config.options.cols;
-        radioButtonsConfig.map(function (option) {
-            option.id = option.id || core_1.uid();
-        });
-        this.layout = new ts_layout_1.Layout(null, this.config.options);
-        radioButtonsConfig.map(function (option) {
-            var radioButton = new radiobutton_1.RadioButton(null, __assign(__assign({}, option), { $disabled: config.disabled, $name: config.name, $required: config.required }));
-            _this._buttons.push(radioButton);
-            _this.layout.getCell(option.id).attach(radioButton);
-            radioButton.events.on(radiobutton_1.RadioButtonEvents.change, function () {
-                _this._buttons.map(function (button) {
-                    if (button.config.id !== radioButton.config.id) {
-                        button.setValue(false);
-                    }
-                });
-                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-                helper_1.isVerify(_this.config) && _this.validate();
-            });
-            radioButton.events.on(radiobutton_1.RadioButtonEvents.focus, function (value, id) {
-                _this.events.fire(types_1.ItemEvent.focus, [value, id]);
-            });
-            radioButton.events.on(radiobutton_1.RadioButtonEvents.blur, function (value, id) {
-                _this.events.fire(types_1.ItemEvent.blur, [value, id]);
-            });
-            radioButton.events.on(radiobutton_1.RadioButtonEvents.keydown, function (event, id) {
-                _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
-            });
-        });
-    };
-    RadioGroup.prototype._initHandlers = function () {
-        var _this = this;
-        this.events.on(types_1.ItemEvent.change, function () {
-            _this.config.value = _this.getValue();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-    };
-    RadioGroup.prototype._draw = function () {
-        var _a = this.config, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage, required = _a.required, hidden = _a.hidden, name = _a.name, id = _a.id;
-        var visibility = hidden ? " dhx_form-group--hidden" : "";
-        return dom_1.el("fieldset.dhx_form-group-fieldset", {}, [
-            dom_1.el("div.dhx_form-group.dhx_form-group--radio-group", {
-                class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)) + visibility,
-                "data-dhx-id": name || id,
-            }, [
-                label || labelWidth || helpMessage || required ? [this._drawLabel()] : null,
-                dom_1.el("div.dhx_radio-group--container", {}, [
-                    this.layout && dom_1.inject(this.layout.getRootView()),
-                    required &&
-                        helper_1.getValidationMessage(this.config) &&
-                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
-                ]),
-            ]),
-        ]);
-    };
-    RadioGroup.prototype._setValue = function (value) {
-        if (typeof value === "undefined" || this._buttons.findIndex(function (i) { return i.config.value === value; }) === -1)
-            return;
-        this._buttons.forEach(function (element) {
-            value === element.config.value ? element.setValue(true) : element.setValue(false);
-        });
-    };
-    return RadioGroup;
-}(label_1.Label));
-exports.RadioGroup = RadioGroup;
-
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
 /* 99 */
@@ -16759,21 +16442,21 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var label_1 = __webpack_require__(14);
-var helper_1 = __webpack_require__(8);
 var events_1 = __webpack_require__(3);
-var types_1 = __webpack_require__(6);
-var Select = /** @class */ (function (_super) {
-    __extends(Select, _super);
-    function Select(container, config) {
-        var _this = _super.call(this, null, config) || this;
+var helper_1 = __webpack_require__(9);
+var ts_popup_1 = __webpack_require__(11);
+var types_1 = __webpack_require__(7);
+var label_1 = __webpack_require__(16);
+var core_1 = __webpack_require__(1);
+var Checkbox = /** @class */ (function (_super) {
+    __extends(Checkbox, _super);
+    function Checkbox(container, config) {
+        if (config === void 0) { config = {}; }
+        var _this = _super.call(this, container, config) || this;
         _this.events = new events_1.EventSystem();
         _this._isValid = true;
         _this._propsItem = [
             "required",
-            "validation",
-            "icon",
             "label",
             "labelWidth",
             "labelPosition",
@@ -16782,32 +16465,30 @@ var Select = /** @class */ (function (_super) {
             "preMessage",
             "successMessage",
             "errorMessage",
+            "text",
         ];
         _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
         _this._initView(config);
         _this._initHandlers();
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
         return _this;
     }
-    Select.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.events = this._uid = this._propsItem = this._props = this._isValid = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    Select.prototype.setProperties = function (propertyConfig) {
+    Checkbox.prototype.setProperties = function (propertyConfig, silent) {
+        if (silent === void 0) { silent = false; }
         if (!propertyConfig ||
             core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            (!silent && !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()])))
             return;
         for (var key in propertyConfig) {
             if (this._props.includes(key)) {
                 this.config[key] = propertyConfig[key];
             }
         }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        !silent && this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
         this.paint();
     };
-    Select.prototype.getProperties = function () {
+    Checkbox.prototype.getProperties = function () {
         var obj = {};
         for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
             var prop = _a[_i];
@@ -16815,219 +16496,277 @@ var Select = /** @class */ (function (_super) {
         }
         return obj;
     };
-    Select.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+    Checkbox.prototype.show = function () {
+        var hidden = this.config.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue()])) {
             return;
         }
         this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue()]);
     };
-    Select.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+    Checkbox.prototype.hide = function (init) {
+        var hidden = this.config.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), init])) {
             return;
         }
         this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), init]);
     };
-    Select.prototype.isVisible = function () {
+    Checkbox.prototype.isVisible = function () {
         return !this.config.hidden;
     };
-    Select.prototype.disable = function () {
+    Checkbox.prototype.disable = function () {
         this.config.disabled = true;
         this.paint();
     };
-    Select.prototype.enable = function () {
+    Checkbox.prototype.enable = function () {
         this.config.disabled = false;
         this.paint();
     };
-    Select.prototype.isDisabled = function () {
-        return this.config.disabled;
+    Checkbox.prototype.isDisabled = function () {
+        return !!this.config.disabled;
     };
-    Select.prototype.validate = function (silent) {
+    Checkbox.prototype.validate = function (silent) {
         if (silent === void 0) { silent = false; }
-        var _a = this.config, value = _a.value, validation = _a.validation;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
             return;
-        this._isValid = validation
-            ? this.config.validation(value)
-            : typeof value !== "undefined" && !!String(value).length;
-        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        if (this.config.required || this.config.$required) {
+            this._isValid = !!this.config.checked;
+        }
+        if (!silent) {
+            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
+        }
         return this._isValid;
     };
-    Select.prototype.clearValidate = function () {
+    Checkbox.prototype.clearValidate = function () {
         this.config.$validationStatus = types_1.ValidationStatus.pre;
         this.paint();
     };
-    Select.prototype.clear = function () {
-        if (this.config.value === this.config.options[0].value)
+    Checkbox.prototype.setValue = function (checked, silent) {
+        if (silent === void 0) { silent = false; }
+        if (typeof checked === "undefined" ||
+            checked === this.config.checked ||
+            (!silent && !this.events.fire(types_1.ItemEvent.beforeChange, [this._getValue(checked)])))
             return;
-        this.config.value = this.config.options[0].value;
-        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+        this.config.checked = !!checked;
+        if (!silent) {
+            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+            helper_1.isVerify(this.config) && this.validate();
+        }
     };
-    Select.prototype.setValue = function (value) {
-        if (typeof value === "undefined" ||
-            value === this.config.value ||
-            this.config.options.findIndex(function (i) { return i.value === value; }) === -1)
+    Checkbox.prototype.getValue = function () {
+        return this._getValue(this.config.checked);
+    };
+    Checkbox.prototype.clear = function (silent) {
+        if (!this.config.checked ||
+            (!silent && !this.events.fire(types_1.ItemEvent.beforeChange, [this._getValue(false)]))) {
             return;
-        this.config.value = value;
-        this.events.fire(types_1.ItemEvent.change, [value]);
-        helper_1.isVerify(this.config) && this.validate();
+        }
+        this.config.checked = false;
+        if (!silent) {
+            this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+            helper_1.isVerify(this.config) && this.validate();
+        }
     };
-    Select.prototype.focus = function () {
+    Checkbox.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this._inGroup = this._propsItem = this._props = this._isValid = this._uid = this.events = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    Checkbox.prototype.focus = function () {
         var _this = this;
         dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.select.el.focus();
+            _this.getRootView().refs.input.el.focus();
         });
     };
-    Select.prototype.blur = function () {
+    Checkbox.prototype.blur = function () {
         var _this = this;
         dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.select.el.blur();
+            _this.getRootView().refs.input.el.blur();
         });
     };
-    Select.prototype.getValue = function () {
-        return this.config.value;
+    Checkbox.prototype.isChecked = function () {
+        return !!this.config.checked;
     };
-    Select.prototype.setOptions = function (options) {
-        if (!options || !options.length) {
-            throw new Error("Function argument cannot be empty, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
+    Checkbox.prototype._getValue = function (checked) {
+        if (typeof this.config.value === "string") {
+            return (checked && this.config.value) || "";
         }
-        this._checkOptions(options);
-        this.config.options = __spreadArrays(options);
-        this.config.value = this.config.options[0].value;
-        this.events.fire(types_1.ItemEvent.changeOptions, [__spreadArrays(options)]);
-        this.paint();
+        return !!checked;
     };
-    Select.prototype.getOptions = function () {
-        return this.config.options;
-    };
-    Select.prototype._initView = function (config) {
+    Checkbox.prototype._initView = function (config) {
         var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        this._checkOptions(config.options);
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            required: false,
-            icon: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-            options: config.options,
-            value: config.options[0].value,
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
+        this._inGroup = this.config.$group;
+        if (!this._inGroup) {
+            this.config = {
+                type: config.type,
+                id: config.id,
+                name: config.name,
+                disabled: false,
+                required: false,
+                label: "",
+                labelWidth: "",
+                labelPosition: "top",
+                hiddenLabel: false,
+                helpMessage: "",
+                preMessage: "",
+                successMessage: "",
+                errorMessage: "",
+                width: "content",
+                height: "content",
+            };
+            for (var key in config) {
+                if (key !== "id" && key !== "type" && key !== "name") {
+                    this.config[key] = config[key];
+                }
             }
+            if (this.config.helpMessage) {
+                this._helper = new ts_popup_1.Popup({
+                    css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
+                });
+                this._helper.attachHTML(this.config.helpMessage);
+            }
+            this._handlers = {
+                showHelper: function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    _this._helper.show(e.target, {
+                        mode: _this.config.labelPosition === "left" ? "bottom" : "right",
+                        theme: _this.getRootNode(),
+                    });
+                },
+                hideHelper: function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    _this._helper.hide();
+                },
+                onchange: function (e) {
+                    var checked = e.target.checked;
+                    if (!_this.events.fire(types_1.ItemEvent.beforeChange, [_this._getValue(checked)])) {
+                        var element = _this.getRootView().refs.input.el;
+                        element.checked = !checked;
+                        return;
+                    }
+                    _this.config.checked = checked;
+                    _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
+                    helper_1.isVerify(_this.config) && _this.validate();
+                },
+                onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]); },
+                onblur: function () { var _a; return (_a = _this.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.ItemEvent.blur, [_this.getValue()]); },
+                onkeydown: function (event) {
+                    _this.events.fire(types_1.ItemEvent.keydown, [event]);
+                },
+            };
+        }
+        else {
+            this.config = {
+                type: config.type,
+                id: config.id,
+                text: "",
+                width: "content",
+                height: "content",
+                padding: 0,
+            };
+            for (var key in config) {
+                if (key !== "id" && key !== "type" && key !== "name") {
+                    this.config[key] = config[key];
+                }
+            }
+            this._handlers = {
+                onchange: function (e) {
+                    var checked = e.target.checked;
+                    if (!_this.events.fire(types_1.ItemEvent.beforeChange, [_this._getValue(checked)])) {
+                        var element = _this.getRootView().refs.input.el;
+                        element.checked = !checked;
+                        return;
+                    }
+                    _this.config.checked = checked;
+                    _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
+                    helper_1.isVerify(_this.config) && _this.validate();
+                },
+                onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.getValue(), _this.config.id]); },
+                onblur: function () { return _this.events.fire(types_1.ItemEvent.blur, [_this.getValue(), _this.config.id]); },
+                onkeydown: function (event) {
+                    _this.events.fire(types_1.ItemEvent.keydown, [event, _this.config.id]);
+                },
+            };
         }
         if (this.config.hidden) {
             dom_1.awaitRedraw().then(function () {
                 _this.hide(true);
             });
         }
-        this.paint();
     };
-    Select.prototype._initHandlers = function () {
+    Checkbox.prototype._initHandlers = function () {
         var _this = this;
+        this.events.on(types_1.ItemEvent.change, function () { return _this.paint(); });
         this.events.on(types_1.ItemEvent.afterValidate, function () {
             _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
             _this.paint();
         });
-        this.events.on(types_1.ItemEvent.changeOptions, function () {
-            _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
-            helper_1.isVerify(_this.config) && _this.validate();
-        });
-        this.events.on(types_1.ItemEvent.change, function () { return _this.paint(); });
     };
-    Select.prototype._getHandlers = function () {
-        var _this = this;
-        return {
-            onchange: function (e) {
-                var value = _this.config.options
-                    .map(function (o) { return o.value; })
-                    .find(function (v) { return v == e.target.value; });
-                _this.config.value = value;
-                _this.events.fire(types_1.ItemEvent.change, [value]);
-                helper_1.isVerify(_this.config) && _this.validate();
-            },
-            onblur: function () {
-                if (!_this._uid)
-                    return;
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-                _this.paint();
-            },
-            onfocus: function () {
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-                _this.paint();
-            },
-        };
-    };
-    Select.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, id = _d.id, options = _d.options, icon = _d.icon, value = _d.value, label = _d.label, labelWidth = _d.labelWidth, helpMessage = _d.helpMessage, required = _d.required, name = _d.name;
-        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.select) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el(".dhx_form-group", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
-        }, [
-            (label || labelWidth || helpMessage) && this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", {}, [
-                dom_1.el("div.dhx_input__container", {}, [
-                    dom_1.el(".dhx_input__icon", {
-                        class: icon ? icon : "dxi dxi-menu-down",
-                    }),
-                    dom_1.el("select.dhx_select.dhx_input", {
+    Checkbox.prototype._draw = function () {
+        var _a = this.config, id = _a.id, value = _a.value, checked = _a.checked, disabled = _a.disabled, name = _a.name, required = _a.required, $required = _a.$required, text = _a.text, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage;
+        return dom_1.el("label.dhx_checkbox.dhx_form-group.dhx_form-group--checkbox", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config) || !!$required),
+        }, !this._inGroup
+            ? [
+                label || labelWidth || helpMessage || required ? this._drawLabel() : null,
+                dom_1.el(".dhx_checkbox__container", [
+                    dom_1.el(".dhx_checkbox__holder", [
+                        dom_1.el("input.dhx_checkbox__input", {
+                            type: "checkbox",
+                            "data-dhx-id": name || id,
+                            id: id,
+                            value: value,
+                            name: name,
+                            disabled: disabled,
+                            checked: checked,
+                            onchange: this._handlers.onchange,
+                            onfocus: this._handlers.onfocus,
+                            onblur: this._handlers.onblur,
+                            onkeydown: this._handlers.onkeydown,
+                            required: required,
+                            _ref: "input",
+                            "aria-label": label || "checkbox " + (text || ""),
+                            "aria-describedby": helpMessage
+                                ? "dhx_label__help_" + (id || this._uid)
+                                : null,
+                        }),
+                        dom_1.el("span.dhx_checkbox__visual-input"),
+                        dom_1.el("span.dhx_text", [text]),
+                    ]),
+                    required &&
+                        helper_1.getValidationMessage(this.config) &&
+                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
+                ]),
+            ]
+            : [
+                dom_1.el(".dhx_checkbox__holder", [
+                    dom_1.el("input.dhx_checkbox__input", {
+                        type: "checkbox",
                         id: id,
-                        "data-dhx-id": name || id,
-                        tabindex: 0,
-                        class: activeFocus && "dhx_input--focus",
+                        value: value || "",
+                        name: name || "",
+                        disabled: disabled,
+                        checked: checked,
                         onchange: this._handlers.onchange,
                         onfocus: this._handlers.onfocus,
                         onblur: this._handlers.onblur,
                         onkeydown: this._handlers.onkeydown,
-                        _ref: "select",
                         required: required,
-                    }, options.length &&
-                        options.map(function (option) {
-                            return dom_1.el("option", {
-                                value: option.value,
-                                disabled: option.disabled,
-                                selected: value === option.value,
-                            }, option.content);
-                        })),
+                        _ref: "input",
+                    }),
+                    dom_1.el("span.dhx_checkbox__visual-input"),
+                    dom_1.el("span.dhx_text", [text]),
                 ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
+            ]);
     };
-    Select.prototype._checkOptions = function (options) {
-        if (options.length === 0) {
-            throw new Error("Property options* cannot be empty, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
-        }
-        options.forEach(function (item) {
-            if (!item.hasOwnProperty("value") || !item.hasOwnProperty("content")) {
-                throw new Error("The object must contain two required properties value and content, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
-            }
-        });
-    };
-    return Select;
+    return Checkbox;
 }(label_1.Label));
-exports.Select = Select;
+exports.Checkbox = Checkbox;
 
 
 /***/ }),
@@ -17036,186 +16775,11 @@ exports.Select = Select;
 
 "use strict";
 
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var helper_1 = __webpack_require__(8);
-var input_1 = __webpack_require__(39);
-var types_1 = __webpack_require__(6);
-var core_1 = __webpack_require__(1);
-var Textarea = /** @class */ (function (_super) {
-    __extends(Textarea, _super);
-    function Textarea() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._propsItem = [
-            "required",
-            "validation",
-            "placeholder",
-            "readOnly",
-            "maxlength",
-            "minlength",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        return _this;
-    }
-    Textarea.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || this.config.value === value)
-            return;
-        this.config.value = value;
-        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    Textarea.prototype.getValue = function () {
-        var _a;
-        return String((_a = this.config.value) !== null && _a !== void 0 ? _a : "");
-    };
-    Textarea.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.textarea.el.focus();
-        });
-    };
-    Textarea.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.textarea.el.blur();
-        });
-    };
-    Textarea.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    Textarea.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Textarea.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            required: false,
-            validation: undefined,
-            placeholder: "",
-            readOnly: false,
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.paint();
-    };
-    Textarea.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, id = _d.id, value = _d.value, disabled = _d.disabled, name = _d.name, placeholder = _d.placeholder, required = _d.required, resizable = _d.resizable, readOnly = _d.readOnly, maxlength = _d.maxlength, minlength = _d.minlength, label = _d.label, helpMessage = _d.helpMessage, height = _d.height;
-        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.textarea) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el("div.dhx_form-group.dhx_form-group--textarea", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", [
-                dom_1.el("textarea.dhx_input.dhx_input--textarea", {
-                    type: "text",
-                    id: id,
-                    "data-dhx-id": name || id,
-                    placeholder: placeholder || "",
-                    value: core_1.isDefined(value) ? value : "",
-                    name: name || "",
-                    disabled: disabled,
-                    required: required,
-                    readOnly: readOnly,
-                    maxlength: maxlength,
-                    minlength: minlength,
-                    onblur: this._handlers.onblur,
-                    oninput: this._handlers.oninput,
-                    onchange: this._handlers.onchange,
-                    onfocus: this._handlers.onfocus,
-                    onkeydown: this._handlers.onkeydown,
-                    _hooks: {
-                        didInsert: function (node) {
-                            if (height === "content") {
-                                var textarea = node.el;
-                                textarea.style.height = textarea.scrollHeight + "px";
-                            }
-                        },
-                    },
-                    style: {
-                        resize: resizable ? "both" : "none",
-                    },
-                    _ref: "textarea",
-                    "aria-label": label || (readOnly ? value : "") + " type text",
-                    "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
-                }),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    return Textarea;
-}(input_1.Input));
-exports.Textarea = Textarea;
+exports.default = {
+    simpleVaultText: "Drag & drop files or folders here or",
+    simpleVaultLabel: "browse files",
+};
 
 
 /***/ }),
@@ -17224,129 +16788,12 @@ exports.Textarea = Textarea;
 
 "use strict";
 
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
+function __export(m) {
+    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
+}
 Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var input_1 = __webpack_require__(39);
-var types_1 = __webpack_require__(6);
-var Text = /** @class */ (function (_super) {
-    __extends(Text, _super);
-    function Text() {
-        var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this._propsItem = [
-            "inputType",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
-        return _this;
-    }
-    Text.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    Text.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Text.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            value: "",
-            inputType: "text",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.paint();
-    };
-    Text.prototype._draw = function () {
-        var _a = this.config, id = _a.id, value = _a.value, name = _a.name, inputType = _a.inputType, label = _a.label;
-        var valueLength = (value !== null && value !== void 0 ? value : "").toString().length;
-        return dom_1.el("div.dhx_form-group.dhx_form-group--textinput", {
-            class: helper_1.getFormItemCss(this.config),
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", [
-                dom_1.el("input.dhx_input.dhx_input--textinput", {
-                    type: ["text", "number", "password"].includes(inputType) ? inputType : "text",
-                    readOnly: true,
-                    id: id,
-                    "data-dhx-id": name || id,
-                    value: value !== null && value !== void 0 ? value : "",
-                    name: name,
-                    _ref: "input",
-                    tabindex: -1,
-                    role: "presentation",
-                    "aria-label": label || value,
-                    size: valueLength > 20 ? valueLength : 20,
-                    onkeydown: this._handlers.onkeydown,
-                }),
-            ]),
-        ]);
-    };
-    return Text;
-}(input_1.Input));
-exports.Text = Text;
+__export(__webpack_require__(102));
+__export(__webpack_require__(236));
 
 
 /***/ }),
@@ -17368,1961 +16815,9 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var ts_combobox_1 = __webpack_require__(24);
-var events_1 = __webpack_require__(3);
-var label_1 = __webpack_require__(14);
-var types_1 = __webpack_require__(6);
-var Combo = /** @class */ (function (_super) {
-    __extends(Combo, _super);
-    function Combo(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._isValid = true;
-        _this._propsItem = [
-            "required",
-            "validation",
-            "placeholder",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-            "readonly",
-            "readOnly",
-        ];
-        _this._propsCombo = [
-            "template",
-            "filter",
-            "multiselection",
-            "selectAllButton",
-            "itemsCount",
-            "itemHeight",
-            "virtual",
-            "listHeight",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsCombo);
-        _this._initView(config);
-        _this._initHandlers();
-        return _this;
-    }
-    Combo.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.combobox && this.combobox.destructor();
-        this.events = this._uid = this._propsCombo = this._propsItem = this._props = this._isValid = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    Combo.prototype.setProperties = function (propertyConfig) {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!propertyConfig ||
-                core_1.isEmptyObj(propertyConfig) ||
-                !_this.events.fire(types_1.ItemEvent.beforeChangeProperties, [_this.getProperties()]))
-                return;
-            for (var key in propertyConfig) {
-                if (_this._props.includes(key)) {
-                    _this.config[key] = propertyConfig[key];
-                }
-            }
-            var data = [];
-            _this.getWidget().data.forEach(function (item) { return data.push(item); });
-            _this.config.data = data;
-            _this._initView(_this.config);
-            _this._initHandlers();
-            _this.events.fire(types_1.ItemEvent.afterChangeProperties, [_this.getProperties()]);
-            _this.combobox.paint();
-            _this.paint();
-        });
-    };
-    Combo.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Combo.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    Combo.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    Combo.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    Combo.prototype.disable = function () {
-        this.config.disabled = true;
-        this.combobox.disable();
-        this.paint();
-    };
-    Combo.prototype.enable = function () {
-        this.config.disabled = false;
-        this.combobox.enable();
-        this.paint();
-    };
-    Combo.prototype.isDisabled = function () {
-        return !!this.config.disabled;
-    };
-    Combo.prototype.clear = function () {
-        if (!this.config.value)
-            return;
-        this.config.value = "";
-        this.combobox.clear();
-    };
-    Combo.prototype.getValue = function () {
-        if (this.config.multiselection) {
-            return this.combobox.getValue(true) || [];
-        }
-        else {
-            return this.combobox.getValue() || "";
-        }
-    };
-    Combo.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || value === this.config.value)
-            return;
-        value && this.combobox.setValue(value);
-    };
-    Combo.prototype.validate = function (silent, validateValue) {
-        var _this = this;
-        if (silent === void 0) { silent = false; }
-        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return false;
-        var text;
-        if (Array.isArray(value)) {
-            text = value.map(function (id) { return _this._getItemText(id); });
-        }
-        else {
-            text = this._getItemText(value) || "";
-        }
-        this._isValid = this.config.validation
-            ? this.config.validation(value, text)
-            : this._exsistData(value);
-        if (!silent) {
-            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            this.config.required && this._validationStatus();
-            this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        }
-        return this._isValid;
-    };
-    Combo.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this._validationStatus();
-        this.paint();
-    };
-    Combo.prototype.getWidget = function () {
-        return this.combobox;
-    };
-    Combo.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.combobox.focus();
-        });
-    };
-    Combo.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.combobox.blur();
-        });
-    };
-    Combo.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.combobox) {
-            this.combobox.destructor();
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            value: "",
-            readOnly: false,
-            multiselection: false,
-            selectAllButton: false,
-            itemHeight: 32,
-            virtual: false,
-            listHeight: 224,
-            required: false,
-            placeholder: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        var comboConfig = {};
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-                if (key !== "validation") {
-                    comboConfig[key] = config[key];
-                }
-            }
-        }
-        this.combobox = new ts_combobox_1.Combobox(null, comboConfig);
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.paint();
-    };
-    Combo.prototype._initHandlers = function () {
-        var _this = this;
-        this.combobox.events.on(ts_combobox_1.ComboboxEvents.change, function () {
-            var value = (_this.config.value = _this.getValue());
-            _this.events.fire(types_1.ItemEvent.change, [value]);
-            helper_1.isVerify(_this.config) && _this.validate();
-            _this.paint();
-        });
-        this.combobox.events.on(ts_combobox_1.ComboboxEvents.focus, function () {
-            _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-            _this.paint();
-        });
-        this.combobox.events.on(ts_combobox_1.ComboboxEvents.blur, function () {
-            _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-            _this.paint();
-        });
-        this.combobox.events.on(ts_combobox_1.ComboboxEvents.keydown, function (event, id) {
-            if (event.code === "Enter") {
-                event.preventDefault();
-            }
-            _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-    };
-    Combo.prototype._validationStatus = function () {
-        var _a, _b, _c;
-        var activeFocus = this.combobox.popup.isVisible() ||
-            ((_c = (_b = (_a = this.combobox.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        if (!activeFocus) {
-            switch (this.config.$validationStatus) {
-                case types_1.ValidationStatus.success:
-                    return (this.combobox.config.css =
-                        (this.config.css || "") + "dhx_form-group--state_success");
-                case types_1.ValidationStatus.error:
-                    return (this.combobox.config.css =
-                        (this.config.css || "") + "dhx_form-group--state_error");
-                case types_1.ValidationStatus.pre:
-                default:
-                    return (this.combobox.config.css = this.config.css || "");
-            }
-        }
-        return (this.combobox.config.css = this.config.css || "");
-    };
-    Combo.prototype._getRootView = function () {
-        return this.combobox.getRootView();
-    };
-    Combo.prototype._draw = function () {
-        var _a = this.config, labelWidth = _a.labelWidth, labelPosition = _a.labelPosition, name = _a.name, id = _a.id;
-        return dom_1.el(".dhx_form-group", {
-            "data-dhx-id": name || id,
-        }, [
-            dom_1.inject(this._getRootView()),
-            dom_1.el("div", {
-                style: {
-                    "margin-left": "" + (labelWidth && labelPosition === "left" ? "calc(" + labelWidth + " + 16px)" : ""),
-                },
-                class: this._validationStatus(),
-            }, [dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config))]),
-        ]);
-    };
-    Combo.prototype._exsistData = function (id) {
-        var _this = this;
-        if (!core_1.isDefined(id))
-            return false;
-        if (id instanceof Array) {
-            if (!id.length)
-                return false;
-            return id.every(function (i) {
-                return _this.combobox.data.exists(i);
-            });
-        }
-        return this.combobox.data.exists(id);
-    };
-    Combo.prototype._getItemText = function (id) {
-        var _a;
-        return (_a = this.combobox.data.getItem(id)) === null || _a === void 0 ? void 0 : _a.value;
-    };
-    return Combo;
-}(label_1.Label));
-exports.Combo = Combo;
-
-
-/***/ }),
-/* 103 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var ts_slider_1 = __webpack_require__(44);
-var events_1 = __webpack_require__(3);
-var label_1 = __webpack_require__(14);
-var types_1 = __webpack_require__(6);
-var helper_1 = __webpack_require__(8);
-var SliderForm = /** @class */ (function (_super) {
-    __extends(SliderForm, _super);
-    function SliderForm(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._propsItem = ["label", "labelWidth", "labelPosition", "hiddenLabel", "helpMessage"];
-        _this._propsSlider = [
-            "min",
-            "max",
-            "step",
-            "mode",
-            "range",
-            "inverse",
-            "tooltip",
-            "tick",
-            "tickTemplate",
-            "majorTick",
-        ];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsSlider);
-        _this._initView(config);
-        _this._initHandlers();
-        var render = function () { return _this._drawSlider(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    SliderForm.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.slider && this.slider.destructor();
-        this.events = this._uid = this._propsSlider = this._propsItem = this._props = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    SliderForm.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this._initView(this.config);
-        this._initHandlers();
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.slider.paint();
-        this.paint();
-    };
-    SliderForm.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    SliderForm.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    SliderForm.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    SliderForm.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    SliderForm.prototype.disable = function () {
-        this.config.disabled = true;
-        this.slider.disable();
-        this.paint();
-    };
-    SliderForm.prototype.enable = function () {
-        this.config.disabled = false;
-        this.slider.enable();
-        this.paint();
-    };
-    SliderForm.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    SliderForm.prototype.clear = function () {
-        var _a = this.config, value = _a.value, min = _a.min;
-        if (value[0] === min)
-            return;
-        this.slider.setValue(min);
-    };
-    SliderForm.prototype.getValue = function () {
-        return this.slider.getValue();
-    };
-    SliderForm.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || value === this.config.value)
-            return;
-        this.slider.setValue(value);
-    };
-    SliderForm.prototype.getWidget = function () {
-        return this.slider;
-    };
-    SliderForm.prototype.focus = function (extra) {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.slider.focus(extra);
-        });
-    };
-    SliderForm.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.slider.blur();
-        });
-    };
-    SliderForm.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.slider) {
-            this.slider.destructor();
-        }
-        var sliderConfig = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            mode: "horizontal",
-            min: 0,
-            max: 100,
-            step: 1,
-            range: false,
-            inverse: false,
-            tooltip: true,
-            disabled: false,
-            hidden: false,
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                sliderConfig[key] = config[key];
-            }
-        }
-        this.config = __assign({ type: this.config.type }, sliderConfig);
-        this.slider = new ts_slider_1.Slider(null, sliderConfig);
-        this.config.disabled && this.slider.disable();
-        this.config.value = this.slider.getValue();
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-    };
-    SliderForm.prototype._initHandlers = function () {
-        var _this = this;
-        this.slider.events.on(ts_slider_1.SliderEvents.change, function () {
-            if (!_this._uid)
-                return;
-            var value = (_this.config.value = _this.slider.getValue());
-            _this.events.fire(types_1.ItemEvent.change, [value]);
-            _this.paint();
-        });
-        this.slider.events.on(ts_slider_1.SliderEvents.focus, function () {
-            _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-        });
-        this.slider.events.on(ts_slider_1.SliderEvents.blur, function () {
-            _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-        });
-        this.slider.events.on(ts_slider_1.SliderEvents.keydown, function (event) {
-            _this.events.fire(types_1.ItemEvent.keydown, [event]);
-        });
-    };
-    SliderForm.prototype._getRootView = function () {
-        this.slider.paint();
-        return this.slider.getRootView();
-    };
-    SliderForm.prototype._drawSlider = function () {
-        var _a = this.config, name = _a.name, id = _a.id;
-        return dom_1.el("div.dhx_form-group", {
-            "data-dhx-id": name || id,
-        }, [dom_1.inject(this._getRootView())]);
-    };
-    return SliderForm;
-}(label_1.Label));
-exports.SliderForm = SliderForm;
-
-
-/***/ }),
-/* 104 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var events_1 = __webpack_require__(3);
-var html_1 = __webpack_require__(2);
-var view_1 = __webpack_require__(5);
-var core_1 = __webpack_require__(1);
-var ts_data_1 = __webpack_require__(4);
-var ts_vault_1 = __webpack_require__(58);
-var ts_popup_1 = __webpack_require__(11);
-var helper_1 = __webpack_require__(8);
-var en_1 = __webpack_require__(105);
-var types_1 = __webpack_require__(6);
-var SimpleVault = /** @class */ (function (_super) {
-    __extends(SimpleVault, _super);
-    function SimpleVault(container, config) {
-        var _this = _super.call(this, container, config) || this;
-        _this._isValid = true;
-        _this._propsItem = [
-            "required",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._propsSimpleVault = ["target", "singleRequest", "fieldName", "params"];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsSimpleVault);
-        _this.events = new events_1.EventSystem(_this);
-        _this.data = new ts_data_1.DataCollection();
-        _this._uploader = new ts_vault_1.Uploader(__assign(__assign({}, config), { autosend: false, fieldName: config.fieldName || config.name || config.id }), _this.data, _this.data.events);
-        _this._initView(config);
-        _this._initHandlers();
-        _this._handlers = {
-            add: function (e) {
-                if (_this.config.disabled) {
-                    return;
-                }
-                e.preventDefault();
-                _this._uploader.selectFile();
-            },
-            remove: function (e) {
-                if (_this.config.disabled) {
-                    return;
-                }
-                var id = html_1.locate(e);
-                if (!id) {
-                    return;
-                }
-                _this.data.remove(id);
-            },
-            ondragover: function (e) {
-                var types = e.dataTransfer.types;
-                for (var _i = 0, types_2 = types; _i < types_2.length; _i++) {
-                    var type = types_2[_i];
-                    if (type !== "Files" && type !== "application/x-moz-file") {
-                        return;
-                    }
-                }
-                if (_this._dragoverTimeout) {
-                    clearTimeout(_this._dragoverTimeout);
-                }
-                else {
-                    _this.paint();
-                }
-                _this._dragover = true;
-                _this._dragoverTimeout = setTimeout(function () {
-                    _this._dragover = false;
-                    _this._dragoverTimeout = null;
-                    _this.paint();
-                }, 150);
-            },
-            showHelper: function (e) {
-                e.stopPropagation();
-                e.preventDefault();
-                _this._helper.show(e.target, {
-                    mode: _this.config.labelPosition === "left" ? "bottom" : "right",
-                });
-            },
-            hideHelper: function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                _this._helper.hide();
-            },
-        };
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    SimpleVault.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this._helper && this._helper.destructor();
-        this.config = this.events = this._uid = this._helper = this._handlers = this._uploader = this.data = null;
-        this._propsItem = this._propsSimpleVault = this._props = this._isValid = this._dragover = this._dragoverTimeout = null;
-        this.unmount();
-    };
-    SimpleVault.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-                if (this._propsSimpleVault.includes(key)) {
-                    this._uploader.config[key] = propertyConfig[key];
-                }
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    SimpleVault.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    SimpleVault.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    SimpleVault.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    SimpleVault.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    SimpleVault.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    SimpleVault.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    SimpleVault.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    SimpleVault.prototype.validate = function (silent) {
-        if (silent === void 0) { silent = false; }
-        var _a = this.config, required = _a.required, value = _a.value;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return;
-        this._isValid = !required || this.data.getLength() > 0;
-        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        return this._isValid;
-    };
-    SimpleVault.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this.paint();
-    };
-    SimpleVault.prototype.clear = function () {
-        if (this.getValue().length === 0)
-            return;
-        this.data.removeAll();
-        this.paint();
-    };
-    SimpleVault.prototype.getValue = function () {
-        return this.data.serialize();
-    };
-    SimpleVault.prototype.selectFile = function () {
-        this._uploader.selectFile();
-    };
-    SimpleVault.prototype.send = function (params) {
-        if (helper_1.isVerify(this.config) && !this.validate(true)) {
-            return;
-        }
-        this._uploader.send(params);
-    };
-    SimpleVault.prototype.setValue = function (value) {
-        if (!value.length) {
-            return;
-        }
-        this.data.parse(value);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    SimpleVault.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            fieldName: config.fieldName || config.name || config.id,
-            disabled: false,
-            hidden: false,
-            singleRequest: false,
-            target: "",
-            value: [],
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.config.value.length && this.setValue(this.config.value);
-        this.paint();
-    };
-    SimpleVault.prototype._initHandlers = function () {
-        var _this = this;
-        this.data.events.on(types_1.ItemEvent.change, function (_id, method) {
-            var value = (_this.config.value = _this.getValue());
-            _this.events.fire(types_1.ItemEvent.change, [value]);
-            method && helper_1.isVerify(_this.config) && _this.validate();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-        this._uploader.events.on("beforeUploadFile", function (file) {
-            return _this.events.fire(types_1.ItemEvent.beforeUploadFile, [file, _this.config.value]);
-        });
-        this._uploader.events.on("uploadBegin", function (file) {
-            _this.events.fire(types_1.ItemEvent.uploadBegin, [file, _this.config.value]);
-        });
-        this._uploader.events.on("uploadComplete", function (file) {
-            _this.events.fire(types_1.ItemEvent.uploadComplete, [file, _this.config.value]);
-        });
-        this._uploader.events.on("uploadFail", function (file) {
-            _this.events.fire(types_1.ItemEvent.uploadFail, [file, _this.config.value]);
-        });
-        this._uploader.events.on("uploadFile", function (file, extra) {
-            _this.events.fire(types_1.ItemEvent.uploadFile, [file, _this.config.value, extra]);
-        });
-        this._uploader.events.on("uploadProgress", function (file) {
-            _this.events.fire(types_1.ItemEvent.uploadProgress, [file, _this.config.value]);
-        });
-    };
-    SimpleVault.prototype._draw = function () {
-        var _this = this;
-        if (this.config.helpMessage) {
-            if (this._helper) {
-                this._helper.attachHTML(this.config.helpMessage);
-            }
-            else {
-                this._helper = new ts_popup_1.Popup({
-                    css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
-                });
-                this._helper.attachHTML(this.config.helpMessage);
-            }
-        }
-        var files = this.data.getLength()
-            ? dom_1.el("ul.dhx_simplevault__files.dhx_simplevault-files", {
-                class: this.config.$vaultHeight ? "" : "dhx_simplevault-files__fixed",
-            }, this.data.map(function (file) {
-                return dom_1.el("li.dhx_simplevault-files__item", [
-                    dom_1.el("span.dhx_simplevault-files__item-name", (file.file && file.file.name) || file.name),
-                    dom_1.el(".dhx_button.dhx_simplevault-files__delete.dhx_button--icon.dhx_button--view_link.dhx_button--size_small.dhx_button--color_secondary.dhx_button--circle", {
-                        "data-dhx-id": file.id,
-                        onclick: _this._handlers.remove,
-                    }, [dom_1.el("span.dxi.dxi-delete-forever")]),
-                ]);
-            }))
-            : null;
-        var _a = this.config, id = _a.id, helpMessage = _a.helpMessage, disabled = _a.disabled, required = _a.required, label = _a.label;
-        var labelStyle = html_1.getLabelStyle(this.config);
-        return dom_1.el(".dhx_form-group.dhx_form-group--simplevault", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)),
-        }, [
-            labelStyle &&
-                dom_1.el("legend.dhx_label", {
-                    class: helpMessage ? "dhx_label--with-help" : "",
-                    style: labelStyle.style,
-                    onclick: this._handlers.add,
-                    "aria-label": label || "select files",
-                }, helpMessage
-                    ? [
-                        (labelStyle.label || required) &&
-                            dom_1.el("span.dhx_label__holder", labelStyle.label),
-                        dom_1.el("span.dhx_label-help.dxi.dxi-help-circle-outline", {
-                            tabindex: "0",
-                            role: "button",
-                            onclick: this._handlers.showHelper,
-                            onfocus: this._handlers.showHelper,
-                            onblur: this._handlers.hideHelper,
-                        }),
-                    ]
-                    : labelStyle.label),
-            dom_1.el(".dhx_input__wrapper", { id: this._uid }, [
-                dom_1.el("div", {
-                    _hooks: {
-                        didInsert: function (node) {
-                            _this._uploader.linkDropArea(node.el);
-                        },
-                    },
-                    ondragover: this._handlers.ondragover,
-                    class: "dhx_simplevault" + (this._dragover ? " dhx_simplevault--on-drag" : ""),
-                }, [
-                    dom_1.el("div.dhx_simplevault-loader", [
-                        dom_1.el("span.dhx_simplevault__icon.dxi.dxi-vault"),
-                    ]),
-                    dom_1.el(".dhx_simplevault__drop-area", [
-                        dom_1.el("input.dhx_simplevault__input", {
-                            type: "file",
-                            id: id,
-                            disabled: disabled,
-                        }),
-                        dom_1.el("span.dhx_simplevault__icon.dxi.dxi-vault"),
-                        dom_1.el("span.dhx_simplevault__title", [
-                            dom_1.el("span", en_1.default.simpleVaultText),
-                            dom_1.el("br"),
-                            dom_1.el("label.dhx_simplevault__label", {
-                                onclick: this._handlers.add,
-                                for: id,
-                            }, " " + en_1.default.simpleVaultLabel),
-                        ]),
-                    ]),
-                    files,
-                ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    return SimpleVault;
-}(view_1.View));
-exports.SimpleVault = SimpleVault;
-
-
-/***/ }),
-/* 105 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = {
-    simpleVaultText: "Drag & drop files or folders here or",
-    simpleVaultLabel: "browse files",
-};
-
-
-/***/ }),
-/* 106 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var ts_timepicker_1 = __webpack_require__(42);
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var label_1 = __webpack_require__(14);
-var ts_popup_1 = __webpack_require__(11);
-var events_1 = __webpack_require__(3);
-var types_1 = __webpack_require__(6);
-var helper_1 = __webpack_require__(8);
-var KeyManager_1 = __webpack_require__(12);
-var TimePicker = /** @class */ (function (_super) {
-    __extends(TimePicker, _super);
-    function TimePicker(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._isValid = true;
-        _this._popupIsFocus = false;
-        _this._propsItem = [
-            "required",
-            "validation",
-            "icon",
-            "placeholder",
-            "editable",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._propsTimepicker = ["timeFormat", "controls", "valueFormat"];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsTimepicker);
-        _this._keyManager = new KeyManager_1.KeyManager(function () {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            return element === activeEl || _this._popup.isVisible();
-        });
-        _this._initView(config);
-        _this._initHandlers();
-        _this._initHotkeys();
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    TimePicker.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.timepicker && this.timepicker.destructor();
-        this._popup && this._popup.destructor();
-        this.events = this._uid = this._propsItem = this._propsTimepicker = this._props = this._isValid = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    TimePicker.prototype.setProperties = function (propertyConfig) {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            if (!propertyConfig ||
-                core_1.isEmptyObj(propertyConfig) ||
-                !_this.events.fire(types_1.ItemEvent.beforeChangeProperties, [_this.getProperties()]))
-                return;
-            for (var key in propertyConfig) {
-                if (_this._props.includes(key)) {
-                    _this.config[key] = propertyConfig[key];
-                }
-            }
-            _this._initView(_this.config);
-            _this._initHandlers();
-            _this.events.fire(types_1.ItemEvent.afterChangeProperties, [_this.getProperties()]);
-            _this.paint();
-        });
-    };
-    TimePicker.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    TimePicker.prototype.show = function () {
-        if (!this.config.hidden ||
-            !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue(this.config.valueFormat === "timeObject")])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue(this.config.valueFormat === "timeObject")]);
-    };
-    TimePicker.prototype.hide = function (init) {
-        if ((this.config.hidden && !init) ||
-            !this.events.fire(types_1.ItemEvent.beforeHide, [
-                this.getValue(this.config.valueFormat === "timeObject"),
-                init,
-            ])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [
-            this.getValue(this.config.valueFormat === "timeObject"),
-            init,
-        ]);
-    };
-    TimePicker.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    TimePicker.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    TimePicker.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    TimePicker.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    TimePicker.prototype.validate = function (silent, validateValue) {
-        if (silent === void 0) { silent = false; }
-        var value = typeof validateValue === "undefined"
-            ? this.getValue(this.config.valueFormat === "timeObject")
-            : validateValue;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return;
-        this._isValid = this.config.validation
-            ? this.config.validation(value)
-            : helper_1.isTimeFormat(this.getValue(), this.config.timeFormat);
-        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        return this._isValid;
-    };
-    TimePicker.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this.paint();
-    };
-    TimePicker.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || value === this.config.value)
-            return;
-        this.timepicker.setValue(value);
-        if (this.config.controls) {
-            this.config.value = this.timepicker.getValue();
-            this.events.fire(types_1.ItemEvent.change, [this.getValue(this.config.valueFormat === "timeObject")]);
-            helper_1.isVerify(this.config) && this.validate();
-            this.paint();
-        }
-    };
-    TimePicker.prototype.getValue = function (asOBject) {
-        return asOBject ? this.timepicker.getValue(asOBject) : this.config.value || "";
-    };
-    TimePicker.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.input.el.focus();
-        });
-    };
-    TimePicker.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this._popup.hide();
-            _this.getRootView().refs.input.el.blur();
-        });
-    };
-    TimePicker.prototype.clear = function () {
-        if (this.config.value === "")
-            return;
-        this._clear();
-    };
-    TimePicker.prototype.getWidget = function () {
-        return this.timepicker;
-    };
-    TimePicker.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.timepicker) {
-            this.timepicker.destructor();
-        }
-        if (this._popup) {
-            this._popup.destructor();
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            editable: false,
-            hidden: false,
-            timeFormat: 24,
-            controls: false,
-            valueFormat: "string",
-            required: false,
-            icon: "",
-            placeholder: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        this._popup = new ts_popup_1.Popup();
-        this.timepicker = new ts_timepicker_1.Timepicker(null, helper_1.widgetConfig(config));
-        this._popup.attach(this.timepicker);
-        if (this.config.hasOwnProperty("value")) {
-            this.config.value = this.timepicker.getValue();
-        }
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-    };
-    TimePicker.prototype._initHandlers = function () {
-        var _this = this;
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-        if (this.config.controls) {
-            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.afterClose, function () {
-                _this._popup.hide();
-            });
-            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.afterApply, function () {
-                _this._afterApply();
-            });
-            this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
-                if (_this.config.value && _this.config.value !== _this.timepicker.getValue()) {
-                    _this.timepicker.setValue(_this.config.value);
-                }
-                else if (_this.config.value === "" || _this.config.value === undefined) {
-                    _this._clear(true);
-                }
-            });
-        }
-        else {
-            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.change, function () {
-                _this.config.value = _this.timepicker.getValue();
-                _this.events.fire(types_1.ItemEvent.change, [_this.getValue(_this.config.valueFormat === "timeObject")]);
-                _this.paint();
-            });
-        }
-        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
-            if (document.activeElement !== _this.getRootView().refs.input.el) {
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-            }
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.input, function (value) {
-            var timeLength = _this.config.timeFormat === 12 ? 7 : 5;
-            if (value.length >= timeLength && helper_1.isTimeFormat(value, _this.config.timeFormat)) {
-                _this.timepicker.setValue(value);
-            }
-            else if (value === "" && !_this.config.controls) {
-                _this.clear();
-            }
-        });
-        this.events.on(types_1.ItemEvent.afterChangeProperties, function () {
-            _this.config.value = _this.timepicker.getValue();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.blur, function () {
-            _this._popupIsFocus = false;
-            _this.paint();
-        });
-        document.addEventListener("keydown", function (event) {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            if (element === activeEl || _this._popup.isVisible()) {
-                _this.events.fire(types_1.ItemEvent.keydown, [event]);
-            }
-        });
-        document.addEventListener("mousedown", function () {
-            var popup = _this._popup.getContainer();
-            var activeEl = document.activeElement;
-            if (popup !== activeEl)
-                _this._popupIsFocus = false;
-        });
-    };
-    TimePicker.prototype._getHandlers = function () {
-        var _this = this;
-        return {
-            onfocus: function () {
-                if (_this._popup.isVisible()) {
-                    return;
-                }
-                var node = _this.getRootView().refs.input.el;
-                _this._popup.show(node);
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-                _this.paint();
-            },
-            onblur: function () {
-                if (!_this._popup.isVisible()) {
-                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-                }
-                _this.paint();
-            },
-            oninput: function (e) {
-                var value = e.target.value;
-                _this.events.fire(types_1.ItemEvent.input, [value]);
-            },
-        };
-    };
-    TimePicker.prototype._initHotkeys = function () {
-        var _this = this;
-        var handlers = {
-            "shift+tab": function () {
-                _this._applyTab();
-            },
-            tab: function () {
-                _this._applyTab();
-            },
-            escape: function () {
-                if (_this._popup.isVisible()) {
-                    _this.getRootView().refs.input.el.focus();
-                }
-                _this._popup.hide();
-            },
-            enter: function (event) {
-                event.preventDefault();
-                var node = _this.getRootView().refs.input.el;
-                if (!_this._popup.isVisible()) {
-                    _this._popup.show(node);
-                }
-                else if (!_this._popupIsFocus || !_this.config.controls) {
-                    if (_this.config.value && node.value === "") {
-                        _this.clear();
-                    }
-                    else if (node.value !== _this.config.value) {
-                        _this.config.value = _this.timepicker.getValue();
-                        _this.events.fire(types_1.ItemEvent.change, [
-                            _this.getValue(_this.config.valueFormat === "timeObject"),
-                        ]);
-                    }
-                    helper_1.isVerify(_this.config) && _this.validate();
-                    _this._popup.hide();
-                }
-            },
-            arrowRight: function (event) {
-                var focusElement = _this._popup.getContainer();
-                if (_this._popup.isVisible() && !_this._popupIsFocus) {
-                    event.preventDefault();
-                    focusElement.focus();
-                    _this._popupIsFocus = true;
-                }
-            },
-        };
-        for (var key in handlers) {
-            this._keyManager.addHotKey(key, handlers[key]);
-        }
-    };
-    TimePicker.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, value = _d.value, required = _d.required, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
-        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el("div.dhx_form-group", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", [
-                dom_1.el("div.dhx_input__container", {}, [
-                    dom_1.el(".dhx_input__icon.dxi.dxi-clock-outline"),
-                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
-                        tabindex: 0,
-                        "data-dhx-id": name || id,
-                        _key: this._uid,
-                        _ref: "input",
-                        value: value,
-                        type: "text",
-                        required: required,
-                        disabled: disabled,
-                        class: activeFocus && "dhx_input--focus",
-                        placeholder: placeholder || "",
-                        name: name || "",
-                        id: id || this._uid,
-                        onfocus: this._handlers.onfocus,
-                        onblur: this._handlers.onblur,
-                        oninput: this._handlers.oninput,
-                        autocomplete: "off",
-                        readOnly: !editable,
-                        "aria-label": label || (editable ? "type or" : "") + " select date",
-                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
-                    }),
-                ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    TimePicker.prototype._clear = function (silent) {
-        this.timepicker.clear();
-        this.config.value = "";
-        !silent && this.events.fire(types_1.ItemEvent.change, [this.config.value]);
-    };
-    TimePicker.prototype._afterApply = function () {
-        var inputValue = this.getRootView().refs.input.el.value;
-        if (this.config.value && inputValue === "") {
-            this.clear();
-        }
-        else {
-            this.config.value = this.timepicker.getValue();
-            this.events.fire(types_1.ItemEvent.change, [this.getValue(this.config.valueFormat === "timeObject")]);
-        }
-        helper_1.isVerify(this.config) && this.validate();
-        this._popup.hide();
-        this.paint();
-    };
-    TimePicker.prototype._applyTab = function () {
-        var _a, _b, _c;
-        var activeEl = document.activeElement;
-        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
-        if (activeEl !== popup && !this._popupIsFocus) {
-            this._popup.hide();
-        }
-    };
-    return TimePicker;
-}(label_1.Label));
-exports.TimePicker = TimePicker;
-
-
-/***/ }),
-/* 107 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var ts_colorpicker_1 = __webpack_require__(50);
-var events_1 = __webpack_require__(3);
-var dom_1 = __webpack_require__(0);
-var core_1 = __webpack_require__(1);
-var label_1 = __webpack_require__(14);
-var ts_popup_1 = __webpack_require__(11);
-var types_1 = __webpack_require__(6);
-var helper_1 = __webpack_require__(8);
-var KeyManager_1 = __webpack_require__(12);
-var ColorPicker = /** @class */ (function (_super) {
-    __extends(ColorPicker, _super);
-    function ColorPicker(container, config) {
-        var _this = _super.call(this, null, config) || this;
-        _this.events = new events_1.EventSystem();
-        _this._isValid = true;
-        _this._popupIsFocus = false;
-        _this._propsItem = [
-            "required",
-            "validation",
-            "icon",
-            "placeholder",
-            "editable",
-            "label",
-            "labelWidth",
-            "labelPosition",
-            "hiddenLabel",
-            "helpMessage",
-            "preMessage",
-            "successMessage",
-            "errorMessage",
-        ];
-        _this._propsColorpicker = ["mode", "grayShades", "customColors", "palette"];
-        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsColorpicker);
-        _this._keyManager = new KeyManager_1.KeyManager(function () {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            return element === activeEl || _this._popup.isVisible();
-        });
-        _this._initView(config);
-        _this._initHandlers();
-        _this._initHotkeys();
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    ColorPicker.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this._popup && this._popup.destructor();
-        this.colorpicker && this.colorpicker.destructor();
-        this.events = this._uid = this._propsColorpicker = this._propsItem = this._props = this._isValid = null;
-        _super.prototype._destructor.call(this);
-        this.unmount();
-    };
-    ColorPicker.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (this._props.includes(key)) {
-                this.config[key] = propertyConfig[key];
-                if (this._propsColorpicker.includes(key)) {
-                    this.colorpicker.config[key] = propertyConfig[key];
-                }
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.colorpicker.paint();
-        this.paint();
-    };
-    ColorPicker.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
-            var prop = _a[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    ColorPicker.prototype.show = function () {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [value]);
-    };
-    ColorPicker.prototype.hide = function (init) {
-        var _a = this.config, value = _a.value, hidden = _a.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
-    };
-    ColorPicker.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    ColorPicker.prototype.disable = function () {
-        this.config.disabled = true;
-        this.paint();
-    };
-    ColorPicker.prototype.enable = function () {
-        this.config.disabled = false;
-        this.paint();
-    };
-    ColorPicker.prototype.isDisabled = function () {
-        return this.config.disabled;
-    };
-    ColorPicker.prototype.validate = function (silent, validateValue) {
-        if (silent === void 0) { silent = false; }
-        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
-        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
-            return;
-        this._isValid = this.config.validation ? this.config.validation(value) : ts_colorpicker_1.isHex(value);
-        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
-        return this._isValid;
-    };
-    ColorPicker.prototype.clearValidate = function () {
-        this.config.$validationStatus = types_1.ValidationStatus.pre;
-        this.paint();
-    };
-    ColorPicker.prototype.setValue = function (value) {
-        if (typeof value === "undefined" || value === this.config.value)
-            return;
-        this.colorpicker.setValue(value);
-        helper_1.isVerify(this.config) && this.validate();
-    };
-    ColorPicker.prototype.getValue = function () {
-        return this.config.value || "";
-    };
-    ColorPicker.prototype.clear = function () {
-        if (this.config.value === "")
-            return;
-        this.config.value = "";
-        this.colorpicker.clear();
-    };
-    ColorPicker.prototype.getWidget = function () {
-        return this.colorpicker;
-    };
-    ColorPicker.prototype.focus = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this.getRootView().refs.input.el.focus();
-        });
-    };
-    ColorPicker.prototype.blur = function () {
-        var _this = this;
-        dom_1.awaitRedraw().then(function () {
-            _this._popup.hide();
-            _this.getRootView().refs.input.el.blur();
-        });
-    };
-    ColorPicker.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.colorpicker) {
-            this.colorpicker.destructor();
-        }
-        if (this._popup) {
-            this._popup.destructor();
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            editable: false,
-            hidden: false,
-            value: "",
-            grayShades: true,
-            pickerOnly: false,
-            paletteOnly: false,
-            customColors: [],
-            palette: ts_colorpicker_1.palette,
-            mode: "palette",
-            required: false,
-            icon: "",
-            placeholder: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-        };
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-            }
-        }
-        this._popup = new ts_popup_1.Popup();
-        this.colorpicker = new ts_colorpicker_1.Colorpicker(null, helper_1.widgetConfig(config));
-        this._popup.attach(this.colorpicker);
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-    };
-    ColorPicker.prototype._initHandlers = function () {
-        var _this = this;
-        this.colorpicker.events.on(ts_colorpicker_1.ColorpickerEvents.change, function () {
-            var value = (_this.config.value = _this.colorpicker.getValue());
-            _this.events.fire(types_1.ItemEvent.change, [value]);
-            _this._popup.hide();
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.afterValidate, function () {
-            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
-            _this.paint();
-        });
-        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
-            if (document.activeElement !== _this.getRootView().refs.input.el) {
-                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-            }
-            _this.paint();
-        });
-        this.events.on(types_1.ItemEvent.blur, function () {
-            _this._popupIsFocus = false;
-            _this.paint();
-        });
-        document.addEventListener("keydown", function (event) {
-            var _a, _b, _c;
-            var activeEl = document.activeElement;
-            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
-            if (element === activeEl || _this._popup.isVisible()) {
-                _this.events.fire(types_1.ItemEvent.keydown, [event]);
-            }
-        });
-        document.addEventListener("mousedown", function () {
-            var popup = _this._popup.getContainer();
-            var activeEl = document.activeElement;
-            if (popup !== activeEl)
-                _this._popupIsFocus = false;
-        });
-    };
-    ColorPicker.prototype._getHandlers = function () {
-        var _this = this;
-        return {
-            onblur: function () {
-                if (!_this._popup.isVisible()) {
-                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
-                }
-                _this.paint();
-            },
-            onfocus: function () {
-                if (_this._popup.isVisible()) {
-                    return;
-                }
-                var node = _this.getRootView().refs.input.el;
-                _this._popup.show(node);
-                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
-                _this.paint();
-            },
-            oninput: function (e) {
-                var value = e.target.value;
-                _this.events.fire(types_1.ItemEvent.input, [value]);
-            },
-            onchange: function (e) {
-                var value = e.target.value;
-                if (_this.config.editable && ts_colorpicker_1.isHex(value)) {
-                    _this.setValue(value);
-                }
-                else if (value === "") {
-                    _this.clear();
-                    helper_1.isVerify(_this.config) && _this.validate();
-                    _this.paint();
-                }
-                else {
-                    helper_1.isVerify(_this.config) && _this.validate();
-                    _this.paint();
-                }
-            },
-        };
-    };
-    ColorPicker.prototype._initHotkeys = function () {
-        var _this = this;
-        var handlers = {
-            "shift+tab": function () {
-                _this._applyTab();
-            },
-            tab: function () {
-                _this._applyTab();
-            },
-            escape: function () {
-                if (_this._popup.isVisible()) {
-                    _this.getRootView().refs.input.el.focus();
-                }
-                _this._popup.hide();
-            },
-            enter: function (event) {
-                event.preventDefault();
-                if (!_this._popup.isVisible()) {
-                    var node = _this.getRootView().refs.input.el;
-                    _this._popup.show(node);
-                }
-            },
-            arrowRight: function (event) {
-                var focusElement = _this._popup.getContainer();
-                if (_this._popup.isVisible() && !_this._popupIsFocus) {
-                    event.preventDefault();
-                    focusElement.focus();
-                    _this._popupIsFocus = true;
-                }
-            },
-        };
-        for (var key in handlers) {
-            this._keyManager.addHotKey(key, handlers[key]);
-        }
-    };
-    ColorPicker.prototype._draw = function () {
-        var _a, _b, _c;
-        var _d = this.config, required = _d.required, value = _d.value, icon = _d.icon, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
-        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
-        return dom_1.el("div.dhx_form-group", {
-            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
-        }, [
-            this._drawLabel(),
-            dom_1.el(".dhx_input__wrapper", [
-                dom_1.el("div.dhx_input__container", {}, [
-                    dom_1.el(".dhx_input__icon", {
-                        class: icon ||
-                            "dxi dxi-eyedropper-variant" +
-                                (value ? " dhx_input__icon--color-selected" : ""),
-                        style: { "background-color": value || "transparent" },
-                    }),
-                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
-                        tabindex: 0,
-                        "data-dhx-id": name || id,
-                        _key: this._uid,
-                        _ref: "input",
-                        value: value,
-                        type: "text",
-                        required: required,
-                        disabled: disabled,
-                        class: activeFocus && "dhx_input--focus",
-                        placeholder: placeholder || "",
-                        name: name || "",
-                        id: id || this._uid,
-                        onfocus: this._handlers.onfocus,
-                        oninput: this._handlers.oninput,
-                        onchange: this._handlers.onchange,
-                        onblur: this._handlers.onblur,
-                        autocomplete: "off",
-                        readOnly: !editable,
-                        "aria-label": label || (editable ? "type or" : "") + " select color",
-                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
-                    }),
-                ]),
-                helper_1.getValidationMessage(this.config) &&
-                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
-            ]),
-        ]);
-    };
-    ColorPicker.prototype._applyTab = function () {
-        var _a, _b, _c;
-        var activeEl = document.activeElement;
-        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
-        if (activeEl !== popup && !this._popupIsFocus) {
-            this._popup.hide();
-        }
-    };
-    return ColorPicker;
-}(label_1.Label));
-exports.ColorPicker = ColorPicker;
-
-
-/***/ }),
-/* 108 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(6);
-var events_1 = __webpack_require__(3);
-var core_1 = __webpack_require__(1);
-var helper_1 = __webpack_require__(8);
-var Spacer = /** @class */ (function (_super) {
-    __extends(Spacer, _super);
-    function Spacer(container, config) {
-        var _this = _super.call(this, container, __assign({ disabled: false, hidden: false, width: "content", height: "content" }, config)) || this;
-        _this.events = new events_1.EventSystem();
-        if (_this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        var render = function () { return _this._draw(); };
-        _this.mount(container, dom_1.create({ render: render }));
-        return _this;
-    }
-    Spacer.prototype.destructor = function () {
-        this.events && this.events.clear();
-        this.config = this.events = null;
-        this.unmount();
-    };
-    Spacer.prototype.setProperties = function (propertyConfig) {
-        if (!propertyConfig ||
-            core_1.isEmptyObj(propertyConfig) ||
-            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
-            return;
-        for (var key in propertyConfig) {
-            if (helper_1.baseProps.includes(key)) {
-                this.config[key] = propertyConfig[key];
-            }
-        }
-        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
-        this.paint();
-    };
-    Spacer.prototype.getProperties = function () {
-        var obj = {};
-        for (var _i = 0, baseProps_1 = helper_1.baseProps; _i < baseProps_1.length; _i++) {
-            var prop = baseProps_1[_i];
-            obj[prop] = this.config[prop];
-        }
-        return obj;
-    };
-    Spacer.prototype.show = function () {
-        var hidden = this.config.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [undefined])) {
-            return;
-        }
-        this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [undefined]);
-    };
-    Spacer.prototype.hide = function (init) {
-        var hidden = this.config.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [undefined, init])) {
-            return;
-        }
-        this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [undefined, init]);
-    };
-    Spacer.prototype.isVisible = function () {
-        return !this.config.hidden;
-    };
-    Spacer.prototype._draw = function () {
-        return dom_1.el("div");
-    };
-    return Spacer;
-}(view_1.View));
-exports.Spacer = Spacer;
-
-
-/***/ }),
-/* 109 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(110));
-__export(__webpack_require__(231));
-
-
-/***/ }),
-/* 110 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_navbar_1 = __webpack_require__(20);
 var core_1 = __webpack_require__(1);
 var html_1 = __webpack_require__(2);
 var ts_message_1 = __webpack_require__(13);
@@ -19331,6 +16826,7 @@ var Ribbon = /** @class */ (function (_super) {
     function Ribbon(element, config) {
         var _this = _super.call(this, element, core_1.extend({
             navigationType: "click",
+            $name: "ribbon",
         }, config)) || this;
         _this._widgetHeight = [];
         _this._listeners = {
@@ -19537,7 +17033,7 @@ exports.Ribbon = Ribbon;
 
 
 /***/ }),
-/* 111 */
+/* 103 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19546,13 +17042,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(112));
-__export(__webpack_require__(232));
-__export(__webpack_require__(113));
+__export(__webpack_require__(104));
+__export(__webpack_require__(237));
+__export(__webpack_require__(105));
 
 
 /***/ }),
-/* 112 */
+/* 104 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19573,9 +17069,9 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
-var types_1 = __webpack_require__(113);
+var types_1 = __webpack_require__(105);
 var ts_message_1 = __webpack_require__(13);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_navbar_1 = __webpack_require__(20);
 var core_1 = __webpack_require__(1);
 var Sidebar = /** @class */ (function (_super) {
     __extends(Sidebar, _super);
@@ -19585,6 +17081,7 @@ var Sidebar = /** @class */ (function (_super) {
             width: "200",
             minWidth: "44",
             collapsed: false,
+            $name: "sidebar",
         }, config)) || this;
         _this._currentRoot = null;
         var render = function () { return _this._draw(); };
@@ -19703,7 +17200,7 @@ var Sidebar = /** @class */ (function (_super) {
                         }, true);
                     },
                 },
-            }, this.data.map(function (item) { return _this._factory(item); }, this.data.getRoot(), false)),
+            }, this.data.map(function (item) { return _this._factory(item, false); }, this.data.getRoot(), false)),
         ]);
     };
     Sidebar.prototype._getMode = function () {
@@ -19730,7 +17227,7 @@ exports.Sidebar = Sidebar;
 
 
 /***/ }),
-/* 113 */
+/* 105 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19748,7 +17245,7 @@ var SidebarEvents;
 
 
 /***/ }),
-/* 114 */
+/* 106 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19766,7 +17263,7 @@ var TabbarEvents;
 
 
 /***/ }),
-/* 115 */
+/* 107 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19809,12 +17306,14 @@ var Editor = /** @class */ (function () {
             didInsert: function (node) {
                 var element = node === null || node === void 0 ? void 0 : node.el;
                 if (element) {
-                    var range = document.createRange();
-                    var selection = window.getSelection();
-                    range.setStart(element.childNodes[0], element.innerText.length);
-                    range.collapse(true);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+                    if (element.childNodes.length) {
+                        var range = document.createRange();
+                        var selection = window.getSelection();
+                        range.setStart(element.childNodes[0], element.innerText.length);
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
                     element.focus();
                 }
             },
@@ -19899,7 +17398,7 @@ exports.Editor = Editor;
 
 
 /***/ }),
-/* 116 */
+/* 108 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19938,7 +17437,7 @@ var Direction;
 
 
 /***/ }),
-/* 117 */
+/* 109 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19947,12 +17446,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(118));
-__export(__webpack_require__(239));
+__export(__webpack_require__(110));
+__export(__webpack_require__(244));
 
 
 /***/ }),
-/* 118 */
+/* 110 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -19962,13 +17461,13 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var KeyManager_1 = __webpack_require__(12);
-var FocusManager_1 = __webpack_require__(18);
+var FocusManager_1 = __webpack_require__(19);
 var ts_layout_1 = __webpack_require__(10);
-var ts_toolbar_1 = __webpack_require__(25);
-var helpers_1 = __webpack_require__(237);
-var types_1 = __webpack_require__(119);
-var WindowController_1 = __webpack_require__(238);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_toolbar_1 = __webpack_require__(26);
+var helpers_1 = __webpack_require__(242);
+var types_1 = __webpack_require__(111);
+var WindowController_1 = __webpack_require__(243);
+var ts_navbar_1 = __webpack_require__(20);
 var Window = /** @class */ (function () {
     function Window(config) {
         var _this = this;
@@ -20532,7 +18031,7 @@ exports.Window = Window;
 
 
 /***/ }),
-/* 119 */
+/* 111 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20551,7 +18050,7 @@ var WindowEvents;
 
 
 /***/ }),
-/* 120 */
+/* 112 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20560,13 +18059,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(240));
-__export(__webpack_require__(122));
-__export(__webpack_require__(121));
+__export(__webpack_require__(245));
+__export(__webpack_require__(114));
+__export(__webpack_require__(113));
 
 
 /***/ }),
-/* 121 */
+/* 113 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20633,7 +18132,7 @@ var TreeGridCollection = /** @class */ (function (_super) {
             }
             var cell = __assign({}, el);
             Object.keys(cell).forEach(function (key) {
-                if (key.startsWith("$") && key !== "$groupName") {
+                if (key.startsWith("$") && key !== "$groupName" && key !== "$level") {
                     delete cell[key];
                 }
             });
@@ -20778,7 +18277,7 @@ exports.TreeGridCollection = TreeGridCollection;
 
 
 /***/ }),
-/* 122 */
+/* 114 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20794,7 +18293,7 @@ var TreeGridEvents;
 
 
 /***/ }),
-/* 123 */
+/* 115 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -20807,19 +18306,19 @@ var PaginationEvents;
 
 
 /***/ }),
-/* 124 */
+/* 116 */
 /***/ (function(module, exports, __webpack_require__) {
 
-__webpack_require__(125);
-__webpack_require__(126);
-__webpack_require__(127);
-__webpack_require__(128);
-__webpack_require__(129);
-module.exports = __webpack_require__(130);
+__webpack_require__(117);
+__webpack_require__(118);
+__webpack_require__(119);
+__webpack_require__(120);
+__webpack_require__(121);
+module.exports = __webpack_require__(122);
 
 
 /***/ }),
-/* 125 */
+/* 117 */
 /***/ (function(module, exports) {
 
 Object.values = Object.values
@@ -20890,7 +18389,7 @@ if (!Object.assign) {
 
 
 /***/ }),
-/* 126 */
+/* 118 */
 /***/ (function(module, exports) {
 
 /* eslint-disable prefer-rest-params */
@@ -21002,7 +18501,7 @@ if (!Array.prototype.findIndex) {
 
 
 /***/ }),
-/* 127 */
+/* 119 */
 /***/ (function(module, exports) {
 
 if (!String.prototype.includes) {
@@ -21065,7 +18564,7 @@ if (!String.prototype.padEnd) {
 
 
 /***/ }),
-/* 128 */
+/* 120 */
 /***/ (function(module, exports) {
 
 /* eslint-disable @typescript-eslint/no-this-alias */
@@ -21141,7 +18640,7 @@ if (!Event.prototype.composedPath) {
 
 
 /***/ }),
-/* 129 */
+/* 121 */
 /***/ (function(module, exports) {
 
 Math.sign =
@@ -21156,7 +18655,7 @@ Math.sign =
 
 
 /***/ }),
-/* 130 */
+/* 122 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21165,61 +18664,64 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(131));
+__export(__webpack_require__(123));
 // HELPERS
 var ts_data_1 = __webpack_require__(4);
 exports.dataDrivers = ts_data_1.dataDriversPro;
 exports.LazyDataProxy = ts_data_1.LazyDataProxy;
-var ts_treegrid_1 = __webpack_require__(120);
+var ts_treegrid_1 = __webpack_require__(112);
 exports.TreeGridCollection = ts_treegrid_1.TreeGridCollection;
-var ScrollView_1 = __webpack_require__(17);
+var ScrollView_1 = __webpack_require__(18);
 exports.ScrollView = ScrollView_1.ScrollView;
 exports.scrollViewConfig = ScrollView_1.scrollViewConfig;
 // WIDGETS
-var ts_treegrid_2 = __webpack_require__(120);
+var ts_treegrid_2 = __webpack_require__(112);
 exports.TreeGrid = ts_treegrid_2.TreeGrid;
-var ts_grid_1 = __webpack_require__(28);
+var ts_grid_1 = __webpack_require__(29);
 exports.Grid = ts_grid_1.ProGrid;
-var ts_list_1 = __webpack_require__(30);
+var ts_chart_1 = __webpack_require__(84);
+exports.Chart = ts_chart_1.ProChart;
+var ts_list_1 = __webpack_require__(31);
 exports.List = ts_list_1.ProList;
-var ts_combobox_1 = __webpack_require__(24);
+var ts_combobox_1 = __webpack_require__(25);
 exports.Combobox = ts_combobox_1.ProCombobox;
-var ts_dataview_1 = __webpack_require__(90);
+var ts_dataview_1 = __webpack_require__(94);
 exports.DataView = ts_dataview_1.ProDataView;
 var ts_layout_1 = __webpack_require__(10);
 exports.Layout = ts_layout_1.ProLayout;
-var ts_toolbar_1 = __webpack_require__(25);
+var ts_toolbar_1 = __webpack_require__(26);
 exports.Toolbar = ts_toolbar_1.ProToolbar;
-var ts_sidebar_1 = __webpack_require__(111);
+var ts_sidebar_1 = __webpack_require__(103);
 exports.Sidebar = ts_sidebar_1.ProSidebar;
-var ts_ribbon_1 = __webpack_require__(109);
+var ts_ribbon_1 = __webpack_require__(101);
 exports.Ribbon = ts_ribbon_1.ProRibbon;
-var ts_pagination_1 = __webpack_require__(241);
+var ts_pagination_1 = __webpack_require__(246);
 exports.Pagination = ts_pagination_1.Pagination;
-var ts_window_1 = __webpack_require__(117);
+var ts_window_1 = __webpack_require__(109);
 exports.Window = ts_window_1.ProWindow;
-var ts_form_1 = __webpack_require__(93);
+var ts_form_1 = __webpack_require__(97);
 exports.Form = ts_form_1.ProForm;
 
 
 /***/ }),
-/* 131 */
+/* 123 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-__webpack_require__(132);
+__webpack_require__(124);
 // HELPERS
 /* tslint:disable */
-var CssManager_1 = __webpack_require__(133);
+var CssManager_1 = __webpack_require__(125);
 exports.cssManager = CssManager_1.cssManager;
 var events_1 = __webpack_require__(3);
 exports.EventSystem = events_1.EventSystem;
 var dom_1 = __webpack_require__(0);
 exports.awaitRedraw = dom_1.awaitRedraw;
 exports.resizeHandler = dom_1.resizeHandler;
-var ts_vault_1 = __webpack_require__(58);
+exports.setTheme = dom_1.setTheme;
+var ts_vault_1 = __webpack_require__(59);
 exports.Uploader = ts_vault_1.Uploader;
 var ts_data_1 = __webpack_require__(4);
 exports.DataCollection = ts_data_1.DataCollection;
@@ -21230,21 +18732,21 @@ exports.ajax = ts_data_1.ajax;
 // WIDGETS
 var ts_layout_1 = __webpack_require__(10);
 exports.Layout = ts_layout_1.Layout;
-var ts_list_1 = __webpack_require__(30);
+var ts_list_1 = __webpack_require__(31);
 exports.List = ts_list_1.List;
-var ts_calendar_1 = __webpack_require__(35);
+var ts_calendar_1 = __webpack_require__(37);
 exports.Calendar = ts_calendar_1.Calendar;
-var ts_colorpicker_1 = __webpack_require__(50);
+var ts_colorpicker_1 = __webpack_require__(51);
 exports.Colorpicker = ts_colorpicker_1.Colorpicker;
-var ts_chart_1 = __webpack_require__(199);
+var ts_chart_1 = __webpack_require__(84);
 exports.Chart = ts_chart_1.Chart;
-var ts_combobox_1 = __webpack_require__(24);
+var ts_combobox_1 = __webpack_require__(25);
 exports.Combobox = ts_combobox_1.Combobox;
-var ts_dataview_1 = __webpack_require__(90);
+var ts_dataview_1 = __webpack_require__(94);
 exports.DataView = ts_dataview_1.DataView;
-var ts_form_1 = __webpack_require__(93);
+var ts_form_1 = __webpack_require__(97);
 exports.Form = ts_form_1.Form;
-var ts_grid_1 = __webpack_require__(28);
+var ts_grid_1 = __webpack_require__(29);
 exports.Grid = ts_grid_1.Grid;
 var ts_message_1 = __webpack_require__(13);
 exports.message = ts_message_1.message;
@@ -21253,36 +18755,36 @@ exports.confirm = ts_message_1.confirm;
 exports.enableTooltip = ts_message_1.enableTooltip;
 exports.disableTooltip = ts_message_1.disableTooltip;
 exports.tooltip = ts_message_1.tooltip;
-var ts_menu_1 = __webpack_require__(228);
+var ts_menu_1 = __webpack_require__(233);
 exports.Menu = ts_menu_1.Menu;
 exports.ContextMenu = ts_menu_1.ContextMenu;
 var ts_popup_1 = __webpack_require__(11);
 exports.Popup = ts_popup_1.Popup;
-var ts_ribbon_1 = __webpack_require__(109);
+var ts_ribbon_1 = __webpack_require__(101);
 exports.Ribbon = ts_ribbon_1.Ribbon;
-var ts_sidebar_1 = __webpack_require__(111);
+var ts_sidebar_1 = __webpack_require__(103);
 exports.Sidebar = ts_sidebar_1.Sidebar;
-var ts_slider_1 = __webpack_require__(44);
+var ts_slider_1 = __webpack_require__(45);
 exports.Slider = ts_slider_1.Slider;
-var ts_tabbar_1 = __webpack_require__(233);
+var ts_tabbar_1 = __webpack_require__(238);
 exports.Tabbar = ts_tabbar_1.Tabbar;
 var ts_timepicker_1 = __webpack_require__(42);
 exports.Timepicker = ts_timepicker_1.Timepicker;
-var ts_toolbar_1 = __webpack_require__(25);
+var ts_toolbar_1 = __webpack_require__(26);
 exports.Toolbar = ts_toolbar_1.Toolbar;
-var ts_tree_1 = __webpack_require__(235);
+var ts_tree_1 = __webpack_require__(240);
 exports.Tree = ts_tree_1.Tree;
-var ts_window_1 = __webpack_require__(117);
+var ts_window_1 = __webpack_require__(109);
 exports.Window = ts_window_1.Window;
 // TOOLS
-var ts_colorpicker_2 = __webpack_require__(50);
-var en_1 = __webpack_require__(48);
-var date_1 = __webpack_require__(22);
-var en_2 = __webpack_require__(46);
-var en_3 = __webpack_require__(105);
-var en_4 = __webpack_require__(70);
+var ts_colorpicker_2 = __webpack_require__(51);
+var en_1 = __webpack_require__(49);
+var date_1 = __webpack_require__(15);
+var en_2 = __webpack_require__(47);
+var en_3 = __webpack_require__(100);
+var en_4 = __webpack_require__(69);
 var w = window;
-exports.i18n = w.dhx && w.dhx.i18n ? w.dhx.i18 : {};
+exports.i18n = w.dhx && w.dhx.i18n ? w.dhx.i18n : {};
 exports.i18n.setLocale = function (component, value) {
     var target = exports.i18n[component];
     for (var key in value) {
@@ -21298,13 +18800,13 @@ exports.i18n.timepicker = exports.i18n.timepicker || en_4.default;
 
 
 /***/ }),
-/* 132 */
+/* 124 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // extracted by mini-css-extract-plugin
 
 /***/ }),
-/* 133 */
+/* 125 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -21399,7 +18901,7 @@ exports.cssManager = new CssManager();
 
 
 /***/ }),
-/* 134 */
+/* 126 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global) {var scope = (typeof global !== "undefined" && global) ||
@@ -21455,7 +18957,7 @@ exports._unrefActive = exports.active = function(item) {
 };
 
 // setimmediate attaches itself to the global object
-__webpack_require__(135);
+__webpack_require__(127);
 // On some exotic environments, it's not clear which object `setimmediate` was
 // able to install onto.  Search each possibility in the same order as the
 // `setimmediate` library.
@@ -21469,7 +18971,7 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
 /* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(40)))
 
 /***/ }),
-/* 135 */
+/* 127 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* WEBPACK VAR INJECTION */(function(global, process) {(function (global, undefined) {
@@ -21659,10 +19161,10 @@ exports.clearImmediate = (typeof self !== "undefined" && self.clearImmediate) ||
     attachTo.clearImmediate = clearImmediate;
 }(typeof self === "undefined" ? typeof global === "undefined" ? this : global : self));
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(40), __webpack_require__(136)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(40), __webpack_require__(128)))
 
 /***/ }),
-/* 136 */
+/* 128 */
 /***/ (function(module, exports) {
 
 // shim for using process in browser
@@ -21852,7 +19354,7 @@ process.umask = function() { return 0; };
 
 
 /***/ }),
-/* 137 */
+/* 129 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /**
@@ -23793,7 +21295,7 @@ return nano;
 
 
 /***/ }),
-/* 138 */
+/* 130 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -23810,8 +21312,8 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var helpers_1 = __webpack_require__(21);
-var types_1 = __webpack_require__(20);
+var helpers_1 = __webpack_require__(22);
+var types_1 = __webpack_require__(21);
 var Loader = /** @class */ (function () {
     function Loader(parent, changes) {
         this._parent = parent;
@@ -24008,16 +21510,16 @@ var Loader = /** @class */ (function () {
 }());
 exports.Loader = Loader;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 139 */
+/* 131 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var xml_1 = __webpack_require__(140);
+var xml_1 = __webpack_require__(132);
 var ARRAY_NAME = "items";
 var ITEM_NAME = "item";
 // convert xml tag to js object, all subtags and attributes are mapped to the properties of result object
@@ -24148,7 +21650,7 @@ exports.XMLDriver = XMLDriver;
 
 
 /***/ }),
-/* 140 */
+/* 132 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24188,13 +21690,13 @@ exports.jsonToXML = jsonToXML;
 
 
 /***/ }),
-/* 141 */
+/* 133 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var helpers_1 = __webpack_require__(21);
+var helpers_1 = __webpack_require__(22);
 var Sort = /** @class */ (function () {
     function Sort() {
     }
@@ -24241,7 +21743,7 @@ exports.Sort = Sort;
 
 
 /***/ }),
-/* 142 */
+/* 134 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24268,10 +21770,10 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
-var datacollection_1 = __webpack_require__(60);
-var dataproxy_1 = __webpack_require__(27);
-var helpers_1 = __webpack_require__(21);
-var types_1 = __webpack_require__(20);
+var datacollection_1 = __webpack_require__(61);
+var dataproxy_1 = __webpack_require__(28);
+var helpers_1 = __webpack_require__(22);
+var types_1 = __webpack_require__(21);
 function addToOrder(store, obj, parent, index) {
     if (index !== undefined && index !== -1 && store[parent] && store[parent][index]) {
         store[parent].splice(index, 0, obj);
@@ -24384,7 +21886,7 @@ var TreeCollection = /** @class */ (function (_super) {
                 }
             }
         }
-        this.events.fire(types_1.DataEvents.change);
+        this.events.fire(types_1.DataEvents.change, [undefined, "sort", rule]);
     };
     TreeCollection.prototype.filter = function (rule, config) {
         var _this = this;
@@ -24505,14 +22007,23 @@ var TreeCollection = /** @class */ (function (_super) {
     TreeCollection.prototype.loadItems = function (id, driver) {
         var _this = this;
         if (driver === void 0) { driver = types_1.DataDriver.json; }
+        if (!this.events.fire(types_1.DataEvents.beforeItemLoad, [id])) {
+            return;
+        }
         var urlPart = this.config.autoload.toString();
         var url = urlPart + (urlPart.includes("?") ? "&id=" + id : "?id=" + id);
         var proxy = new dataproxy_1.DataProxy(url);
-        proxy.load().then(function (data) {
+        proxy
+            .load()
+            .then(function (data) {
             driver = helpers_1.toDataDriver(driver);
             data = driver.toJsonArray(data);
             _this._parse_data(data, id);
             _this.events.fire(types_1.DataEvents.change);
+            _this.events.fire(types_1.DataEvents.afterItemLoad, [id]);
+        })
+            .catch(function (error) {
+            _this.events.fire(types_1.DataEvents.loadError, [error]);
         });
     };
     TreeCollection.prototype.refreshItems = function (id, driver) {
@@ -24894,7 +22405,7 @@ exports.TreeCollection = TreeCollection;
 
 
 /***/ }),
-/* 143 */
+/* 135 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -24919,10 +22430,10 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var html_1 = __webpack_require__(2);
-var ts_grid_1 = __webpack_require__(28);
-var CollectionStore_1 = __webpack_require__(175);
-var types_1 = __webpack_require__(20);
-var helpers_1 = __webpack_require__(21);
+var ts_grid_1 = __webpack_require__(29);
+var CollectionStore_1 = __webpack_require__(170);
+var types_1 = __webpack_require__(21);
+var helpers_1 = __webpack_require__(22);
 var core_1 = __webpack_require__(1);
 function getPosition(e) {
     var y = e.clientY;
@@ -24947,7 +22458,7 @@ function dragEventContent(element, elements, exhaustiveList) {
     clone.style.fontSize = window.getComputedStyle(element.parentElement).fontSize;
     clone.style.opacity = "0.8";
     clone.style.fontSize = window.getComputedStyle(element.parentElement).fontSize;
-    if (!exhaustiveList || !elements || !elements.length) {
+    if (!exhaustiveList && (!elements || !elements.length)) {
         ghost.appendChild(clone);
     }
     if (elements && elements.length) {
@@ -25233,6 +22744,8 @@ var DragManager = /** @class */ (function () {
         }
     };
     DragManager.prototype._move = function (from, to) {
+        var grid = from.component;
+        var nextGrid = to.component;
         var fromData = from.component.data;
         var toData = to.component.data;
         var index = 0;
@@ -25247,7 +22760,6 @@ var DragManager = /** @class */ (function () {
         if (isColumnDrag && from.component === to.component) {
             if (from.id === to.id)
                 return;
-            var grid = from.component;
             var currentCols = grid.config.columns.map(function (c) { return (__assign({}, c)); });
             var sourceIndex = currentCols.findIndex(function (c) { return c.id === from.id; });
             var componentIndex = currentCols.findIndex(function (c) { return c.id === to.id; });
@@ -25259,32 +22771,40 @@ var DragManager = /** @class */ (function () {
             return;
         }
         else if (isColumnDrag && from.component instanceof ts_grid_1.ProGrid && to.component instanceof ts_grid_1.ProGrid) {
-            var grid = from.component;
-            var nextGrid_1 = to.component;
             var currentCols = grid.config.columns.map(function (c) { return (__assign({}, c)); });
             var sourceIndex = currentCols.findIndex(function (c) { return c.id === from.id; });
-            var nextGridCols = nextGrid_1.config.columns.map(function (c) { return (__assign({}, c)); });
+            var nextGridCols = nextGrid.config.columns.map(function (c) { return (__assign({}, c)); });
+            var nextGridLength = nextGrid.data.getLength();
             var componentIndex = nextGridCols.findIndex(function (c) { return c.id === to.id; });
-            var isIdExsist = nextGridCols.findIndex(function (item) { return item.id === from.id; });
-            var copyId_1 = isIdExsist >= 0 ? from.id + "_copy" : from.id;
             var currentColumnData_1 = [];
+            var currentColumnId_1 = from.id;
             grid.data.forEach(function (item) {
                 var _a;
-                currentColumnData_1.push((_a = {}, _a[copyId_1] = item[from.id], _a));
+                currentColumnData_1.push((_a = { id: item.id }, _a[currentColumnId_1] = item[from.id], _a));
             });
-            nextGrid_1.data.forEach(function (item, index) {
-                nextGrid_1.data.update(item.id, __assign(__assign({}, item), currentColumnData_1[index]));
-            });
+            if (nextGridLength) {
+                grid.data.forEach(function (item, index) {
+                    var nextGridItem = nextGrid.data.getItem(item.id);
+                    if (nextGridItem) {
+                        nextGrid.data.update(nextGridItem.id, __assign(__assign({}, nextGridItem), currentColumnData_1[index]));
+                    }
+                    else {
+                        nextGrid.data.add(currentColumnData_1[index]);
+                    }
+                });
+            }
+            else {
+                nextGrid.data.parse(currentColumnData_1);
+            }
             var col = currentCols.splice(sourceIndex, 1)[0];
-            col.id = copyId_1;
-            nextGridCols.splice(componentIndex, 0, col);
-            nextGrid_1.setColumns(nextGridCols);
-            nextGrid_1.paint();
+            nextGridCols.find(function (c) { return c.id === currentColumnId_1; }) || nextGridCols.splice(componentIndex, 0, col);
+            nextGrid.setColumns(nextGridCols);
+            nextGrid.paint();
             grid.setColumns(currentCols);
             grid.paint();
             return;
         }
-        var isRootParent = to.id === to.component.config.rootParent;
+        var isRootParent = to.id === nextGrid.config.rootParent;
         switch (behaviour) {
             case "child":
                 break;
@@ -25340,15 +22860,20 @@ var DragManager = /** @class */ (function () {
         }
         else {
             if (this._transferData.source instanceof Array && this._transferData.source.length > 1) {
-                this._transferData.source.map(function (selctedId) {
-                    fromData.move(selctedId, index, toData, componentId);
-                    if (index > -1) {
-                        index++;
-                    }
-                });
+                fromData.move(this._transferData.source, index, toData, componentId);
             }
             else {
-                fromData.move(from.id, index, toData, componentId, from.newId);
+                if (nextGrid instanceof ts_grid_1.Grid && !nextGrid.config.columns.length) {
+                    var gridItem = grid.data.getItem(from.id);
+                    nextGrid.data.parse([__assign({}, gridItem)]);
+                    nextGrid.setColumns(__spreadArrays(grid.config.columns));
+                    nextGrid.paint();
+                    grid.data.remove(from.id);
+                    grid.paint();
+                }
+                else {
+                    fromData.move(from.id, index, toData, componentId, from.newId);
+                }
             }
         }
     };
@@ -25395,7 +22920,7 @@ exports.dragManager = dhx.dragManager;
 
 
 /***/ }),
-/* 144 */
+/* 136 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -25419,10 +22944,10 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var main_1 = __webpack_require__(16);
+var main_1 = __webpack_require__(14);
 var ts_data_1 = __webpack_require__(4);
 var core_1 = __webpack_require__(1);
-var date_1 = __webpack_require__(22);
+var date_1 = __webpack_require__(15);
 function fillArray(arr, value) {
     for (var i = 0; i < arr.length; i++) {
         arr[i] = value;
@@ -25651,18 +23176,32 @@ exports.Exporter = Exporter;
 
 
 /***/ }),
-/* 145 */
+/* 137 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var core_1 = __webpack_require__(1);
 var ts_data_1 = __webpack_require__(4);
 var events_1 = __webpack_require__(3);
-var types_1 = __webpack_require__(9);
-var FocusManager_1 = __webpack_require__(18);
+var types_1 = __webpack_require__(8);
+var FocusManager_1 = __webpack_require__(19);
+var render_1 = __webpack_require__(24);
+var render_2 = __webpack_require__(24);
+var main_1 = __webpack_require__(14);
 var Selection = /** @class */ (function () {
     function Selection(grid, config, events, gridId) {
         var types = ["cell", "row", "complex"];
@@ -25673,7 +23212,7 @@ var Selection = /** @class */ (function () {
         this._oldSelectedCell = undefined;
         this._selectedCells = [];
         this._type = types.includes(this._grid.config.selection) ? this._grid.config.selection : "complex";
-        this._multiselection = grid.config.multiselection && this._type !== "complex";
+        this._multiselection = grid.config.multiselection;
         this.events = events || new events_1.EventSystem(this);
         this._init();
     }
@@ -25698,9 +23237,14 @@ var Selection = /** @class */ (function () {
         }
         if ((this._multiselection && !ctrlUp && !shiftUp) || !this._multiselection) {
             this._selectedCells.length && this._removeCells();
+            if (this._type !== "row" && this._selectedCells.length) {
+                this._grid.paint();
+                this._setBrowserFocus();
+                return;
+            }
         }
         if (this._multiselection &&
-            this._type === "cell" &&
+            (this._type === "cell" || this._type === "complex") &&
             this._selectedCells.find(function (item) {
                 return item.row.id === ((row && row.id) || row) && item.column.id === ((col && col.id) || col);
             })) {
@@ -25738,7 +23282,7 @@ var Selection = /** @class */ (function () {
                     endRowIndex = temp;
                 }
                 this._selectedCells = [this._oldSelectedCell];
-                if (this._type === "cell") {
+                if (this._type === "cell" || this._type === "complex") {
                     var columnsIds = colums.map(function (e) { return e.id; });
                     var startColIndex = columnsIds.indexOf(oldSelectedCell.column.id);
                     var endColIndex = columnsIds.indexOf(col.id);
@@ -25805,8 +23349,10 @@ var Selection = /** @class */ (function () {
         }
         if (this._multiselection) {
             var selection_1 = [];
+            var selectedRows_1 = {};
             this._selectedCells.forEach(function (cell, index, array) {
-                selection_1.push(_this._toHTML(cell.row, cell.column, index === array.length - 1 || _this._type === "cell"));
+                selection_1.push(_this._toHTML(cell.row, cell.column, index === array.length - 1 || _this._type === "cell" || _this._type === "complex", selectedRows_1[cell.row.id]));
+                selectedRows_1[cell.row.id] = true;
             });
             return selection_1;
         }
@@ -25825,7 +23371,7 @@ var Selection = /** @class */ (function () {
     };
     Selection.prototype.removeCell = function (rowId, colId) {
         var _this = this;
-        if (rowId && colId && this._type === "cell") {
+        if (rowId && colId && (this._type === "cell" || this._type === "complex")) {
             var cell = this._selectedCells.find(function (_a) {
                 var row = _a.row, column = _a.column;
                 return row.id == rowId && column.id == colId;
@@ -25852,9 +23398,11 @@ var Selection = /** @class */ (function () {
     Selection.prototype._removeCell = function (row, col) {
         if (!row || !col || !row.id || !col.id)
             return;
-        if (!this.events.fire(types_1.GridSelectionEvents.beforeUnSelect, [row, col]))
-            return;
         var index = this._selectedCells.findIndex(function (item) { return item.row.id === row.id && item.column.id === col.id; });
+        if (!this.events.fire(types_1.GridSelectionEvents.beforeUnSelect, [row, col])) {
+            this._selectedCells[index].$preventedUnselect = true;
+            return;
+        }
         this._selectedCells.splice(index, 1);
         if (this._selectedCell &&
             col.id === this._selectedCell.column.id &&
@@ -25873,7 +23421,9 @@ var Selection = /** @class */ (function () {
         this._selectedCells.forEach(function (item) {
             _this._removeCell(item && item.row, item && item.column);
         });
-        this._selectedCells.length && this._removeCells();
+        this._selectedCells.length &&
+            !this._selectedCells.every(function (item) { return item.$preventedUnselect; }) &&
+            this._removeCells();
     };
     Selection.prototype._init = function () {
         var _this = this;
@@ -25897,78 +23447,172 @@ var Selection = /** @class */ (function () {
             }
         });
     };
-    Selection.prototype._toHTML = function (row, column, last) {
+    Selection.prototype._toHTML = function (row, column, last, skipRow) {
         if (last === void 0) { last = false; }
-        var _a, _b, _c;
+        if (skipRow === void 0) { skipRow = false; }
+        var _a, _b;
         var rows = this._grid.data.getRawData(0, -1, null, 2);
         var rowInd = core_1.findIndex(rows, function (obj) { return obj.id == row.id; });
         if (rowInd === -1)
             return null;
-        var leftSplit = this._grid.config.leftSplit;
-        var topSplit = this._grid.config.topSplit;
-        var colums = this._grid.config.columns.filter(function (col) { return !col.hidden; });
-        var fixedCols = leftSplit ? colums.slice(0, leftSplit) : [];
-        var fixedRows = this._grid.config.topSplit
-            ? this._grid.data.getRawData(0, this._grid.config.topSplit)
-            : [];
-        var fixedColsIds = fixedCols.map(function (col) { return col.id; });
-        var fixedRowIds = fixedRows.map(function (row) { return row.id; });
-        var fixedColsWidth = fixedCols.reduce(function (total, coll) { return (total += coll.$width); }, 0);
-        var fixedRowsHeight = fixedRows.reduce(function (total, row) { return (total += row.$height); }, 0);
+        var _c = this._grid.config, leftSplit = _c.leftSplit, rightSplit = _c.rightSplit, topSplit = _c.topSplit, bottomSplit = _c.bottomSplit, $totalWidth = _c.$totalWidth, $totalHeight = _c.$totalHeight, configColumns = _c.columns;
+        var columns = configColumns.filter(function (col) { return !col.hidden; });
+        var fixedCols = {
+            left: leftSplit ? configColumns.slice(0, leftSplit).filter(function (col) { return !col.hidden; }) : [],
+            right: rightSplit ? configColumns.slice(-rightSplit).filter(function (col) { return !col.hidden; }) : [],
+        };
+        var dataLength = this._grid.data.getLength();
+        var fixedRows = {
+            top: topSplit ? this._grid.data.getRawData(0, topSplit) : [],
+            bottom: bottomSplit ? this._grid.data.getRawData(dataLength - bottomSplit, dataLength) : [],
+        };
+        var fixedColsIds = {
+            left: fixedCols.left.map(function (col) { return col.id; }),
+            right: fixedCols.right.map(function (col) { return col.id; }),
+        };
+        var fixedRowsIds = {
+            top: fixedRows.top.map(function (row) { return row.id; }),
+            bottom: fixedRows.bottom.map(function (row) { return row.id; }),
+        };
+        var fixedColsWidth = {
+            left: fixedCols.left.reduce(function (total, coll) { return (total += coll.$width); }, 0),
+            right: fixedCols.right.reduce(function (total, coll) { return (total += coll.$width); }, 0),
+        };
+        var fixedRowsHeight = {
+            top: fixedRows.top.reduce(function (total, row) { return (total += row.$height); }, 0),
+            bottom: fixedRows.bottom.reduce(function (total, row) { return (total += row.$height); }, 0),
+        };
         var cellRect = this._grid.getCellRect(row.id, column.id);
         var scrollState = this._grid.getScrollState();
         var top = cellRect.y;
-        var isFixedRow = fixedRowIds.includes(row.id);
-        var isFixedCol = fixedColsIds.includes(column.id);
-        var isBehindFixedCols = fixedCols.length && fixedColsWidth > cellRect.x - scrollState.x;
-        var isBehindFixedRows = fixedRows.length && fixedRowsHeight > cellRect.y - scrollState.y;
+        var isTopFixedRow = fixedRowsIds.top.includes(row.id);
+        var isLeftFixedCol = fixedColsIds.left.includes(column.id);
+        var isBehindLeftFixedCols = fixedCols.left.length && fixedColsWidth.left > cellRect.x - scrollState.x;
+        var isBehindTopFixedRows = fixedRows.top.length && fixedRowsHeight.top > cellRect.y - scrollState.y;
         var width = cellRect.width;
         var height = cellRect.height - 1;
         var minHeight = null;
         var minWidth = null;
-        var left = isBehindFixedCols ? fixedColsWidth + scrollState.x : cellRect.x;
-        if (isBehindFixedCols) {
-            width -= (isFixedCol ? 0 : fixedColsWidth) - (cellRect.x - scrollState.x);
+        var left = isBehindLeftFixedCols ? fixedColsWidth.left + scrollState.x : cellRect.x;
+        if (isBehindLeftFixedCols) {
+            width -= (isLeftFixedCol ? 0 : fixedColsWidth.left) - (cellRect.x - scrollState.x);
         }
-        if (isBehindFixedRows) {
-            height -= (isFixedRow ? 0 : fixedRowsHeight) - (cellRect.y - scrollState.y) - 1;
+        if (isBehindTopFixedRows) {
+            height -= (isTopFixedRow ? 0 : fixedRowsHeight.top) - (cellRect.y - scrollState.y) - 1;
             top += cellRect.height - height;
         }
-        if (isFixedRow) {
+        if (isTopFixedRow) {
             top = cellRect.y + scrollState.y;
             if ((_a = this._grid.getSpan(row.id, column.id)) === null || _a === void 0 ? void 0 : _a.rowspan) {
-                minHeight = fixedRows
+                minHeight = fixedRows.top
                     .splice(this._grid.data.getIndex(row.id))
                     .reduce(function (total, row) { return (total += row.$height); }, 0);
             }
             else {
-                height = topSplit === fixedRowIds.indexOf(row.id) + 1 ? cellRect.height - 1 : cellRect.height;
+                height =
+                    topSplit === fixedRowsIds.top.indexOf(row.id) + 1 ? cellRect.height - 1 : cellRect.height;
             }
         }
-        if (isFixedCol) {
+        if (isLeftFixedCol) {
             left = cellRect.x + scrollState.x;
             if ((_b = this._grid.getSpan(row.id, column.id)) === null || _b === void 0 ? void 0 : _b.colspan) {
-                minWidth = fixedCols
-                    .splice((_c = this._grid.config.columns) === null || _c === void 0 ? void 0 : _c.indexOf(column))
+                minWidth = fixedCols.left
+                    .splice(columns === null || columns === void 0 ? void 0 : columns.indexOf(column))
                     .reduce(function (total, col) { return (total += col.$width); }, 0);
             }
             else {
                 width =
-                    leftSplit === fixedColsIds.indexOf(column.id) + 1 ? cellRect.width - 1 : cellRect.width;
+                    leftSplit === fixedColsIds.left.indexOf(column.id) + 1
+                        ? cellRect.width - 1
+                        : cellRect.width;
             }
         }
-        var totalWidth = this._grid.config.$totalWidth;
+        var isRightFixedCol, isBehindRightFixedCols, isBottomFixedRow, isBehindBottomFixedRows;
+        if (fixedCols.right.length || bottomSplit) {
+            var span = this._grid.getSpan(row.id, column.id);
+            var reverseScrollState = this._getReverseScrollState(scrollState);
+            if (fixedCols.right.length) {
+                isRightFixedCol =
+                    fixedColsIds.right.includes(column.id) ||
+                        (span &&
+                            columns.indexOf(column) + (span.colspan || 1) >
+                                columns.length - fixedCols.right.length);
+                isBehindRightFixedCols =
+                    $totalWidth - fixedColsWidth.right < reverseScrollState.x + cellRect.x + cellRect.width;
+                if (isBehindRightFixedCols && !isRightFixedCol) {
+                    width -=
+                        reverseScrollState.x +
+                            cellRect.x +
+                            cellRect.width -
+                            $totalWidth +
+                            fixedColsWidth.right;
+                }
+                if (isRightFixedCol) {
+                    if (span && !fixedColsIds.right.includes(span.column)) {
+                        var i = columns.length - columns.indexOf(column) - (span.colspan || 1);
+                        var xSplit = $totalWidth - fixedColsWidth.right;
+                        left =
+                            cellRect.x + reverseScrollState.x < xSplit + 1
+                                ? cellRect.x
+                                : xSplit - reverseScrollState.x + 1;
+                        minWidth = main_1.getTotalWidth(i ? fixedCols.right.slice(0, -i) : fixedCols.right) - 1;
+                        width = cellRect.width - reverseScrollState.x;
+                    }
+                    else {
+                        var gap = fixedColsIds.right.indexOf(column.id) ? 0 : 1;
+                        left = cellRect.x - reverseScrollState.x + gap;
+                        width = cellRect.width - gap;
+                    }
+                }
+            }
+            if (bottomSplit) {
+                isBottomFixedRow =
+                    fixedRowsIds.bottom.includes(row.id) ||
+                        (span && rows.indexOf(row) + (span.rowspan || 1) > rows.length - bottomSplit);
+                isBehindBottomFixedRows =
+                    $totalHeight - fixedRowsHeight.bottom <
+                        reverseScrollState.y + cellRect.y + cellRect.height;
+                if (isBehindBottomFixedRows && !isBottomFixedRow) {
+                    height -=
+                        reverseScrollState.y +
+                            cellRect.y +
+                            cellRect.height -
+                            $totalHeight +
+                            fixedRowsHeight.bottom;
+                }
+                if (isBottomFixedRow) {
+                    if (span && !fixedRowsIds.bottom.includes(span.row)) {
+                        var i = rows.length - rows.indexOf(row) - (span.rowspan || 1);
+                        var ySplit = $totalHeight - fixedRowsHeight.bottom;
+                        var gap = i ? 0 : 1;
+                        top =
+                            cellRect.y + reverseScrollState.y < ySplit
+                                ? cellRect.y
+                                : ySplit - reverseScrollState.y;
+                        minHeight =
+                            main_1.getTotalHeight(i ? fixedRows.bottom.slice(0, -i) : fixedRows.bottom) - gap;
+                        height = cellRect.height - reverseScrollState.y - gap;
+                    }
+                    else {
+                        top = cellRect.y - reverseScrollState.y;
+                        height =
+                            cellRect.height -
+                                (bottomSplit === fixedRowsIds.bottom.indexOf(row.id) + 1 ? 1 : 0);
+                    }
+                }
+            }
+        }
         var selectedRowElement = null;
-        if (this._type === "row" || this._type === "complex") {
+        if ((this._type === "row" || this._type === "complex") && !skipRow) {
             selectedRowElement = dom_1.el(".dhx_grid-selected-row", {
                 style: {
-                    width: fixedCols.length ? totalWidth - scrollState.x : totalWidth,
+                    width: fixedCols.left.length ? $totalWidth - scrollState.x : $totalWidth,
                     height: height,
                     minHeight: minHeight,
                     minWidth: minWidth,
                     display: height < 0 && !minHeight ? "none" : "flex",
                     top: top,
-                    left: fixedCols.length ? scrollState.x : 0,
+                    left: fixedCols.left.length ? scrollState.x : 0,
                     position: "absolute",
                 },
             });
@@ -25985,8 +23629,10 @@ var Selection = /** @class */ (function () {
                     left: left,
                     position: "absolute",
                     display: (width < 0 && !minWidth) || (height < 0 && !minHeight) ? "none" : "flex",
-                    borderLeft: isBehindFixedCols && !isFixedCol ? "none" : null,
-                    borderTop: isBehindFixedRows && !isFixedRow ? "none" : null,
+                    borderLeft: isBehindLeftFixedCols && !isLeftFixedCol ? "none" : null,
+                    borderRight: isBehindRightFixedCols && !isRightFixedCol ? "none" : null,
+                    borderTop: isBehindTopFixedRows && !isTopFixedRow ? "none" : null,
+                    borderBottom: isBehindBottomFixedRows && !isBottomFixedRow ? "none" : null,
                 },
             });
         }
@@ -26007,7 +23653,7 @@ var Selection = /** @class */ (function () {
         if (cell === void 0) { cell = this._selectedCell; }
         var cellIndex = -1;
         this._selectedCells.some(function (element, index) {
-            if (_this._type === "cell") {
+            if (_this._type === "cell" || _this._type === "complex") {
                 if (core_1.compare(element.row, cell.row) && core_1.compare(element.column, cell.column)) {
                     cellIndex = index;
                     return true;
@@ -26046,25 +23692,42 @@ var Selection = /** @class */ (function () {
             }
         }
     };
+    Selection.prototype._getReverseScrollState = function (scrollState) {
+        var headerHeight = this._grid.config.$headerLevel * this._grid.config.headerRowHeight;
+        var footerHeight = this._grid.config.$footerLevel * this._grid.config.footerRowHeight;
+        var scrollBarWidth = render_2.calcScrollBarWidth(__assign(__assign({}, this._grid.config), { headerHeight: headerHeight,
+            footerHeight: footerHeight }));
+        var totalScrollX = this._grid.config.$totalWidth - this._grid.config.width + render_1.BORDERS + scrollBarWidth.y;
+        var totalScrollY = this._grid.config.$totalHeight -
+            this._grid.config.height +
+            headerHeight +
+            footerHeight +
+            render_1.BORDERS +
+            scrollBarWidth.x;
+        return {
+            x: totalScrollX > 0 ? totalScrollX - scrollState.x : 0,
+            y: totalScrollY > 0 ? totalScrollY - scrollState.y : 0,
+        };
+    };
     return Selection;
 }());
 exports.Selection = Selection;
 
 
 /***/ }),
-/* 146 */
+/* 138 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(9);
-var InputEditor_1 = __webpack_require__(147);
-var SelectEditor_1 = __webpack_require__(148);
-var DateEditor_1 = __webpack_require__(149);
-var CheckboxEditor_1 = __webpack_require__(159);
-var ComboboxEditor_1 = __webpack_require__(160);
-var TextAreaEditor_1 = __webpack_require__(167);
+var types_1 = __webpack_require__(8);
+var InputEditor_1 = __webpack_require__(139);
+var SelectEditor_1 = __webpack_require__(140);
+var DateEditor_1 = __webpack_require__(141);
+var CheckboxEditor_1 = __webpack_require__(151);
+var ComboboxEditor_1 = __webpack_require__(152);
+var TextAreaEditor_1 = __webpack_require__(159);
 var lastEditor = {
     cell: {
         row: null,
@@ -26129,14 +23792,14 @@ exports.getEditor = getEditor;
 
 
 /***/ }),
-/* 147 */
+/* 139 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var core_1 = __webpack_require__(1);
 var InputEditor = /** @class */ (function () {
     function InputEditor(row, col, config) {
@@ -26162,7 +23825,7 @@ var InputEditor = /** @class */ (function () {
             this._input.focus();
         }
     };
-    InputEditor.prototype.toHTML = function () {
+    InputEditor.prototype.toHTML = function (text) {
         var content = this._cell.row[this._cell.col.id];
         if (this._input) {
             content = this._input.value;
@@ -26174,7 +23837,7 @@ var InputEditor = /** @class */ (function () {
             },
             _key: "cell_editor",
             "data-dhx-id": "cell_editor",
-            value: content,
+            value: text !== null && text !== void 0 ? text : content,
         });
     };
     InputEditor.prototype._initHandlers = function () {
@@ -26202,14 +23865,14 @@ exports.InputEditor = InputEditor;
 
 
 /***/ }),
-/* 148 */
+/* 140 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var SelectEditor = /** @class */ (function () {
     function SelectEditor(row, col, config) {
         this._config = config;
@@ -26280,23 +23943,34 @@ exports.SelectEditor = SelectEditor;
 
 
 /***/ }),
-/* 149 */
+/* 141 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
-var ts_calendar_1 = __webpack_require__(35);
-var date_1 = __webpack_require__(22);
+var types_1 = __webpack_require__(8);
+var ts_calendar_1 = __webpack_require__(37);
+var date_1 = __webpack_require__(15);
 var ts_popup_1 = __webpack_require__(11);
 var DateEditor = /** @class */ (function () {
     function DateEditor(row, col, config) {
         var _this = this;
         this._config = config;
         this._cell = { row: row, col: col };
-        this._calendar = new ts_calendar_1.Calendar(null, { dateFormat: col.format });
+        this._calendar = new ts_calendar_1.Calendar(null, this._cleanConfig(col));
         var value = this._cell.row[this._cell.col.id];
         var format = this._calendar.config.dateFormat;
         if (date_1.stringToDate(value, format, true) || value instanceof Date) {
@@ -26321,6 +23995,7 @@ var DateEditor = /** @class */ (function () {
         }
         var format = this._calendar.config.dateFormat;
         var value = this._cell.row[this._cell.col.id];
+        var inputVal = this._input.value;
         if (!withoutSave) {
             if (value instanceof Date || calendarChange) {
                 this._value = this._calendar.getValue();
@@ -26328,9 +24003,9 @@ var DateEditor = /** @class */ (function () {
                 this._popup.hide();
                 return;
             }
-            else if (date_1.stringToDate(this._input.value, format, true) &&
-                ((value && this._input.value.length === value.length) || !value)) {
-                this._value = this._input.value;
+            else if ((date_1.stringToDate(inputVal, format, true) || !inputVal) &&
+                ((value && inputVal.length === value.length) || !value || !inputVal)) {
+                this._value = inputVal;
             }
         }
         if (this._config.events.fire(types_1.GridEvents.beforeEditEnd, [this._value, this._cell.row, this._cell.col])) {
@@ -26361,6 +24036,12 @@ var DateEditor = /** @class */ (function () {
             value: value,
         });
     };
+    DateEditor.prototype._cleanConfig = function (col) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        var _a = col.editorConfig || {}, value = _a.value, range = _a.range, dateFormat = _a.dateFormat, calendarConfig = __rest(_a, ["value", "range", "dateFormat"]);
+        calendarConfig.dateFormat = col.format;
+        return calendarConfig;
+    };
     DateEditor.prototype._initHandlers = function () {
         var _this = this;
         this._handlers = {
@@ -26369,6 +24050,7 @@ var DateEditor = /** @class */ (function () {
                     _this._popup.show(_this._input, {
                         centering: true,
                         mode: "bottom",
+                        theme: _this._input,
                     });
                 });
             },
@@ -26402,7 +24084,7 @@ exports.DateEditor = DateEditor;
 
 
 /***/ }),
-/* 150 */
+/* 142 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -26442,11 +24124,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_timepicker_1 = __webpack_require__(42);
-var helper_1 = __webpack_require__(158);
-var date_1 = __webpack_require__(22);
-var types_1 = __webpack_require__(72);
+var helper_1 = __webpack_require__(150);
+var date_1 = __webpack_require__(15);
+var types_1 = __webpack_require__(71);
 var html_1 = __webpack_require__(2);
 var Calendar = /** @class */ (function (_super) {
     __extends(Calendar, _super);
@@ -26533,13 +24215,13 @@ var Calendar = /** @class */ (function (_super) {
         if (!value || (value instanceof Array && value.length === 0)) {
             return false;
         }
-        this._selected = [];
         var currentDate = value instanceof Array ? value[0] : value;
         var date = date_1.DateHelper.toDateObject(currentDate, this.config.dateFormat);
         var oldDate = date_1.DateHelper.copy(this._getSelected());
         if (!this.events.fire(types_1.CalendarEvents.beforeChange, [date, oldDate, false])) {
             return false;
         }
+        this._selected = [];
         this._setSelected(value);
         if (this._timepicker) {
             this._timepicker.setValue(date);
@@ -26587,6 +24269,8 @@ var Calendar = /** @class */ (function (_super) {
     };
     Calendar.prototype.clear = function () {
         var oldDate = this.getValue(true);
+        if (!this.events.fire(types_1.CalendarEvents.beforeChange, ["", oldDate, false]))
+            return;
         if (this.config.timePicker) {
             this._timepicker.clear();
             this._time = this._timepicker.getValue();
@@ -26855,7 +24539,7 @@ var Calendar = /** @class */ (function (_super) {
                     };
                     this_1.config.$rangeMark = rangeMark;
                 }
-                if (isDateWeekEnd && isCurrentMonth) {
+                if (isDateWeekEnd) {
                     css.push("dhx_calendar-day--weekend");
                 }
                 if (!isCurrentMonth) {
@@ -27220,7 +24904,7 @@ exports.Calendar = Calendar;
 
 
 /***/ }),
-/* 151 */
+/* 143 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27253,12 +24937,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_layout_1 = __webpack_require__(10);
-var ts_slider_1 = __webpack_require__(44);
-var en_1 = __webpack_require__(70);
-var helper_1 = __webpack_require__(157);
-var types_1 = __webpack_require__(71);
+var ts_slider_1 = __webpack_require__(45);
+var en_1 = __webpack_require__(69);
+var helper_1 = __webpack_require__(149);
+var types_1 = __webpack_require__(70);
 var html_1 = __webpack_require__(2);
 function validate(value, max) {
     if (isNaN(value)) {
@@ -27292,24 +24976,10 @@ var Timepicker = /** @class */ (function (_super) {
         _this._initEvents();
         return _this;
     }
-    Timepicker.prototype.getValue = function (asOBject) {
+    Timepicker.prototype.getValue = function (asObject) {
         if (this.config.timeFormat === 12)
             this._time.hour = this._time.hour % 12 || 12;
-        var _a = this._time, h = _a.hour, m = _a.minute, isAM = _a.AM;
-        if (asOBject) {
-            var obj = {
-                hour: h,
-                minute: m,
-            };
-            if (this.config.timeFormat === 12) {
-                obj.AM = isAM;
-            }
-            return obj;
-        }
-        return ((h < 10 ? "0" + h : h) +
-            ":" +
-            (m < 10 ? "0" + m : m) +
-            (this.config.timeFormat === 12 ? (isAM ? "AM" : "PM") : ""));
+        return this._getValue(this._time, asObject);
     };
     Timepicker.prototype.setValue = function (value) {
         this._setValue(value);
@@ -27336,6 +25006,19 @@ var Timepicker = /** @class */ (function (_super) {
     };
     Timepicker.prototype.getRootView = function () {
         return this.layout.getRootView();
+    };
+    Timepicker.prototype._getValue = function (timeObj, asObj) {
+        var hour = timeObj.hour, minute = timeObj.minute, AM = timeObj.AM;
+        if (asObj) {
+            var obj = { hour: hour, minute: minute };
+            if (this.config.timeFormat === 12)
+                obj.AM = AM;
+            return obj;
+        }
+        return ((hour < 10 ? "0" + hour : hour) +
+            ":" +
+            (minute < 10 ? "0" + minute : minute) +
+            (this.config.timeFormat === 12 ? (AM ? "AM" : "PM") : ""));
     };
     Timepicker.prototype._setValue = function (value) {
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -27491,24 +25174,16 @@ var Timepicker = /** @class */ (function (_super) {
         };
         this._outerHandlers = {
             close: function () {
-                if (!_this.events.fire(types_1.TimepickerEvents.beforeClose, [
-                    _this.getValue(_this.config.valueFormat === "timeObject"),
-                ])) {
+                if (!_this.events.fire(types_1.TimepickerEvents.beforeClose, [_this.getValue(_this._isTimeObj())])) {
                     return;
                 }
-                _this.events.fire(types_1.TimepickerEvents.afterClose, [
-                    _this.getValue(_this.config.valueFormat === "timeObject"),
-                ]);
+                _this.events.fire(types_1.TimepickerEvents.afterClose, [_this.getValue(_this._isTimeObj())]);
                 _this.events.fire(types_1.TimepickerEvents.close, []); // TODO: remove suite_7.0
             },
             save: function () {
-                if (!_this.events.fire(types_1.TimepickerEvents.beforeApply, [
-                    _this.getValue(_this.config.valueFormat === "timeObject"),
-                ]))
+                if (!_this.events.fire(types_1.TimepickerEvents.beforeApply, [_this.getValue(_this._isTimeObj())]))
                     return;
-                _this.events.fire(types_1.TimepickerEvents.afterApply, [
-                    _this.getValue(_this.config.valueFormat === "timeObject"),
-                ]);
+                _this.events.fire(types_1.TimepickerEvents.afterApply, [_this.getValue(_this._isTimeObj())]);
                 _this.events.fire(types_1.TimepickerEvents.apply, [_this.getValue()]); // TODO: remove suite_7.0
                 _this.events.fire(types_1.TimepickerEvents.save, [_this._time]); // TODO: remove suite_7.0
             },
@@ -27516,6 +25191,21 @@ var Timepicker = /** @class */ (function (_super) {
     };
     Timepicker.prototype._initEvents = function () {
         var _this = this;
+        this._hoursSlider.events.on(ts_slider_1.SliderEvents.beforeChange, function (value) {
+            if (value < _this._hoursSlider.config.min || value > _this._hoursSlider.config.max) {
+                return;
+            }
+            var timeObj = __assign({}, _this._time);
+            if (_this.config.timeFormat === 12) {
+                timeObj.AM = value < 12;
+                timeObj.hour = value % 12 || 12;
+            }
+            else {
+                timeObj.hour = value;
+            }
+            var asObject = _this._isTimeObj();
+            return _this.events.fire(types_1.TimepickerEvents.beforeChange, [_this._getValue(timeObj, asObject)]);
+        });
         this._hoursSlider.events.on(ts_slider_1.SliderEvents.change, function (value) {
             if (value < _this._hoursSlider.config.min || value > _this._hoursSlider.config.max) {
                 return;
@@ -27527,19 +25217,25 @@ var Timepicker = /** @class */ (function (_super) {
             else {
                 _this._time.hour = value;
             }
-            _this.events.fire(types_1.TimepickerEvents.change, [
-                _this.getValue(_this.config.valueFormat === "timeObject"),
-            ]);
+            var asObject = _this._isTimeObj();
+            _this.events.fire(types_1.TimepickerEvents.change, [_this.getValue(asObject)]);
             _this._inputsView.paint();
+        });
+        this._minutesSlider.events.on(ts_slider_1.SliderEvents.beforeChange, function (value) {
+            if (value < _this._minutesSlider.config.min || value > _this._minutesSlider.config.max) {
+                return;
+            }
+            var timeObj = __assign(__assign({}, _this._time), { minute: value });
+            var asObject = _this._isTimeObj();
+            return _this.events.fire(types_1.TimepickerEvents.beforeChange, [_this._getValue(timeObj, asObject)]);
         });
         this._minutesSlider.events.on(ts_slider_1.SliderEvents.change, function (value) {
             if (value < _this._minutesSlider.config.min || value > _this._minutesSlider.config.max) {
                 return;
             }
             _this._time.minute = value;
-            _this.events.fire(types_1.TimepickerEvents.change, [
-                _this.getValue(_this.config.valueFormat === "timeObject"),
-            ]);
+            var asObject = _this._isTimeObj();
+            _this.events.fire(types_1.TimepickerEvents.change, [_this.getValue(asObject)]);
             _this._inputsView.paint();
         });
     };
@@ -27566,13 +25262,17 @@ var Timepicker = /** @class */ (function (_super) {
                 : null,
         ]);
     };
+    Timepicker.prototype._isTimeObj = function () {
+        var _a;
+        return ((_a = this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "timeobject";
+    };
     return Timepicker;
 }(view_1.View));
 exports.Timepicker = Timepicker;
 
 
 /***/ }),
-/* 152 */
+/* 144 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27605,7 +25305,7 @@ exports.getMarginSize = getMarginSize;
 
 
 /***/ }),
-/* 153 */
+/* 145 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27624,8 +25324,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Layout_1 = __webpack_require__(66);
-var ProCell_1 = __webpack_require__(154);
+var Layout_1 = __webpack_require__(43);
+var ProCell_1 = __webpack_require__(146);
 var ProLayout = /** @class */ (function (_super) {
     __extends(ProLayout, _super);
     function ProLayout(parent, config) {
@@ -27653,7 +25353,7 @@ exports.ProLayout = ProLayout;
 
 
 /***/ }),
-/* 154 */
+/* 146 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27685,8 +25385,8 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var ScrollView_1 = __webpack_require__(17);
-var Cell_1 = __webpack_require__(67);
+var ScrollView_1 = __webpack_require__(18);
+var Cell_1 = __webpack_require__(66);
 var ProCell = /** @class */ (function (_super) {
     __extends(ProCell, _super);
     function ProCell(parent, config) {
@@ -27704,6 +25404,7 @@ var ProCell = /** @class */ (function (_super) {
     };
     ProCell.prototype.toVDOM = function (nodes) {
         var _a;
+        var _b;
         if (this.config === null) {
             this.config = {};
         }
@@ -27772,78 +25473,83 @@ var ProCell = /** @class */ (function (_super) {
                 ".innerHTML": this.config.html,
             }),
         ]);
-        var cell = dom_1.el("div", __assign(__assign((_a = { _key: this._uid, _ref: this._uid }, _a["aria-label"] = this.config.id ? "tab-content-" + this.config.id : null, _a), handlers), { class: this._getCss(false) +
+        var cell = dom_1.el("div", __assign(__assign((_a = { _key: this._uid, _ref: this._uid }, _a["aria-label"] = this.config.id ? "tab-content-" + this.config.id : null, _a["data-cell-id"] = (_b = this.config.id) !== null && _b !== void 0 ? _b : null, _a), handlers), { class: this._getCss(false) +
                 (this.config.css ? " " + this.config.css : "") +
                 (this.config.collapsed ? " dhx_layout-cell--collapsed" : "") +
                 (this.config.resizable ? " dhx_layout-cell--resizable" : "") +
-                (this.config.type && !this.config.full ? typeClass : ""), style: fullStyle }), this.config.full
-            ? [
-                dom_1.el("div", {
-                    tabindex: this.config.collapsable ? "0" : "-1",
-                    class: "dhx_layout-cell-header" +
-                        (this._isXDirection()
-                            ? " dhx_layout-cell-header--col"
-                            : " dhx_layout-cell-header--row") +
-                        (this.config.collapsable ? " dhx_layout-cell-header--collapseble" : "") +
-                        (this.config.collapsed ? " dhx_layout-cell-header--collapsed" : "") +
-                        (((this.getParent() || {}).config || {}).isAccordion
-                            ? " dhx_layout-cell-header--accordion"
-                            : ""),
-                    style: {
-                        height: this.config.headerHeight,
-                    },
-                    onclick: this._handlers.toggle,
-                    onkeydown: this._handlers.enterCollapse,
-                }, [
-                    this.config.headerIcon &&
-                        dom_1.el("span.dhx_layout-cell-header__icon", {
-                            class: this.config.headerIcon,
-                        }),
-                    this.config.headerImage &&
-                        dom_1.el(".dhx_layout-cell-header__image-wrapper", [
-                            dom_1.el("img", {
-                                src: this.config.headerImage,
-                                class: "dhx_layout-cell-header__image",
-                            }),
-                        ]),
-                    this.config.header &&
-                        dom_1.el("h3.dhx_layout-cell-header__title", this.config.header),
-                    this.config.collapsable
-                        ? dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
-                            class: this._getCollapseIcon(),
-                        })
-                        : dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
-                            class: "dxi dxi-empty",
-                        }),
-                ]),
-                !this.config.collapsed
-                    ? dom_1.el("div", {
-                        style: __assign(__assign({}, stylePadding), { height: "calc(100% - " + (this.config.headerHeight || 37) + "px)" }),
-                        class: this._getCss(true) +
-                            " dhx_layout-cell-content" +
-                            (this.config.type ? typeClass : ""),
-                    }, this.config.html
-                        ? [
-                            dom_1.el("div", {
-                                ".innerHTML": this.config.html,
-                                class: "dhx_layout-cell dhx_layout-cell-inner_html",
-                            }),
-                        ]
-                        : kids)
-                    : null,
-            ]
-            : this.config.html &&
-                !(this.config.rows &&
-                    this.config.cols &&
-                    this.config.views)
+                (this.config.type && !this.config.full ? typeClass : ""), style: fullStyle }), [
+            this.config.full
                 ? [
+                    dom_1.el("div", {
+                        tabindex: this.config.collapsable ? "0" : "-1",
+                        class: "dhx_layout-cell-header" +
+                            (this._isXDirection()
+                                ? " dhx_layout-cell-header--col"
+                                : " dhx_layout-cell-header--row") +
+                            (this.config.collapsable
+                                ? " dhx_layout-cell-header--collapseble"
+                                : "") +
+                            (this.config.collapsed ? " dhx_layout-cell-header--collapsed" : "") +
+                            (((this.getParent() || {}).config || {}).isAccordion
+                                ? " dhx_layout-cell-header--accordion"
+                                : ""),
+                        style: {
+                            height: this.config.headerHeight,
+                        },
+                        onclick: this._handlers.toggle,
+                        onkeydown: this._handlers.enterCollapse,
+                    }, [
+                        this.config.headerIcon &&
+                            dom_1.el("span.dhx_layout-cell-header__icon", {
+                                class: this.config.headerIcon,
+                            }),
+                        this.config.headerImage &&
+                            dom_1.el(".dhx_layout-cell-header__image-wrapper", [
+                                dom_1.el("img", {
+                                    src: this.config.headerImage,
+                                    class: "dhx_layout-cell-header__image",
+                                }),
+                            ]),
+                        this.config.header &&
+                            dom_1.el("h3.dhx_layout-cell-header__title", this.config.header),
+                        this.config.collapsable
+                            ? dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
+                                class: this._getCollapseIcon(),
+                            })
+                            : dom_1.el("div.dhx_layout-cell-header__collapse-icon", {
+                                class: "dxi dxi-empty",
+                            }),
+                    ]),
                     !this.config.collapsed
-                        ? this.scrollView && this.scrollView.config.enable
-                            ? this.scrollView.render([htmlContent], this._uid)
-                            : htmlContent
+                        ? dom_1.el("div", {
+                            style: __assign(__assign({}, stylePadding), { height: "calc(100% - " + (this.config.headerHeight || 37) + "px)" }),
+                            class: this._getCss(true) +
+                                " dhx_layout-cell-content" +
+                                (this.config.type ? typeClass : ""),
+                        }, this.config.html
+                            ? [
+                                dom_1.el("div", {
+                                    ".innerHTML": this.config.html,
+                                    class: "dhx_layout-cell dhx_layout-cell-inner_html",
+                                }),
+                            ]
+                            : kids)
                         : null,
                 ]
-                : kids);
+                : this.config.html &&
+                    !(this.config.rows &&
+                        this.config.cols &&
+                        this.config.views)
+                    ? [
+                        !this.config.collapsed
+                            ? this.scrollView && this.scrollView.config.enable
+                                ? this.scrollView.render([htmlContent], this._uid)
+                                : htmlContent
+                            : null,
+                    ]
+                    : kids,
+            this._checkProgress() && this._getProgressBar(),
+        ]);
         return resizer ? [cell, resizer] : cell;
     };
     return ProCell;
@@ -27852,7 +25558,7 @@ exports.ProCell = ProCell;
 
 
 /***/ }),
-/* 155 */
+/* 147 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -27886,9 +25592,9 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var KeyManager_1 = __webpack_require__(12);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_popup_1 = __webpack_require__(11);
-var types_1 = __webpack_require__(69);
+var types_1 = __webpack_require__(68);
 var html_1 = __webpack_require__(2);
 function normalizeValue(value, min, max) {
     if (value < min) {
@@ -27989,16 +25695,22 @@ var Slider = /** @class */ (function (_super) {
         var old = this._getValue(this._currentPosition);
         if (Array.isArray(value) && value.length > 1) {
             var oldExtra = this._getValue(this._extraCurrentPosition);
-            this._setValue(value[0], false);
-            this.events.fire(types_1.SliderEvents.change, [value[0], old, false]);
-            this._setValue(value[1], true);
-            this.events.fire(types_1.SliderEvents.change, [value[1], oldExtra, true]);
+            if (this.events.fire(types_1.SliderEvents.beforeChange, [value[0], old, false])) {
+                this._setValue(value[0], false);
+                this.events.fire(types_1.SliderEvents.change, [value[0], old, false]);
+            }
+            if (this.events.fire(types_1.SliderEvents.beforeChange, [value[1], oldExtra, true])) {
+                this._setValue(value[1], true);
+                this.events.fire(types_1.SliderEvents.change, [value[1], oldExtra, true]);
+            }
         }
         else {
             value = parseFloat(value);
             if (!isNaN(value)) {
-                this._setValue(value);
-                this.events.fire(types_1.SliderEvents.change, [value, old, false]);
+                if (this.events.fire(types_1.SliderEvents.beforeChange, [value, old, false])) {
+                    this._setValue(value);
+                    this.events.fire(types_1.SliderEvents.change, [value, old, false]);
+                }
             }
             else {
                 throw new Error("Wrong value type, for more info check documentation https://docs.dhtmlx.com/suite/slider__api__slider_setvalue_method.html");
@@ -28050,6 +25762,7 @@ var Slider = /** @class */ (function (_super) {
         }
     };
     Slider.prototype._move = function (value, forExtra) {
+        if (forExtra === void 0) { forExtra = false; }
         if (this.config.inverse) {
             value = -value;
         }
@@ -28058,10 +25771,12 @@ var Slider = /** @class */ (function (_super) {
             ? this._getValue(this._extraCurrentPosition)
             : this._getValue(this._currentPosition);
         var newValue = oldValue + value;
-        this._setValue(oldValue + value, forExtra);
         if (newValue > max || newValue < min) {
             newValue = oldValue;
         }
+        if (!this.events.fire(types_1.SliderEvents.beforeChange, [newValue, oldValue, forExtra]))
+            return;
+        this._setValue(oldValue + value, forExtra);
         this.events.fire(types_1.SliderEvents.change, [newValue, oldValue, forExtra]);
         this.paint();
     };
@@ -28199,7 +25914,9 @@ var Slider = /** @class */ (function (_super) {
             showHelper: function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                _this._helper.show(e.target);
+                _this._helper.show(e.target, {
+                    theme: e.target,
+                });
             },
             onmousedown: function (e) {
                 sliderStart(e);
@@ -28303,7 +26020,8 @@ var Slider = /** @class */ (function (_super) {
         var position = extra ? this._extraCurrentPosition : this._currentPosition;
         var oldValue = this._getValue(position);
         var newValue = this._getValue(x);
-        if (oldValue === newValue) {
+        if (oldValue === newValue ||
+            !this.events.fire(types_1.SliderEvents.beforeChange, [newValue, oldValue, extra])) {
             return;
         }
         var rawValue = ((newValue - min) / (max - min)) * 100;
@@ -28546,7 +26264,7 @@ exports.Slider = Slider;
 
 
 /***/ }),
-/* 156 */
+/* 148 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28580,8 +26298,8 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(68);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(67);
 var Popup = /** @class */ (function (_super) {
     __extends(Popup, _super);
     function Popup(config) {
@@ -28593,6 +26311,7 @@ var Popup = /** @class */ (function (_super) {
         popup.setAttribute("role", "dialog");
         popup.setAttribute("aria-modal", "true");
         popup.setAttribute("aria-live", "polite");
+        _this.config.theme && _this._setTheme(_this.config.theme);
         _this.mount(popup, dom_1.create({
             render: function () { return _this.toVDOM(); },
         }));
@@ -28615,6 +26334,7 @@ var Popup = /** @class */ (function (_super) {
         if (attached) {
             this.attach(attached);
         }
+        config.theme && this._setTheme(config.theme);
         this._popup.style.left = "0";
         this._popup.style.top = "0";
         dom_1.awaitRedraw()
@@ -28696,6 +26416,16 @@ var Popup = /** @class */ (function (_super) {
             this._outerClickDestructor();
         }
         this._popup = null;
+    };
+    Popup.prototype._setTheme = function (node) {
+        var _a;
+        if (typeof node === "string") {
+            this._popup.setAttribute("data-dhx-theme", node);
+        }
+        else {
+            var theme = (_a = node === null || node === void 0 ? void 0 : node.closest("[data-dhx-theme]")) === null || _a === void 0 ? void 0 : _a.getAttribute("data-dhx-theme");
+            theme && this._popup.setAttribute("data-dhx-theme", theme);
+        }
     };
     Popup.prototype._setPopupSize = function (node, config, calls) {
         var _this = this;
@@ -28803,7 +26533,7 @@ exports.Popup = Popup;
 
 
 /***/ }),
-/* 157 */
+/* 149 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28819,7 +26549,7 @@ exports.isTimeCheck = isTimeCheck;
 
 
 /***/ }),
-/* 158 */
+/* 150 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28829,7 +26559,7 @@ exports.linkButtonClasses = ".dhx_button.dhx_button--view_link.dhx_button--icon.
 
 
 /***/ }),
-/* 159 */
+/* 151 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28837,7 +26567,7 @@ exports.linkButtonClasses = ".dhx_button.dhx_button--view_link.dhx_button--icon.
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var CheckboxEditor = /** @class */ (function () {
     function CheckboxEditor(row, col, config) {
         this._config = config;
@@ -28917,7 +26647,7 @@ exports.CheckboxEditor = CheckboxEditor;
 
 
 /***/ }),
-/* 160 */
+/* 152 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -28935,9 +26665,9 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
-var ts_combobox_1 = __webpack_require__(24);
-var FocusManager_1 = __webpack_require__(18);
+var types_1 = __webpack_require__(8);
+var ts_combobox_1 = __webpack_require__(25);
+var FocusManager_1 = __webpack_require__(19);
 var ComboboxEditor = /** @class */ (function () {
     function ComboboxEditor(row, col, config) {
         this._config = config;
@@ -29023,7 +26753,7 @@ exports.ComboboxEditor = ComboboxEditor;
 
 
 /***/ }),
-/* 161 */
+/* 153 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29041,13 +26771,13 @@ exports.KEY_CODES = {
 
 
 /***/ }),
-/* 162 */
+/* 154 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var InputEditor_1 = __webpack_require__(163);
+var InputEditor_1 = __webpack_require__(155);
 function getEditor(item, list) {
     return new InputEditor_1.InputEditor(item, list);
 }
@@ -29055,14 +26785,14 @@ exports.getEditor = getEditor;
 
 
 /***/ }),
-/* 163 */
+/* 155 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(45);
+var types_1 = __webpack_require__(46);
 var InputEditor = /** @class */ (function () {
     function InputEditor(item, list) {
         var _this = this;
@@ -29148,7 +26878,7 @@ exports.InputEditor = InputEditor;
 
 
 /***/ }),
-/* 164 */
+/* 156 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29186,8 +26916,8 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var ScrollView_1 = __webpack_require__(17);
-var List_1 = __webpack_require__(74);
+var ScrollView_1 = __webpack_require__(18);
+var List_1 = __webpack_require__(73);
 var ProList = /** @class */ (function (_super) {
     __extends(ProList, _super);
     function ProList(container, config) {
@@ -29252,7 +26982,7 @@ exports.ProList = ProList;
 
 
 /***/ }),
-/* 165 */
+/* 157 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29312,7 +27042,7 @@ exports.KeyListener = KeyListener;
 
 
 /***/ }),
-/* 166 */
+/* 158 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29331,10 +27061,10 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Combobox_1 = __webpack_require__(73);
-var ts_list_1 = __webpack_require__(30);
+var Combobox_1 = __webpack_require__(72);
+var ts_list_1 = __webpack_require__(31);
 var ts_layout_1 = __webpack_require__(10);
-var helper_1 = __webpack_require__(76);
+var helper_1 = __webpack_require__(75);
 var ProCombobox = /** @class */ (function (_super) {
     __extends(ProCombobox, _super);
     function ProCombobox(element, config) {
@@ -29382,7 +27112,7 @@ exports.ProCombobox = ProCombobox;
 
 
 /***/ }),
-/* 167 */
+/* 159 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29400,7 +27130,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var core_1 = __webpack_require__(1);
 var data_1 = __webpack_require__(23);
 var TextAreaEditor = /** @class */ (function () {
@@ -29530,35 +27260,20 @@ exports.TextAreaEditor = TextAreaEditor;
 
 
 /***/ }),
-/* 168 */
+/* 160 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var ts_combobox_1 = __webpack_require__(24);
+var ts_combobox_1 = __webpack_require__(25);
 var ts_data_1 = __webpack_require__(4);
-var types_1 = __webpack_require__(9);
 var data_1 = __webpack_require__(23);
-var html_1 = __webpack_require__(2);
 var core_1 = __webpack_require__(1);
-var inputDelay;
-function onInput(eventSystem, colId, filter, filterObj, e) {
-    var inputHandler = function () {
-        var val = html_1.isIE() || html_1.isSafari() ? e.target.value : e.path ? e.path[0].value : e.explicitOriginalTarget.value;
-        filterObj.value[colId] = val;
-        eventSystem.fire(types_1.GridEvents.filterChange, [val, colId, filter]);
-    };
-    if (filter === "selectFilter") {
-        inputHandler();
-        return;
-    }
-    if (inputDelay) {
-        clearTimeout(inputDelay);
-    }
-    inputDelay = setTimeout(inputHandler, 500);
-}
+var ComboFilter_1 = __webpack_require__(161);
+var SelectFilter_1 = __webpack_require__(162);
+var InputFilter_1 = __webpack_require__(163);
 function applyMathMethod(column, config, method, validate) {
     if (!column || !config || !method) {
         return;
@@ -29618,26 +27333,15 @@ function getContent() {
         inputFilter: {
             element: {},
             toHtml: function (column, config) {
+                var _this = this;
                 var id = core_1.uid();
                 var colId = column.id.toString();
-                this.element[colId] = dom_1.el("div.dhx_grid-filter__label.dxi.dxi-magnify", { "aria-label": "Type to search", _ref: column.id + "_filter" }, [
-                    dom_1.el("label", {
-                        style: {
-                            display: "none",
-                        },
-                        "aria-label": "Type to search",
-                        for: id,
-                    }, "Type to search"),
-                    dom_1.el("input", {
-                        type: "text",
-                        class: "dhx_input dhx_grid-filter",
-                        oninput: [onInput, config.events, column.id, "inputFilter", this],
-                        _key: column.id,
-                        id: id,
-                        value: this.value[column.id] || "",
-                    }),
-                ]);
-                return this.element[colId];
+                var filter = new InputFilter_1.InputFilter(column, config, id, this.value[colId]);
+                filter.events.on("change", function (value) {
+                    _this.value[colId] = value;
+                });
+                this.element[colId] = filter;
+                return filter.getFilter();
             },
             match: function (_a) {
                 var val = _a.val, match = _a.match, col = _a.col;
@@ -29662,25 +27366,12 @@ function getContent() {
                 var _this = this;
                 var colId = column.id.toString();
                 var uniqueData = getUniqueData(column);
-                this.element[colId] = dom_1.el("label.dhx_grid-filter__label.dxi.dxi-menu-down", { _ref: column.id + "_filter" }, [
-                    dom_1.el("select.dxi.dxi-menu-down", {
-                        type: "text",
-                        class: "dhx_input dhx_grid-filter dhx_grid-filter--select",
-                        onchange: [onInput, config.events, column.id, "selectFilter", this],
-                        _key: column.id,
-                    }, [
-                        dom_1.el("option", { value: "" }, ""),
-                        uniqueData.map(function (val) {
-                            val = val !== null && val !== void 0 ? val : "";
-                            return (val !== "" &&
-                                dom_1.el("option", {
-                                    value: val,
-                                    selected: _this.value[column.id] === val.toString(),
-                                }, val));
-                        }),
-                    ]),
-                ]);
-                return this.element[colId];
+                var filter = new SelectFilter_1.SelectFilter(column, config, uniqueData, this.value[colId]);
+                filter.events.on("change", function (value) {
+                    _this.value[colId] = value;
+                });
+                this.element[colId] = filter;
+                return filter.getFilter();
             },
             match: function (_a) {
                 var val = _a.val, match = _a.match, col = _a.col;
@@ -29692,66 +27383,41 @@ function getContent() {
         comboFilter: {
             element: {},
             toHtml: function (column, config) {
-                var combo;
+                var _this = this;
+                var filter;
                 var colId = column.id.toString();
                 if (!this.element[colId] && config.events) {
                     var uniqueData = getUniqueData(column);
                     var conf = column.header.filter(function (item) { return item.filterConfig !== undefined; })[0];
-                    if (conf && conf.filterConfig) {
-                        combo = new ts_combobox_1.Combobox(null, Object.assign({}, conf.filterConfig));
-                    }
-                    else {
-                        combo = new ts_combobox_1.Combobox(null, {});
-                    }
-                    combo.data.parse(uniqueData.map(function (value) { return ({ value: value }); }));
-                    config.events.on(ts_data_1.DataEvents.load, function () {
-                        combo.data.parse(column.$uniqueData.map(function (value) { return ({ value: value }); }));
+                    filter = new ComboFilter_1.ComboFilter(column, config, uniqueData, this.value[colId], conf);
+                    filter.events.on("change", function (value) {
+                        _this.value[colId] = value;
                     });
-                    this.element[colId] = combo;
-                    combo.events.on("change", function (id) {
-                        if (id) {
-                            var value = void 0;
-                            var haveIds = Array.isArray(id)
-                                ? id.find(function (item) { return combo.data.getItem(item); })
-                                : combo.data.getItem(id);
-                            if (haveIds) {
-                                value = combo.config.multiselection
-                                    ? combo.list.selection.getItem().map(function (item) {
-                                        if (item && combo.data.getItem(item.id)) {
-                                            return item.value;
-                                        }
-                                    })
-                                    : combo.list.selection.getItem().value;
-                                config.events.fire(types_1.GridEvents.filterChange, [value, colId, "comboFilter"]);
-                            }
-                            else {
-                                config.events.fire(types_1.GridEvents.filterChange, ["", colId, "comboFilter"]);
-                            }
-                        }
-                    });
+                    this.element[colId] = filter;
                     config.events.on(ts_data_1.DataEvents.change, function (id, status) {
                         if (status === "add" || status === "update" || status === "remove") {
                             var uniqueData_1 = getUniqueData(column);
-                            combo.data.parse(uniqueData_1.map(function (value) { return ({ value: value }); }));
-                            combo.events.fire(ts_combobox_1.ComboboxEvents.change, [combo.list.selection.getItem()]);
+                            filter.getFilter().data.parse(uniqueData_1.map(function (value) { return ({ value: value }); }));
+                            filter
+                                .getFilter()
+                                .events.fire(ts_combobox_1.ComboboxEvents.change, [
+                                filter.getFilter().list.selection.getItem(),
+                            ]);
                         }
                     });
                     config.events.on(ts_data_1.DataEvents.removeAll, function () {
-                        combo.data.parse(column.$uniqueData.map(function (value) { return ({ value: value }); }));
-                        combo.events.fire(ts_combobox_1.ComboboxEvents.change, [combo.list.selection.getItem()]);
-                    });
-                    combo.popup.events.on("afterHide", function () {
-                        if (!combo.list.selection.getItem() ||
-                            (combo.config.multiselection && !combo.list.selection.getItem().length)) {
-                            combo.clear();
-                            config.events.fire(types_1.GridEvents.filterChange, ["", colId, "comboFilter"]);
-                        }
+                        filter.getFilter().data.parse(column.$uniqueData.map(function (value) { return ({ value: value }); }));
+                        filter
+                            .getFilter()
+                            .events.fire(ts_combobox_1.ComboboxEvents.change, [
+                            filter.getFilter().list.selection.getItem(),
+                        ]);
                     });
                 }
                 else {
-                    combo = this.element[column.id] || new ts_combobox_1.Combobox(null, {});
+                    filter = this.element[column.id] || new ComboFilter_1.ComboFilter(column);
                 }
-                return dom_1.inject(combo.getRootView());
+                return dom_1.inject(filter.getFilter().getRootView());
             },
             match: function (_a) {
                 var val = _a.val, _b = _a.match, match = _b === void 0 ? "" : _b, _c = _a.multi, multi = _c === void 0 ? false : _c, col = _a.col;
@@ -29865,7 +27531,335 @@ exports.getContent = getContent;
 
 
 /***/ }),
-/* 169 */
+/* 161 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var ts_combobox_1 = __webpack_require__(25);
+var events_1 = __webpack_require__(3);
+var ts_data_1 = __webpack_require__(4);
+var types_1 = __webpack_require__(8);
+var ComboFilter = /** @class */ (function () {
+    function ComboFilter(column, config, data, value, conf) {
+        this.events = new events_1.EventSystem();
+        this.column = column;
+        this.config = config;
+        this.data = data;
+        this.value = value;
+        this.filterConfig = (conf === null || conf === void 0 ? void 0 : conf.filterConfig) || {};
+        this.initFilter();
+        this.config && this.initHandlers();
+    }
+    ComboFilter.prototype.initFilter = function () {
+        this._filter = new ts_combobox_1.Combobox(null, Object.assign({}, this.filterConfig));
+        this.data && this._filter.data && this._filter.data.parse(this.data.map(function (value) { return ({ value: value }); }));
+    };
+    ComboFilter.prototype.initHandlers = function () {
+        var _this = this;
+        var _a, _b, _c;
+        var colId = this.column.id.toString();
+        this._filter.events.on(ts_data_1.DataEvents.load, function () {
+            _this._filter.data.parse(_this.column.$uniqueData.map(function (value) { return ({ value: value }); }));
+        });
+        this._filter.events.on("change", function (id) {
+            var _a, _b;
+            if (id) {
+                var value = void 0;
+                var haveIds = Array.isArray(id)
+                    ? id.find(function (item) { return _this._filter.data.getItem(item); })
+                    : _this._filter.data.getItem(id);
+                if (haveIds) {
+                    value = _this._filter.config.multiselection
+                        ? _this._filter.list.selection.getItem().map(function (item) {
+                            if (item && _this._filter.data.getItem(item.id)) {
+                                return item.value;
+                            }
+                        })
+                        : _this._filter.list.selection.getItem().value;
+                    (_a = _this.config.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.GridEvents.filterChange, [value, colId, "comboFilter"]);
+                }
+                else {
+                    (_b = _this.config.events) === null || _b === void 0 ? void 0 : _b.fire(types_1.GridEvents.filterChange, ["", colId, "comboFilter"]);
+                }
+            }
+        });
+        this._filter.popup.events.on("afterHide", function () {
+            if (!_this._filter.list.selection.getItem() ||
+                (_this._filter.config.multiselection && !_this._filter.list.selection.getItem().length)) {
+                _this.clear();
+            }
+        });
+        (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.on(types_1.GridEvents.scroll, function () {
+            var _a;
+            if (_this._isFocused && ((_a = _this._filter.getRootView().refs) === null || _a === void 0 ? void 0 : _a.input)) {
+                _this._filter.focus();
+            }
+        });
+        (_b = this.config.events) === null || _b === void 0 ? void 0 : _b.on(types_1.GridEvents.headerCellMouseDown, function (col) {
+            if (col.id !== _this.column.id)
+                _this.blur();
+        });
+        (_c = this.config.events) === null || _c === void 0 ? void 0 : _c.on(types_1.GridEvents.cellMouseDown, function () { return _this.blur(); });
+    };
+    ComboFilter.prototype.getFilter = function () {
+        return this._filter;
+    };
+    ComboFilter.prototype.setValue = function (value) {
+        var _this = this;
+        var _a, _b;
+        if (!this.filterConfig.multiselection && Array.isArray(value))
+            return;
+        this.value = value;
+        this._filter.clear();
+        var item = this.filterConfig.multiselection && Array.isArray(this.value)
+            ? this.value.map(function (v) { var _a; return (_a = _this._filter.data.find(function (item) { return item.value === v; })) === null || _a === void 0 ? void 0 : _a.id; })
+            : (_a = this._filter.data.find(function (item) { return item.value === _this.value; })) === null || _a === void 0 ? void 0 : _a.id;
+        this._filter.setValue(item);
+        this.events.fire(types_1.HeaderFilterEvent.change, [this.value]);
+        (_b = this.config.events) === null || _b === void 0 ? void 0 : _b.fire(types_1.GridEvents.filterChange, [this.value, this.column.id, "comboFilter"]);
+    };
+    ComboFilter.prototype.clear = function () {
+        this.setValue("");
+    };
+    ComboFilter.prototype.focus = function () {
+        var _a;
+        this._isFocused = true;
+        ((_a = this._filter.getRootView().refs) === null || _a === void 0 ? void 0 : _a.input) && this._filter.focus();
+    };
+    ComboFilter.prototype.blur = function () {
+        var _a;
+        this._isFocused = false;
+        ((_a = this._filter.getRootView().refs) === null || _a === void 0 ? void 0 : _a.input) && this._filter.blur();
+    };
+    return ComboFilter;
+}());
+exports.ComboFilter = ComboFilter;
+
+
+/***/ }),
+/* 162 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var events_1 = __webpack_require__(3);
+var types_1 = __webpack_require__(8);
+var SelectFilter = /** @class */ (function () {
+    function SelectFilter(column, config, uniqueData, value) {
+        this.events = new events_1.EventSystem();
+        this.column = column;
+        this.config = config;
+        this.data = uniqueData;
+        this.value = value;
+        this.initHandlers();
+        this.initFilter();
+    }
+    SelectFilter.prototype.initHandlers = function () {
+        var _this = this;
+        this._handlers = {
+            onchange: function (e) {
+                var _a, _b, _c, _d;
+                var value = ((_a = e.target) === null || _a === void 0 ? void 0 : _a.value) || ((_c = (_b = e.composedPath()) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.value) || ((_d = e.explicitOriginalTarget) === null || _d === void 0 ? void 0 : _d.value);
+                _this.setValue(value);
+            },
+            onfocus: function () {
+                _this._isFocused = true;
+            },
+            onblur: function () {
+                _this._isFocused = false;
+            },
+        };
+    };
+    SelectFilter.prototype.initFilter = function () {
+        var _this = this;
+        var _a, _b, _c;
+        this._filter = dom_1.el("label.dhx_grid-filter__label.dxi.dxi-menu-down", { _ref: this.column.id + "_filter" }, [
+            dom_1.el("select.dxi.dxi-menu-down", {
+                type: "text",
+                class: "dhx_input dhx_grid-filter dhx_grid-filter--select",
+                onchange: this._handlers.onchange,
+                onfocus: this._handlers.onfocus,
+                onblur: this._handlers.onblur,
+                _key: this.column.id,
+            }, [
+                dom_1.el("option", { value: "" }, ""),
+                this.data.map(function (val) {
+                    val = val !== null && val !== void 0 ? val : "";
+                    return (val !== "" &&
+                        dom_1.el("option", {
+                            value: val,
+                            selected: _this.value === val.toString(),
+                        }, val));
+                }),
+            ]),
+        ]);
+        (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.on(types_1.GridEvents.scroll, function () {
+            var _a, _b, _c, _d;
+            var filterEl = (_d = (_c = (_b = (_a = _this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[_this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+            if (_this._isFocused && filterEl) {
+                dom_1.awaitRedraw().then(function () {
+                    filterEl.focus();
+                });
+            }
+        });
+        (_b = this.config.events) === null || _b === void 0 ? void 0 : _b.on(types_1.GridEvents.headerCellMouseDown, function (col) {
+            if (col.id !== _this.column.id)
+                _this.blur();
+        });
+        (_c = this.config.events) === null || _c === void 0 ? void 0 : _c.on(types_1.GridEvents.cellMouseDown, function () { return _this.blur(); });
+    };
+    SelectFilter.prototype.getFilter = function () {
+        return this._filter;
+    };
+    SelectFilter.prototype.setValue = function (value) {
+        var _a;
+        this.value = value;
+        this.events.fire(types_1.HeaderFilterEvent.change, [value]);
+        (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.GridEvents.filterChange, [this.value, this.column.id, "selectFilter"]);
+    };
+    SelectFilter.prototype.clear = function () {
+        this.setValue("");
+    };
+    SelectFilter.prototype.focus = function () {
+        var _a, _b, _c, _d;
+        this._isFocused = true;
+        var filterEl = (_d = (_c = (_b = (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+        if (filterEl) {
+            filterEl.focus();
+        }
+    };
+    SelectFilter.prototype.blur = function () {
+        var _a, _b, _c, _d;
+        this._isFocused = false;
+        var filterEl = (_d = (_c = (_b = (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+        if (filterEl) {
+            filterEl.blur();
+        }
+    };
+    return SelectFilter;
+}());
+exports.SelectFilter = SelectFilter;
+
+
+/***/ }),
+/* 163 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var events_1 = __webpack_require__(3);
+var types_1 = __webpack_require__(8);
+var InputFilter = /** @class */ (function () {
+    function InputFilter(column, config, id, value) {
+        this.events = new events_1.EventSystem();
+        this.column = column;
+        this.config = config;
+        this.id = id;
+        this.value = value;
+        this.initHandlers();
+        this.initFilter();
+    }
+    InputFilter.prototype.initHandlers = function () {
+        var _this = this;
+        this._handlers = {
+            onchange: function (e) {
+                var handler = function () {
+                    var _a, _b, _c, _d;
+                    var value = ((_a = e.target) === null || _a === void 0 ? void 0 : _a.value) || ((_c = (_b = e.composedPath()) === null || _b === void 0 ? void 0 : _b[0]) === null || _c === void 0 ? void 0 : _c.value) || ((_d = e.explicitOriginalTarget) === null || _d === void 0 ? void 0 : _d.value);
+                    _this.setValue(value);
+                };
+                if (_this._inputDelay) {
+                    clearTimeout(_this._inputDelay);
+                }
+                _this._inputDelay = setTimeout(handler, 500);
+            },
+            onfocus: function () {
+                _this._isFocused = true;
+            },
+            onblur: function () {
+                _this._isFocused = false;
+            },
+        };
+    };
+    InputFilter.prototype.initFilter = function () {
+        var _this = this;
+        var _a, _b, _c;
+        this._filter = dom_1.el("div.dhx_grid-filter__label.dxi.dxi-magnify", { "aria-label": "Type to search", _ref: this.column.id + "_filter" }, [
+            dom_1.el("label", {
+                style: {
+                    display: "none",
+                },
+                "aria-label": "Type to search",
+                for: this.id,
+            }, "Type to search"),
+            dom_1.el("input", {
+                type: "text",
+                class: "dhx_input dhx_grid-filter",
+                oninput: this._handlers.onchange,
+                onfocus: this._handlers.onfocus,
+                onblur: this._handlers.onblur,
+                _key: this.column.id,
+                id: this.id,
+                value: this.value || "",
+            }),
+        ]);
+        (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.on(types_1.GridEvents.scroll, function () {
+            var _a, _b, _c, _d;
+            var filterEl = (_d = (_c = (_b = (_a = _this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[_this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+            if (_this._isFocused && filterEl) {
+                dom_1.awaitRedraw().then(function () {
+                    var _a;
+                    (_a = filterEl.querySelector("input")) === null || _a === void 0 ? void 0 : _a.focus();
+                });
+            }
+        });
+        (_b = this.config.events) === null || _b === void 0 ? void 0 : _b.on(types_1.GridEvents.headerCellMouseDown, function (col) {
+            if (col.id !== _this.column.id)
+                _this.blur();
+        });
+        (_c = this.config.events) === null || _c === void 0 ? void 0 : _c.on(types_1.GridEvents.cellMouseDown, function () { return _this.blur(); });
+    };
+    InputFilter.prototype.getFilter = function () {
+        return this._filter;
+    };
+    InputFilter.prototype.setValue = function (value) {
+        var _a;
+        this.value = value;
+        this.events.fire(types_1.HeaderFilterEvent.change, [this.value]);
+        (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.fire(types_1.GridEvents.filterChange, [this.value, this.column.id, "inputFilter"]);
+    };
+    InputFilter.prototype.clear = function () {
+        this.setValue("");
+    };
+    InputFilter.prototype.focus = function () {
+        var _a, _b, _c, _d, _e;
+        this._isFocused = true;
+        var filterEl = (_d = (_c = (_b = (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+        if (filterEl) {
+            (_e = filterEl.querySelector("input")) === null || _e === void 0 ? void 0 : _e.focus();
+        }
+    };
+    InputFilter.prototype.blur = function () {
+        var _a, _b, _c, _d, _e;
+        this._isFocused = false;
+        var filterEl = (_d = (_c = (_b = (_a = this.config.events) === null || _a === void 0 ? void 0 : _a.context) === null || _b === void 0 ? void 0 : _b.getRootView()) === null || _c === void 0 ? void 0 : _c.refs[this.column.id + "_filter"]) === null || _d === void 0 ? void 0 : _d.el;
+        if (filterEl) {
+            (_e = filterEl.querySelector("input")) === null || _e === void 0 ? void 0 : _e.blur();
+        }
+    };
+    return InputFilter;
+}());
+exports.InputFilter = InputFilter;
+
+
+/***/ }),
+/* 164 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29879,12 +27873,16 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var html_1 = __webpack_require__(2);
+var render_1 = __webpack_require__(24);
 function startResize(grid, column, ev, cb) {
+    var rightSplit = grid.config.rightSplit;
     ev.targetTouches && ev.preventDefault();
     var initX = ev.targetTouches ? ev.targetTouches[0].clientX : ev.clientX;
     var columns = grid.config.columns.filter(function (col) { return !col.hidden; });
+    var rightFixedColsIds = rightSplit ? columns.slice(-rightSplit).map(function (c) { return c.id; }) : [];
+    var xInitScrollBarWidth = rightSplit ? render_1.calcScrollBarWidth(grid.config).x : null;
     var initWidth = 0;
     grid.config.$resizing = column;
     var moveHandler = function (e) {
@@ -29894,7 +27892,10 @@ function startResize(grid, column, ev, cb) {
         var currentX = e.targetTouches ? e.targetTouches[0].clientX : e.clientX;
         var containerLeft = currentX - grid.getRootNode().getBoundingClientRect().left;
         var scrollbarY = grid.config.$totalHeight > grid.config.height ? html_1.getScrollbarWidth() : 0;
-        if (grid.config.leftSplit === i + 1 && containerLeft >= grid.config.width - scrollbarY - 2) {
+        if ((grid.config.leftSplit === i + 1 && containerLeft >= grid.config.width - scrollbarY - 2) ||
+            (rightSplit &&
+                rightFixedColsIds.includes(column) &&
+                render_1.calcScrollBarWidth(grid.config).x !== xInitScrollBarWidth)) {
             return;
         }
         initWidth = initWidth || columns[i].$width;
@@ -29902,7 +27903,7 @@ function startResize(grid, column, ev, cb) {
         var maxWidth = columns[i].maxWidth;
         var move = currentX - initX;
         var cols = __spreadArrays(columns);
-        var size = initWidth + move;
+        var size = initWidth + (xInitScrollBarWidth && rightFixedColsIds.includes(column) ? -move : move);
         var final;
         if ((maxWidth && size >= maxWidth) || size <= minWidth) {
             if (size <= minWidth) {
@@ -29945,7 +27946,7 @@ exports.startResize = startResize;
 
 
 /***/ }),
-/* 170 */
+/* 165 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -29953,7 +27954,7 @@ exports.startResize = startResize;
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var html_1 = __webpack_require__(2);
-var types_1 = __webpack_require__(47);
+var types_1 = __webpack_require__(48);
 var nodeTimeout = new WeakMap();
 var containers = new Map();
 function createMessageContainer(parent, position) {
@@ -30036,24 +28037,34 @@ function message(props) {
     }
     stack.push(messageBox);
     container.appendChild(messageBox);
+    function closeMessage(fromClick) {
+        if (fromClick === void 0) { fromClick = true; }
+        if (!messageBox)
+            return;
+        onExpire(messageBox, fromClick);
+        messageBox = null;
+    }
     if (props.expire) {
-        var timeout = setTimeout(function () { return onExpire(messageBox); }, props.expire);
+        var timeout = setTimeout(function () { return closeMessage(false); }, props.expire);
         nodeTimeout.set(messageBox, timeout);
     }
-    messageBox.onclick = function () { return onExpire(messageBox, true); };
+    messageBox.onclick = function () { return closeMessage(); };
+    return {
+        close: function () { return closeMessage(); },
+    };
 }
 exports.message = message;
 
 
 /***/ }),
-/* 171 */
+/* 166 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(Promise) {
 Object.defineProperty(exports, "__esModule", { value: true });
-var en_1 = __webpack_require__(48);
-var common_1 = __webpack_require__(80);
+var en_1 = __webpack_require__(49);
+var common_1 = __webpack_require__(79);
 var core_1 = __webpack_require__(1);
 function alert(props) {
     var apply = props.buttons && props.buttons[0] ? props.buttons[0] : en_1.default.apply;
@@ -30100,17 +28111,17 @@ function alert(props) {
 }
 exports.alert = alert;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 172 */
+/* 167 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 /* WEBPACK VAR INJECTION */(function(Promise) {
 Object.defineProperty(exports, "__esModule", { value: true });
-var en_1 = __webpack_require__(48);
-var common_1 = __webpack_require__(80);
+var en_1 = __webpack_require__(49);
+var common_1 = __webpack_require__(79);
 var core_1 = __webpack_require__(1);
 function confirm(props) {
     props.buttonsAlignment = props.buttonsAlignment || "right";
@@ -30176,10 +28187,10 @@ function confirm(props) {
 }
 exports.confirm = confirm;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 173 */
+/* 168 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30196,9 +28207,9 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var types_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(8);
 var html_1 = __webpack_require__(2);
-var main_1 = __webpack_require__(16);
+var main_1 = __webpack_require__(14);
 function selectionMove(e, grid, dir, range, toEnd, ctrlUp, shiftUp) {
     if (toEnd === void 0) { toEnd = false; }
     if (ctrlUp === void 0) { ctrlUp = false; }
@@ -30438,7 +28449,7 @@ exports.getKeysHandlers = getKeysHandlers;
 
 
 /***/ }),
-/* 174 */
+/* 169 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30467,15 +28478,22 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-var Grid_1 = __webpack_require__(64);
-var types_1 = __webpack_require__(9);
+var Grid_1 = __webpack_require__(65);
+var types_1 = __webpack_require__(8);
 var ts_data_1 = __webpack_require__(4);
 var html_1 = __webpack_require__(2);
 var data_1 = __webpack_require__(23);
-var render_1 = __webpack_require__(65);
+var render_1 = __webpack_require__(24);
 var dom_1 = __webpack_require__(0);
-var ScrollView_1 = __webpack_require__(17);
+var ScrollView_1 = __webpack_require__(18);
 var ProGrid = /** @class */ (function (_super) {
     __extends(ProGrid, _super);
     function ProGrid(container, config) {
@@ -30599,6 +28617,37 @@ var ProGrid = /** @class */ (function (_super) {
             return row;
         });
     };
+    ProGrid.prototype._dragStart = function (event) {
+        if (this.config.dragMode &&
+            (this.config.dragItem === "row" || this.config.dragItem === "both") &&
+            !this.config.$editable) {
+            var column = this.getColumn(event.target.getAttribute("data-dhx-col-id"));
+            if ((column === null || column === void 0 ? void 0 : column.draggable) === false)
+                return;
+            var item = html_1.locateNode(event, "data-dhx-id");
+            var itemId = item && item.getAttribute("data-dhx-id");
+            if (event.targetTouches) {
+                this._touch.start = true;
+            }
+            var moveIds = this.selection.getCells().map(function (i) { return i.row.id; });
+            if (!moveIds.includes(itemId))
+                moveIds.push(itemId);
+            if (moveIds.length > 1) {
+                var initData = this.data.getInitialData();
+                var sort = {};
+                var _loop_1 = function (index) {
+                    var id = moveIds[index];
+                    var itemIndex = initData === null || initData === void 0 ? void 0 : initData.findIndex(function (item) { return item.id == id; });
+                    sort[itemIndex] = id;
+                };
+                for (var index = 0; index < moveIds.length; index++) {
+                    _loop_1(index);
+                }
+                moveIds = __spreadArrays(Object.values(sort));
+            }
+            return ts_data_1.dragManager.onMouseDown(event, moveIds, [this._getRowGhost(moveIds)]);
+        }
+    };
     ProGrid.prototype._lazyLoad = function () {
         var _this = this;
         var _a, _b;
@@ -30692,7 +28741,7 @@ exports.ProGrid = ProGrid;
 
 
 /***/ }),
-/* 175 */
+/* 170 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30719,7 +28768,7 @@ exports.collectionStore = dhx.collectionStore;
 
 
 /***/ }),
-/* 176 */
+/* 171 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30738,7 +28787,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var dataproxy_1 = __webpack_require__(27);
+var dataproxy_1 = __webpack_require__(28);
 var core_1 = __webpack_require__(1);
 var ajax_1 = __webpack_require__(41);
 var LazyDataProxy = /** @class */ (function (_super) {
@@ -30785,18 +28834,18 @@ var LazyDataProxy = /** @class */ (function (_super) {
 }(dataproxy_1.DataProxy));
 exports.LazyDataProxy = LazyDataProxy;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 177 */
+/* 172 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var events_1 = __webpack_require__(3);
-var types_1 = __webpack_require__(31);
-var types_2 = __webpack_require__(20);
+var types_1 = __webpack_require__(32);
+var types_2 = __webpack_require__(21);
 var Selection = /** @class */ (function () {
     function Selection(config, data, events) {
         var _this = this;
@@ -30867,7 +28916,7 @@ exports.Selection = Selection;
 
 
 /***/ }),
-/* 178 */
+/* 173 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -30908,20 +28957,20 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
-var ScrollView_1 = __webpack_require__(17);
-var view_1 = __webpack_require__(5);
+var ScrollView_1 = __webpack_require__(18);
+var view_1 = __webpack_require__(6);
 var ts_data_1 = __webpack_require__(4);
 var ts_layout_1 = __webpack_require__(10);
 var ts_message_1 = __webpack_require__(13);
-var ts_toolbar_1 = __webpack_require__(25);
-var ts_navbar_1 = __webpack_require__(19);
-var en_1 = __webpack_require__(49);
-var types_1 = __webpack_require__(36);
-var Uploader_1 = __webpack_require__(59);
-var configs_1 = __webpack_require__(192);
-var helper_1 = __webpack_require__(193);
-var ProgressBar_1 = __webpack_require__(194);
-var ReadStackPreview_1 = __webpack_require__(195);
+var ts_toolbar_1 = __webpack_require__(26);
+var ts_navbar_1 = __webpack_require__(20);
+var en_1 = __webpack_require__(50);
+var types_1 = __webpack_require__(38);
+var Uploader_1 = __webpack_require__(60);
+var configs_1 = __webpack_require__(187);
+var helper_1 = __webpack_require__(188);
+var ProgressBar_1 = __webpack_require__(189);
+var ReadStackPreview_1 = __webpack_require__(190);
 var Vault = /** @class */ (function (_super) {
     __extends(Vault, _super);
     function Vault(container, config) {
@@ -31365,7 +29414,7 @@ exports.Vault = Vault;
 
 
 /***/ }),
-/* 179 */
+/* 174 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -31400,9 +29449,9 @@ var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
 var KeyManager_1 = __webpack_require__(12);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var ts_data_1 = __webpack_require__(4);
-var types_1 = __webpack_require__(37);
+var types_1 = __webpack_require__(39);
 function addInGroups(groups, item) {
     if (groups[item.group]) {
         if (item.active) {
@@ -31462,7 +29511,6 @@ var Navbar = /** @class */ (function (_super) {
         _this._currentRoot = _this.data.getRoot();
         _this._factory = _this._getFactory();
         _this._initHandlers();
-        // this._init();
         _this._keyManager = new KeyManager_1.KeyManager(function (_, focusId) { return focusId === _this._uid; });
         _this._initEvents();
         if (Array.isArray(_this.config.data)) {
@@ -31602,10 +29650,15 @@ var Navbar = /** @class */ (function (_super) {
     };
     Navbar.prototype._init = function () {
         var _this = this;
+        var _a;
+        var parentEl = this.getRootNode();
+        var theme = (_a = parentEl === null || parentEl === void 0 ? void 0 : parentEl.closest("[data-dhx-theme]")) === null || _a === void 0 ? void 0 : _a.getAttribute("data-dhx-theme");
         var render = function () {
+            var _a;
             return dom_1.el("div", {
                 "data-dhx-widget-id": _this._uid,
-                class: (_this._isContextMenu ? " dhx_context-menu" : "") + " " + (_this.config.css
+                "data-dhx-theme": theme || "light",
+                class: "dhx_" + ((_a = _this.config) === null || _a === void 0 ? void 0 : _a.$name) + "--popup-menu " + (_this._isContextMenu ? " dhx_context-menu" : "") + " " + (_this.config.css
                     ? _this.config.css
                         .split(" ")
                         .map(function (i) { return (_this._isContextMenu ? i : i + "--popup-menu"); })
@@ -31977,23 +30030,23 @@ exports.Navbar = Navbar;
 
 
 /***/ }),
-/* 180 */
+/* 175 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var button_1 = __webpack_require__(181);
-var navItem_1 = __webpack_require__(182);
-var customHTMLButton_1 = __webpack_require__(183);
-var imageButton_1 = __webpack_require__(184);
-var input_1 = __webpack_require__(185);
-var menuItem_1 = __webpack_require__(186);
-var separator_1 = __webpack_require__(187);
-var spacer_1 = __webpack_require__(188);
-var title_1 = __webpack_require__(189);
-var datePicker_1 = __webpack_require__(190);
-var helpers_1 = __webpack_require__(32);
+var button_1 = __webpack_require__(176);
+var navItem_1 = __webpack_require__(177);
+var customHTMLButton_1 = __webpack_require__(178);
+var imageButton_1 = __webpack_require__(179);
+var input_1 = __webpack_require__(180);
+var menuItem_1 = __webpack_require__(181);
+var separator_1 = __webpack_require__(182);
+var spacer_1 = __webpack_require__(183);
+var title_1 = __webpack_require__(184);
+var datePicker_1 = __webpack_require__(185);
+var helpers_1 = __webpack_require__(33);
 function itemfactory(item, events, widgetName, props) {
     switch (item.type) {
         case "navItem":
@@ -32104,7 +30157,7 @@ exports.createFactory = createFactory;
 
 
 /***/ }),
-/* 181 */
+/* 176 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32122,7 +30175,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var helpers_1 = __webpack_require__(32);
+var helpers_1 = __webpack_require__(33);
 function button(item, widgetName) {
     var getAriaAttrs = function (item) {
         var isItemActivated = item.active || item.$activeParent;
@@ -32163,7 +30216,7 @@ exports.button = button;
 
 
 /***/ }),
-/* 182 */
+/* 177 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32181,7 +30234,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var helpers_1 = __webpack_require__(32);
+var helpers_1 = __webpack_require__(33);
 function navItem(item, widgetName, collapsed) {
     var getAriaAttrs = function (item) {
         var attrs = {
@@ -32243,7 +30296,7 @@ exports.navItem = navItem;
 
 
 /***/ }),
-/* 183 */
+/* 178 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32278,7 +30331,7 @@ exports.customHTMLButton = customHTMLButton;
 
 
 /***/ }),
-/* 184 */
+/* 179 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32296,7 +30349,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var helpers_1 = __webpack_require__(32);
+var helpers_1 = __webpack_require__(33);
 function imageButton(item, widgetName) {
     var getAriaAttrs = function (item) {
         var attrs = {
@@ -32346,14 +30399,14 @@ exports.imageButton = imageButton;
 
 
 /***/ }),
-/* 185 */
+/* 180 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(37);
+var types_1 = __webpack_require__(39);
 function onBlur(events, id) {
     events.fire(types_1.NavigationBarEvents.inputBlur, [id]);
 }
@@ -32418,7 +30471,7 @@ exports.input = input;
 
 
 /***/ }),
-/* 186 */
+/* 181 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32436,7 +30489,7 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var helpers_1 = __webpack_require__(32);
+var helpers_1 = __webpack_require__(33);
 function menuItem(item, widgetName, asMenuItem) {
     var getAriaAttrs = function (item) {
         var attrs = {
@@ -32487,7 +30540,7 @@ exports.menuItem = menuItem;
 
 
 /***/ }),
-/* 187 */
+/* 182 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32500,7 +30553,7 @@ exports.separator = separator;
 
 
 /***/ }),
-/* 188 */
+/* 183 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32513,7 +30566,7 @@ exports.spacer = spacer;
 
 
 /***/ }),
-/* 189 */
+/* 184 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32532,40 +30585,69 @@ exports.title = title;
 
 
 /***/ }),
-/* 190 */
+/* 185 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var ts_calendar_1 = __webpack_require__(35);
+var ts_calendar_1 = __webpack_require__(37);
 var ts_popup_1 = __webpack_require__(11);
-var types_1 = __webpack_require__(37);
-function onBlur(events, id) {
-    events.fire(types_1.NavigationBarEvents.inputBlur, [id]);
+var types_1 = __webpack_require__(39);
+var date_1 = __webpack_require__(15);
+function onBlur(events, item, e) {
+    var element = e.target;
+    if (element) {
+        element.value = item.$calendar.getValue();
+    }
+    events.fire(types_1.NavigationBarEvents.inputBlur, [item === null || item === void 0 ? void 0 : item.id]);
 }
-function onFocus(events, id, popup, e) {
-    dom_1.awaitRedraw().then(function () { return popup.show(e.target); });
-    events.fire(types_1.NavigationBarEvents.inputFocus, [id]);
+function onFocus(events, item, e) {
+    dom_1.awaitRedraw().then(function () { return item.$popup.show(e.target, { theme: e.target }); });
+    events.fire(types_1.NavigationBarEvents.inputFocus, [item === null || item === void 0 ? void 0 : item.id]);
+}
+function onInput(item, e) {
+    var stringDate = e.target.value;
+    var dateFormat = item.$calendar.config.dateFormat;
+    if (!stringDate.length) {
+        item.$calendar.clear();
+    }
+    else if (date_1.stringToDate(stringDate, dateFormat, true)) {
+        item.$calendar.setValue(date_1.stringToDate(stringDate, dateFormat));
+    }
+    return false;
 }
 function datePicker(item, events, widgetName) {
-    var isInit;
-    var calendar;
-    var popup;
-    if (!isInit) {
-        popup = new ts_popup_1.Popup();
-        calendar = new ts_calendar_1.Calendar(null, {
-            dateFormat: item.dateFormat || "%d/%m/%y",
-            value: item.value,
-            css: "dhx_widget--bordered",
+    if (!item.$popup) {
+        item.$popup = new ts_popup_1.Popup();
+    }
+    if (!item.$calendar) {
+        item.$calendar = new ts_calendar_1.Calendar(null, __assign(__assign({}, item), { css: "dhx_widget--bordered" }));
+        item.$popup.attach(item.$calendar);
+        item.$calendar.events.on("change", function (_date, _oldDate, byClick) {
+            var _a;
+            if (byClick && item.$popup.isVisible()) {
+                item.$popup.hide();
+            }
+            var asDate = ((_a = item.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "date";
+            events.fire(types_1.NavigationBarEvents.inputChange, [item.id, item.$calendar.getValue(asDate)]);
         });
-        popup.attach(calendar);
-        calendar.events.on("change", function () {
-            popup.hide();
-            events.fire(types_1.NavigationBarEvents.inputChange, [item.id, calendar.getValue()]);
-        });
-        isInit = true;
+    }
+    var value = item.$calendar.getValue();
+    if (item.mode && item.mode !== "calendar") {
+        item.$calendar.showDate(undefined, item.mode);
     }
     return dom_1.el(".dhx_form-group.dhx_form-group--no-message-holder" +
         (item.hiddenLabel ? ".dhx_form-group--label_sr" : ".dhx_form-group--inline") +
@@ -32589,12 +30671,13 @@ function datePicker(item, events, widgetName) {
                 id: item.id,
                 placeholder: item.placeholder,
                 class: item.icon ? "dhx_input--icon-padding" : "",
-                value: calendar.getValue(),
+                value: value,
                 disabled: item.disabled,
-                onblur: [onBlur, events, item.id],
-                onfocus: [onFocus, events, item.id, popup],
+                onblur: [onBlur, events, item],
+                onfocus: [onFocus, events, item],
+                oninput: [onInput, item],
                 "data-dhx-id": item.id,
-                readOnly: true,
+                readOnly: item.editable !== true,
                 _hooks: {
                     didInsert: function (node) {
                         if (events) {
@@ -32620,7 +30703,7 @@ exports.datePicker = datePicker;
 
 
 /***/ }),
-/* 191 */
+/* 186 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32650,8 +30733,8 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var Toolbar_1 = __webpack_require__(82);
-var ScrollView_1 = __webpack_require__(17);
+var Toolbar_1 = __webpack_require__(81);
+var ScrollView_1 = __webpack_require__(18);
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
 var ts_message_1 = __webpack_require__(13);
@@ -32717,7 +30800,7 @@ exports.ProToolbar = ProToolbar;
 
 
 /***/ }),
-/* 192 */
+/* 187 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -32748,13 +30831,13 @@ exports.layoutConfigWithoutTopbar = {
 
 
 /***/ }),
-/* 193 */
+/* 188 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var en_1 = __webpack_require__(49);
+var en_1 = __webpack_require__(50);
 var basis = ["byte", "kilobyte", "megabyte", "gigabyte"];
 function getBasis(size, current) {
     if (size === void 0) { size = 0; }
@@ -32984,7 +31067,7 @@ exports.isImage = isImage;
 
 
 /***/ }),
-/* 194 */
+/* 189 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33004,9 +31087,9 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var view_1 = __webpack_require__(5);
-var en_1 = __webpack_require__(49);
-var types_1 = __webpack_require__(36);
+var view_1 = __webpack_require__(6);
+var en_1 = __webpack_require__(50);
+var types_1 = __webpack_require__(38);
 var ProgressBar = /** @class */ (function (_super) {
     __extends(ProgressBar, _super);
     function ProgressBar(events, config) {
@@ -33056,7 +31139,7 @@ exports.ProgressBar = ProgressBar;
 
 
 /***/ }),
-/* 195 */
+/* 190 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33109,7 +31192,7 @@ exports.ReadStackPreview = ReadStackPreview;
 
 
 /***/ }),
-/* 196 */
+/* 191 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33138,20 +31221,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
-var view_1 = __webpack_require__(5);
+var view_1 = __webpack_require__(6);
 var core_1 = __webpack_require__(1);
-var color_1 = __webpack_require__(51);
-var colors_1 = __webpack_require__(83);
-var en_1 = __webpack_require__(52);
-var types_1 = __webpack_require__(84);
+var color_1 = __webpack_require__(52);
+var colors_1 = __webpack_require__(82);
+var en_1 = __webpack_require__(53);
+var types_1 = __webpack_require__(83);
 // tslint:disable-next-line
-var tooltip_1 = __webpack_require__(81);
+var tooltip_1 = __webpack_require__(80);
 // tslint:disable-next-line
 var ts_message_1 = __webpack_require__(13);
-var picker_1 = __webpack_require__(197);
-var calculations_1 = __webpack_require__(198);
+var picker_1 = __webpack_require__(192);
+var calculations_1 = __webpack_require__(193);
 var KeyManager_1 = __webpack_require__(12);
-var FocusManager_1 = __webpack_require__(18);
+var FocusManager_1 = __webpack_require__(19);
 var core_2 = __webpack_require__(1);
 var Colorpicker = /** @class */ (function (_super) {
     __extends(Colorpicker, _super);
@@ -33178,7 +31261,10 @@ var Colorpicker = /** @class */ (function (_super) {
             _this.paint();
         };
         _this._onColorClick = function (_e, node) {
-            _this._selected = node.data.color.toUpperCase();
+            var color = node.data.color.toUpperCase();
+            if (!_this.events.fire(types_1.ColorpickerEvents.beforeChange, [color]))
+                return;
+            _this._selected = color;
             _this.events.fire(types_1.ColorpickerEvents.change, [_this._selected]);
             _this.events.fire(types_1.ColorpickerEvents.colorChange, [_this._selected]); // TODO: remove suite_7.0
         };
@@ -33217,13 +31303,16 @@ var Colorpicker = /** @class */ (function (_super) {
         this.unmount();
     };
     Colorpicker.prototype.clear = function () {
+        if (!this.events.fire(types_1.ColorpickerEvents.beforeChange, [""]))
+            return;
         this._selected = "";
         this.events.fire(types_1.ColorpickerEvents.change, [this._selected]);
         this.paint();
     };
     Colorpicker.prototype.setValue = function (value) {
+        if (!this.events.fire(types_1.ColorpickerEvents.beforeChange, [value]))
+            return;
         if (this._focusColor(value) || FocusManager_1.focusManager.getFocusId() === this._uid) {
-            this.paint();
             this.events.fire(types_1.ColorpickerEvents.change, [this._selected]);
             this.events.fire(types_1.ColorpickerEvents.colorChange, [this._selected]); // TODO: remove suite_7.0
         }
@@ -33468,7 +31557,10 @@ var Colorpicker = /** @class */ (function (_super) {
         var handlers = {
             enter: function (e) {
                 if (html_1.locateNodeByClassName(e, "dhx_palette__cell")) {
-                    _this._selected = core_2.rgbToHex(e.target.style.background);
+                    var color = core_2.rgbToHex(e.target.style.background);
+                    if (!_this.events.fire(types_1.ColorpickerEvents.beforeChange, [color]))
+                        return;
+                    _this._selected = color;
                     _this.events.fire(types_1.ColorpickerEvents.change, [_this._selected]);
                     _this.events.fire(types_1.ColorpickerEvents.colorChange, [_this._selected]); // TODO: remove suite_7.0
                 }
@@ -33487,15 +31579,15 @@ exports.Colorpicker = Colorpicker;
 
 
 /***/ }),
-/* 197 */
+/* 192 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var color_1 = __webpack_require__(51);
+var color_1 = __webpack_require__(52);
 var dom_1 = __webpack_require__(0);
-var en_1 = __webpack_require__(52);
+var en_1 = __webpack_require__(53);
 function getPicker(colorpicker, pickerState, handlers) {
     var rgb = color_1.HSVtoRGB(pickerState.hsv);
     pickerState.background = color_1.RGBToHex(rgb);
@@ -33589,7 +31681,7 @@ exports.calculatePaletteGrip = calculatePaletteGrip;
 
 
 /***/ }),
-/* 198 */
+/* 193 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33620,371 +31712,7 @@ exports.calculateRangeGrip = calculateRangeGrip;
 
 
 /***/ }),
-/* 199 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-function __export(m) {
-    for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
-}
-Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(200));
-__export(__webpack_require__(26));
-
-
-/***/ }),
-/* 200 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var events_1 = __webpack_require__(3);
-var view_1 = __webpack_require__(5);
-var ts_data_1 = __webpack_require__(4);
-var ComposeLayer_1 = __webpack_require__(201);
-var Legend_1 = __webpack_require__(203);
-var types_1 = __webpack_require__(26);
-var index_1 = __webpack_require__(205);
-var index_2 = __webpack_require__(209);
-var Stacker_1 = __webpack_require__(219);
-var common_1 = __webpack_require__(7);
-var Tooltip_1 = __webpack_require__(220);
-var core_1 = __webpack_require__(1);
-var Chart = /** @class */ (function (_super) {
-    __extends(Chart, _super);
-    function Chart(node, config) {
-        if (config === void 0) { config = {}; }
-        var _this = _super.call(this, null, config) || this;
-        // using zero values ensure that widget will not attempt to render self in the hidden state
-        _this._width = 0;
-        _this._height = 0;
-        _this._left = 0;
-        _this._top = 0;
-        var dataConfig = {};
-        if (config.maxPoints) {
-            dataConfig.approximate = {
-                value: config.series.map(function (a) { return a.value; }),
-                maxNum: config.maxPoints,
-            };
-        }
-        if (Array.isArray(config.data)) {
-            _this.events = new events_1.EventSystem(_this);
-            _this.data =
-                config.type === "treeMap"
-                    ? new ts_data_1.TreeCollection(dataConfig, _this.events)
-                    : new ts_data_1.DataCollection(dataConfig, _this.events);
-            _this.data.parse(config.data);
-        }
-        else if (config.data && config.data.events) {
-            _this.data = config.data;
-            _this.events = _this.data.events;
-            _this.events.context = _this;
-        }
-        else {
-            _this.events = new events_1.EventSystem(_this);
-            _this.data =
-                config.type === "treeMap"
-                    ? new ts_data_1.TreeCollection(dataConfig, _this.events)
-                    : new ts_data_1.DataCollection(dataConfig, _this.events);
-        }
-        _this._globalHTMLHandlers = {
-            onmousemove: function (e) {
-                var _a = _this._layers.getSizes(), left = _a.left, top = _a.top, bottom = _a.bottom, right = _a.right;
-                var pageX = e.pageX, pageY = e.pageY;
-                var rects = _this.getRootView().node.el.getBoundingClientRect();
-                _this._left = rects.left + window.pageXOffset;
-                _this._top = rects.top + window.pageYOffset;
-                var x = pageX - left - _this._left;
-                var y = pageY - top - _this._top;
-                if (x >= 0 && x <= _this._width - right - left && y >= 0 && y <= _this._height - bottom - top) {
-                    _this.events.fire(types_1.ChartEvents.chartMouseMove, [x, y, _this._left + left, _this._top + top]);
-                }
-                else {
-                    _this.events.fire(types_1.ChartEvents.chartMouseLeave);
-                }
-            },
-            onmouseleave: function () { return _this.events.fire(types_1.ChartEvents.chartMouseLeave); },
-        };
-        _this._layers = new ComposeLayer_1.ComposeLayer();
-        _this.setConfig(config);
-        _this._initEvents();
-        _this._tooltip = new Tooltip_1.Tooltip(_this);
-        var render = function () {
-            if (!_this.data.getLength()) {
-                return dom_1.el("div");
-            }
-            var getChartAriaLabel = function (config) {
-                /*  Full example (without symbols of new line):
-                    Type chart "Title". X/Y Scale Name: bottom axis from Min to Max. Scale Name: left axis Name from Min to Max.
-                    Series: seria A, seria B, seria C, ...
-                 */
-                var scales = _this._scales;
-                var series = config.series;
-                var type = config.type;
-                if (!type) {
-                    // scatter chart
-                    type = series && series.length && series[0] ? series[0].type || "" : "";
-                }
-                var label = (type || "") + " chart.";
-                var getAxisName = function (cfg) { return (cfg._isXDirection ? "X" : "Y"); };
-                var getAxisTitle = function (cfg) { return cfg.title || cfg.text || cfg.value || ""; };
-                var getAxisMin = function (cfg) { return (cfg.steps && cfg.steps.length ? cfg.steps[0] : cfg.min || 0); };
-                var getAxisMax = function (cfg) {
-                    return cfg.steps && cfg.steps.length
-                        ? cfg.steps[cfg.steps.length - 1]
-                        : cfg.max || cfg.maxPoints || "max";
-                };
-                var getRadialAxisValue = function (attr, point) { return point[attr]; };
-                if (scales) {
-                    Object.keys(scales).forEach(function (direction) {
-                        var scale = scales[direction];
-                        var cfg = scale._axis || scale.config;
-                        if (direction === "radial") {
-                            var xData = scale._data._order;
-                            label += " X scale " + getAxisTitle(scale.config) + ": " + direction + " axis from " + getRadialAxisValue(scale.config.value, xData[0]) + " to " + getRadialAxisValue(scale.config.value, xData[xData.length - 1]) + ".";
-                            label += " " + getAxisName(scale) + " scale: axis from " + getAxisMin(cfg) + " to " + getAxisMax(cfg) + ".";
-                        }
-                        else {
-                            label += " " + getAxisName(scale) + " scale " + getAxisTitle(scale.config) + ": " + direction + " axis from " + getAxisMin(cfg) + " to " + getAxisMax(cfg) + ".";
-                        }
-                    });
-                }
-                if (series && series.length) {
-                    label += " Series:";
-                    series.forEach(function (seria, index) {
-                        label += " " + (type === "pie" || type === "pie3D" || type === "donut" ? seria.text : seria.value);
-                        label += index === series.length - 1 ? "." : ",";
-                    });
-                }
-                return label;
-            };
-            var getChartAriaAttrs = function (config) { return ({
-                "aria-label": getChartAriaLabel(config),
-            }); };
-            var content = [
-                dom_1.resizer(function (x, y) {
-                    _this._width = x;
-                    _this._height = y || 400; // if height is not provided, use default value
-                    var view = _this.getRootView();
-                    if (view && view.node && view.node.el) {
-                        var rects = view.node.el.getBoundingClientRect();
-                        _this._left = rects.left + window.pageXOffset;
-                        _this._top = rects.top + window.pageYOffset;
-                    }
-                    _this.events.fire(types_1.ChartEvents.resize, [_this._width, _this._height]);
-                    _this.paint();
-                    if (!document.querySelector(".dhx_widget.dhx_chart") && _this._tooltip) {
-                        _this._tooltip.destructor();
-                    }
-                }),
-            ];
-            if (_this._width && _this._height) {
-                content.push(_this._layers.toVDOM(_this._width, _this._height));
-            }
-            return dom_1.el(".dhx_widget.dhx_chart", __assign(__assign({ class: config.css ? config.css : "", onmousemove: _this._globalHTMLHandlers.onmousemove, onmouseleave: _this._globalHTMLHandlers.onmouseleave }, getChartAriaAttrs(config)), { tabIndex: 0 }), content);
-        };
-        var view = dom_1.create({
-            render: render,
-            hooks: {
-                didMount: function (vm) {
-                    if (vm && vm.node && vm.node.parent && vm.node.parent.el) {
-                        _this._width = vm.node.parent.el.offsetWidth;
-                        _this._height = vm.node.parent.el.offsetHeight || 400;
-                        _this.paint();
-                    }
-                },
-            },
-        });
-        _this.mount(node, view);
-        return _this;
-    }
-    Chart.prototype.getSeries = function (key) {
-        return this._series[key];
-    };
-    Chart.prototype.eachSeries = function (handler) {
-        var result = [];
-        for (var key in this._series) {
-            result.push(handler.call(this, this._series[key]));
-        }
-        return result;
-    };
-    Chart.prototype.destructor = function () {
-        this._tooltip.destructor();
-        this.events.clear();
-        this.unmount();
-    };
-    Chart.prototype.setConfig = function (config) {
-        var _this = this;
-        this.config = config;
-        this._layers.clear();
-        this._series = {};
-        this._scales = {};
-        var min;
-        // let baseLine;
-        if (config.scales) {
-            for (var key in config.scales) {
-                var scale = __assign({}, config.scales[key]);
-                if (config.scales[key].min !== undefined) {
-                    min = config.scales[key].min;
-                }
-                scale.type = scale.type || this._detectScaleType(scale, key);
-                if (config.scales.radial && key !== "radial") {
-                    scale.hidden = true;
-                }
-                this._setScale(scale, key);
-            }
-        }
-        var stack = new Stacker_1.default();
-        this._layers.add(stack);
-        config.series.forEach(function (cfg, ind) {
-            if (cfg.baseLine !== undefined && cfg.baseLine < min) {
-                cfg.baseLine = undefined;
-            }
-            var serieConfig = __assign({}, cfg);
-            serieConfig.type = serieConfig.type || config.type;
-            switch (serieConfig.type) {
-                case "bar":
-                case "xbar":
-                case "area":
-                case "splineArea":
-                    if (!serieConfig.color)
-                        serieConfig.color = serieConfig.fill || common_1.getDefaultColor(ind);
-                    if (!serieConfig.fill)
-                        serieConfig.fill = serieConfig.color || common_1.getDefaultColor(ind);
-                    break;
-                case "treeMap":
-                    serieConfig.legendType = config.legend.type || "groupName";
-                    config.legend.treeSeries.map(function (serie, index) {
-                        var _a, _b;
-                        serie.active = (_a = serie.active) !== null && _a !== void 0 ? _a : true;
-                        serie.id = (_b = serie.id) !== null && _b !== void 0 ? _b : core_1.uid();
-                        if (!serie.color)
-                            serie.color = common_1.getDefaultColor(index, serieConfig.legendType === "range");
-                    });
-                    serieConfig.treeSeries = config.legend.treeSeries;
-                    break;
-                case "radar":
-                case "scatter":
-                    if (!serieConfig.pointColor)
-                        serieConfig.pointColor = serieConfig.color || common_1.getDefaultColor(ind);
-                    break;
-            }
-            var chartFactory = index_2.default[serieConfig.type];
-            if (serieConfig.barWidth || _this.config.barWidth) {
-                serieConfig.barWidth = serieConfig.barWidth || _this.config.barWidth;
-            }
-            var chart = new chartFactory(_this.data, serieConfig, _this.events);
-            var scales = common_1.getScales(config.scales);
-            var chartScales = scales.length > 1 && scales[0] !== "radial"
-                ? scales
-                : scales[0] === "radial"
-                    ? scales
-                    : ["bottom", "left"];
-            chartScales.forEach(function (type) {
-                var scale = _this._scales[type];
-                if (!scale) {
-                    return;
-                }
-                chart.addScale(type, scale);
-                if (!serieConfig.stacked) {
-                    scale.add(chart);
-                }
-                else {
-                    scale.add(stack);
-                }
-            });
-            _this._series[chart.id] = chart;
-            if (serieConfig.stacked) {
-                stack.add(chart);
-            }
-            else {
-                _this._layers.add(chart);
-            }
-        });
-        if (config.legend) {
-            var legendConfig = __assign({}, config.legend);
-            if (legendConfig.series) {
-                legendConfig.$seriesInfo = legendConfig.series.map(function (id) { return _this._series[id]; });
-            }
-            var legend = new Legend_1.Legend(this.data, legendConfig, this.events);
-            this._layers.add(legend);
-        }
-        this.paint();
-    };
-    Chart.prototype._setScale = function (config, position) {
-        var scale = new index_1.default[config.type](this.data, config, position);
-        if (scale.config.type !== "radial") {
-            this._layers.add(scale.scaleGrid());
-        }
-        this._layers.add(scale);
-        this._scales[position] = scale;
-    };
-    Chart.prototype._detectScaleType = function (config, key) {
-        if (key === "radial") {
-            return key;
-        }
-        if (config.text) {
-            return "text";
-        }
-        return "numeric";
-    };
-    Chart.prototype._initEvents = function () {
-        var _this = this;
-        // hide/show series on legend click
-        this.events.on(types_1.ChartEvents.toggleSeries, function (id, pieLike) {
-            if (_this.config.type === "treeMap") {
-                Object.values(_this._series)[0].toggle(id);
-                _this.paint();
-            }
-            else if (pieLike) {
-                var serie = _this._series[Object.keys(_this._series)[0]];
-                if (serie) {
-                    serie.toggle(id);
-                    _this.paint();
-                }
-            }
-            else if (_this._series[id]) {
-                _this._series[id].toggle();
-                _this.paint();
-            }
-        }, this);
-        // repaint on data change
-        this.events.on(ts_data_1.DataEvents.change, function () { return _this.paint(); });
-    };
-    return Chart;
-}(view_1.View));
-exports.Chart = Chart;
-
-
-/***/ }),
-/* 201 */
+/* 194 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -33998,7 +31726,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var Filters_1 = __webpack_require__(202);
+var Filters_1 = __webpack_require__(195);
 var ComposeLayer = /** @class */ (function () {
     function ComposeLayer() {
         this._data = [];
@@ -34063,7 +31791,7 @@ exports.ComposeLayer = ComposeLayer;
 
 
 /***/ }),
-/* 202 */
+/* 195 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34107,284 +31835,7 @@ exports.dropShadow = function () {
 
 
 /***/ }),
-/* 203 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-var ts_data_1 = __webpack_require__(4);
-var types_1 = __webpack_require__(26);
-var dom_1 = __webpack_require__(0);
-var common_1 = __webpack_require__(7);
-var legend_1 = __webpack_require__(204);
-function getDefaultMargin(halign, valign, isTreeMap) {
-    switch (valign) {
-        case "middle": {
-            switch (halign) {
-                case "right":
-                    return isTreeMap ? 20 : 60;
-                case "left":
-                    return 120;
-                case "center":
-                    throw new Error("cant place legend on center, middle");
-            }
-        }
-        // eslint-disable-next-line no-fallthrough
-        case "top":
-            return 20;
-        case "bottom":
-            return isTreeMap ? 20 : 60;
-    }
-}
-var Legend = /** @class */ (function () {
-    function Legend(_data, config, _events) {
-        var _this = this;
-        this._data = _data;
-        this._events = _events;
-        var defaults = {
-            form: "rect",
-            itemPadding: 20,
-            halign: "right",
-            valign: "top",
-            direction: "row",
-            type: "groupName",
-        };
-        this.config = __assign(__assign({}, defaults), config);
-        this.config.margin =
-            config.margin ||
-                getDefaultMargin(this.config.halign, this.config.valign, ts_data_1.isTreeCollection(this._data));
-        this._handlers = {
-            onclick: function (id, pieLike) {
-                return _this._events.fire(types_1.ChartEvents.toggleSeries, [id, pieLike]);
-            },
-            onkeyup: function (id, pieLike, event) {
-                // FIXME: set handler correctly according app code style
-                event.preventDefault();
-                // enter or space
-                if (event.key === "Enter" || event.key === " ") {
-                    _this._events.fire(types_1.ChartEvents.toggleSeries, [id, pieLike]);
-                }
-            },
-        };
-    }
-    Legend.prototype.scaleReady = function (sizes) {
-        var isColumnInCorner = this.config.direction === "column" &&
-            (this.config.halign === "left" || this.config.halign === "right");
-        switch (this.config.valign) {
-            case "middle":
-                if (this.config.halign === "right") {
-                    sizes.right += this.config.size >= 0 ? this.config.size : 200;
-                }
-                else if (this.config.halign === "left") {
-                    sizes.left += this.config.size >= 0 ? this.config.size : 200;
-                }
-                break;
-            case "top":
-                if (isColumnInCorner) {
-                    sizes[this.config.halign] += this.config.size >= 0 ? this.config.size : 200;
-                }
-                else {
-                    sizes.top += this.config.size >= 0 ? this.config.size : 40;
-                }
-                break;
-            case "bottom":
-                if (isColumnInCorner) {
-                    sizes[this.config.halign] += this.config.size >= 0 ? this.config.size : 200;
-                }
-                else {
-                    sizes.bottom += this.config.size >= 0 ? this.config.size : 40;
-                }
-                break;
-        }
-    };
-    Legend.prototype.paint = function (width, height) {
-        var _this = this;
-        var getLegendAriaAttrs = function (item) { return ({
-            role: "button",
-            "aria-label": item.active ? "Hide chart " + item.text : "Show chart " + item.text,
-        }); };
-        var data = this._getData();
-        var config = this.config;
-        config.$sizes = {
-            width: 0,
-            height: 0,
-        };
-        var positionX;
-        var positionY;
-        var font = common_1.getFontStyle("legend-text");
-        var figureWidth = 10; // get Figure width from config ??
-        var margin = config.margin, itemPadding = config.itemPadding;
-        var svg = [];
-        var isMid = config.valign === "middle";
-        var xPadding = 0;
-        var yPadding = 0;
-        var xPaddingMax = 0;
-        var yPaddingMax = 0;
-        data.forEach(function (item, index) {
-            if (!isMid && config.direction === "row") {
-                var textWidth = common_1.getTextWidth(item.text, font);
-                if (xPadding + textWidth + figureWidth * 1.5 > width && index !== 0) {
-                    xPadding = 0;
-                    yPadding += itemPadding + 2;
-                }
-            }
-            svg.push(dom_1.sv("g", __assign(__assign({ transform: "translate(" + xPadding + "," + yPadding + ")", onclick: [_this._handlers.onclick, item.id, _this.config.values], onkeyup: [_this._handlers.onkeyup, item.id, _this.config.values], class: "legend-item " + (!item.active ? "not-active" : "") }, getLegendAriaAttrs(item)), { tabindex: 0 }), [
-                dom_1.sv("text", {
-                    x: figureWidth / 2 + 5,
-                    y: 0,
-                    class: "start-text legend-text",
-                }, [common_1.verticalCenteredText(item.text)]),
-                legend_1.legendShape(config.form, item),
-            ]));
-            var itemWidth = figureWidth * 1.5 + common_1.getTextWidth(item.text, font);
-            if (!isMid && config.direction === "row") {
-                xPadding += itemWidth + itemPadding;
-                xPaddingMax = xPaddingMax > xPadding ? xPaddingMax : xPadding;
-            }
-            else {
-                xPadding = 0;
-                xPaddingMax = xPaddingMax > itemWidth ? xPaddingMax : itemWidth;
-                yPadding += itemPadding + 2;
-                yPaddingMax = yPaddingMax > yPadding ? yPaddingMax : yPadding;
-            }
-        });
-        switch (config.valign) {
-            case "top":
-                if (config.direction === "row") {
-                    positionY = -margin - yPadding - figureWidth / 2;
-                }
-                else {
-                    positionY =
-                        config.halign === "center"
-                            ? -yPaddingMax + figureWidth / 2
-                            : margin + figureWidth / 2;
-                }
-                break;
-            case "middle":
-                positionY = (height - yPaddingMax) / 2 + itemPadding / 2;
-                break;
-            case "bottom":
-                if (config.direction === "row") {
-                    positionY = height + margin;
-                }
-                else {
-                    positionY =
-                        height + figureWidth - (config.halign === "center" ? 0 : margin + yPaddingMax);
-                }
-                break;
-        }
-        switch (config.halign) {
-            case "left":
-                positionX = isMid
-                    ? -xPaddingMax
-                    : figureWidth / 2 - (config.direction === "row" ? 0 : config.size || 200);
-                break;
-            case "center":
-                positionX = (width - xPaddingMax) / 2;
-                break;
-            case "right":
-                if (isMid) {
-                    positionX = width + margin + figureWidth / 2;
-                }
-                else if (config.direction === "row") {
-                    positionX = width - xPaddingMax + itemPadding + figureWidth / 2;
-                }
-                else {
-                    positionX = width + margin + figureWidth / 2;
-                }
-                break;
-        }
-        return dom_1.sv("g", {
-            transform: "translate(" + positionX + ", " + positionY + ")",
-            "aria-label": "Legend",
-            tabindex: 0,
-        }, svg);
-    };
-    Legend.prototype._getData = function () {
-        var drawData = [];
-        if (this.config.values) {
-            var text_1 = common_1.locator(this.config.values.text);
-            var fill_1 = common_1.locator(this.config.values.color);
-            this._data.map(function (item, index) {
-                drawData.push({
-                    id: item.id,
-                    text: text_1(item).toString(),
-                    alpha: 1,
-                    fill: fill_1(item).toString() || common_1.getDefaultColor(index),
-                    active: !item.$hidden,
-                });
-            });
-        }
-        else if (this.config.treeSeries) {
-            var series = this.config.treeSeries;
-            if (this.config.type === "groupName") {
-                series.forEach(function (serie) {
-                    drawData.push({
-                        id: serie.id,
-                        text: serie.name || serie.id,
-                        alpha: 1,
-                        fill: serie.color,
-                        active: serie.active,
-                    });
-                });
-            }
-            else {
-                var getText_1 = function (serie) {
-                    if (serie.from && serie.to)
-                        return serie.from + " - " + serie.to;
-                    if (serie.less)
-                        return "<= " + serie.less;
-                    if (serie.greater)
-                        return ">= " + serie.greater;
-                };
-                series.forEach(function (serie) {
-                    drawData.push({
-                        id: serie.id,
-                        text: getText_1(serie),
-                        alpha: 1,
-                        fill: serie.color,
-                        active: serie.active,
-                    });
-                });
-            }
-        }
-        else {
-            var series = this.config.$seriesInfo;
-            for (var _i = 0, series_1 = series; _i < series_1.length; _i++) {
-                var serie = series_1[_i];
-                var seriaConfig = serie.config;
-                var useColor = seriaConfig.fill && seriaConfig.color;
-                drawData.push({
-                    id: seriaConfig.id,
-                    text: seriaConfig.name || seriaConfig.value,
-                    alpha: seriaConfig.alpha,
-                    fill: seriaConfig.fill || seriaConfig.color,
-                    color: useColor && seriaConfig.color,
-                    active: seriaConfig.active,
-                });
-            }
-        }
-        return drawData;
-    };
-    return Legend;
-}());
-exports.Legend = Legend;
-
-
-/***/ }),
-/* 204 */
+/* 196 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34392,12 +31843,14 @@ exports.Legend = Legend;
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var figureWidth = 10;
+var figureSize = 10;
+var lineHeight = 16;
+var scaleLen = 500;
 var forms = {
     circle: function (color, fill, fillOpacity) {
         return dom_1.sv("circle", {
             id: core_1.uid(),
-            r: figureWidth / 2,
+            r: figureSize / 2,
             fill: fill,
             class: "figure " + (color !== "none" ? "with-stroke" : ""),
             "stroke-width": 2,
@@ -34411,34 +31864,102 @@ var forms = {
             id: core_1.uid(),
             fill: fill,
             "fill-opacity": fillOpacity,
-            width: figureWidth,
+            width: figureSize,
             "stroke-width": 2,
-            height: figureWidth,
+            height: figureSize,
             class: "figure " + (color !== "none" ? "with-stroke" : ""),
             stroke: color,
-            transform: "translate(" + -figureWidth / 2 + ", " + -figureWidth / 2 + ")",
+            transform: "translate(" + -figureSize / 2 + ", " + -figureSize / 2 + ")",
         });
+    },
+    line: function (color, fill, fillOpacity, middle) {
+        var getStopPoint = function (color, percent, value) {
+            return dom_1.sv("stop", { offset: percent + "%", "stop-color": color, class: color ? "" : value });
+        };
+        var linearId = "lg" + core_1.uid();
+        var gradientFill = dom_1.sv("linearGradient", {
+            id: linearId,
+        }, [
+            getStopPoint(color[1], 0, "heat-negative"),
+            getStopPoint(fill, middle, "heat-neutral"),
+            getStopPoint(color[0], 100, "heat-positive"),
+        ]);
+        var line = dom_1.sv("rect", {
+            id: core_1.uid(),
+            y: lineHeight,
+            fill: "url(#" + linearId + ")",
+            "fill-opacity": fillOpacity,
+            width: scaleLen,
+            "stroke-width": 2,
+            height: lineHeight,
+            class: "figure figure-line",
+            stroke: color,
+        });
+        return dom_1.sv("g", {
+            id: core_1.uid(),
+            width: scaleLen,
+            height: lineHeight,
+        }, [gradientFill, line]);
     },
 };
 function legendShape(form, item) {
+    var legendForm;
     if (typeof form === "string") {
-        form = forms[form];
+        legendForm = forms[form];
     }
-    return form(item.color || "none", item.fill, item.alpha || 1);
+    return legendForm(form === "line" ? [item.positiveColor, item.negativeColor] : item.color || "none", item.fill, item.alpha || 1, form === "line" && item.minValue < 0
+        ? (Math.abs(item.minValue) * 100) / (item.maxValue - item.minValue)
+        : 0);
 }
 exports.legendShape = legendShape;
+function legendTicks(form, item) {
+    if (form !== "line" || isNaN(item.maxValue) || isNaN(item.minValue)) {
+        return;
+    }
+    var maxValue = item.maxValue, minValue = item.minValue, step = item.step, tick = item.tick, majorTick = item.majorTick, tickTemplate = item.tickTemplate;
+    var tickValue = tick || 10;
+    var ticksCount = (maxValue - minValue) / tickValue;
+    var ticks = [];
+    for (var index = 0; index <= Math.ceil(ticksCount / (step || 1)); index++) {
+        var value = (item.minValue + tickValue * (step || 1) * index).toFixed();
+        ticks.push(value > item.maxValue ? item.maxValue : value);
+    }
+    ticks = ticks.map(function (tick, index, arr) {
+        var text = (index % (majorTick || 1) === 0 || index === arr.length - 1) &&
+            dom_1.sv("text", {
+                x: index === arr.length - 1
+                    ? scaleLen - 0.5
+                    : ((index * scaleLen) / ticksCount) * (step || 1) - 0.5,
+                y: lineHeight * 2 + 2,
+            }, tickTemplate ? tickTemplate(tick) : tick);
+        var degree = dom_1.sv("rect", {
+            x: index === arr.length - 1
+                ? scaleLen - 0.5
+                : ((index * scaleLen) / ticksCount) * (step || 1) - 0.5,
+            y: lineHeight + 2,
+            width: 1,
+            height: 4,
+        });
+        return dom_1.sv("g", {
+            transform: "translate(0, " + lineHeight + ")",
+            class: "legend-tick",
+        }, [text, degree]);
+    });
+    return ticks;
+}
+exports.legendTicks = legendTicks;
 
 
 /***/ }),
-/* 205 */
+/* 197 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var RadialScale_1 = __webpack_require__(206);
-var Scale_1 = __webpack_require__(53);
-var TextScale_1 = __webpack_require__(208);
+var RadialScale_1 = __webpack_require__(198);
+var Scale_1 = __webpack_require__(54);
+var TextScale_1 = __webpack_require__(200);
 var scaleTypes = {
     radial: RadialScale_1.RadialScale,
     text: TextScale_1.TextScale,
@@ -34448,7 +31969,7 @@ exports.default = scaleTypes;
 
 
 /***/ }),
-/* 206 */
+/* 198 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34467,8 +31988,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var circle_1 = __webpack_require__(33);
-var Scale_1 = __webpack_require__(53);
+var circle_1 = __webpack_require__(34);
+var Scale_1 = __webpack_require__(54);
 var RadialScale = /** @class */ (function (_super) {
     __extends(RadialScale, _super);
     function RadialScale(_data, config) {
@@ -34496,7 +32017,7 @@ exports.RadialScale = RadialScale;
 
 
 /***/ }),
-/* 207 */
+/* 199 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34520,7 +32041,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var common_1 = __webpack_require__(7);
+var common_1 = __webpack_require__(5);
 var allowedBases = [1, 2, 3, 5, 10];
 var AxisCreator = /** @class */ (function () {
     function AxisCreator(_data, conf) {
@@ -34602,7 +32123,7 @@ exports.AxisCreator = AxisCreator;
 
 
 /***/ }),
-/* 208 */
+/* 200 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34632,9 +32153,9 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var common_1 = __webpack_require__(7);
-var Scale_1 = __webpack_require__(53);
-var SvgScales_1 = __webpack_require__(85);
+var common_1 = __webpack_require__(5);
+var Scale_1 = __webpack_require__(54);
+var SvgScales_1 = __webpack_require__(87);
 var renderScale = {
     left: SvgScales_1.left,
     right: SvgScales_1.right,
@@ -34732,43 +32253,7 @@ exports.TextScale = TextScale;
 
 
 /***/ }),
-/* 209 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-Object.defineProperty(exports, "__esModule", { value: true });
-var Area_1 = __webpack_require__(86);
-var Bar_1 = __webpack_require__(88);
-var BarX_1 = __webpack_require__(210);
-var Donut_1 = __webpack_require__(211);
-var Line_1 = __webpack_require__(56);
-var Pie_1 = __webpack_require__(212);
-var Pie3D_1 = __webpack_require__(213);
-var Radar_1 = __webpack_require__(214);
-var Scatter_1 = __webpack_require__(215);
-var Spline_1 = __webpack_require__(216);
-var SplineArea_1 = __webpack_require__(217);
-var TreeMap_1 = __webpack_require__(218);
-var seriesTypes = {
-    line: Line_1.default,
-    spline: Spline_1.default,
-    area: Area_1.default,
-    splineArea: SplineArea_1.default,
-    scatter: Scatter_1.default,
-    pie: Pie_1.default,
-    pie3D: Pie3D_1.default,
-    donut: Donut_1.default,
-    radar: Radar_1.default,
-    bar: Bar_1.default,
-    xbar: BarX_1.default,
-    treeMap: TreeMap_1.default,
-};
-exports.default = seriesTypes;
-
-
-/***/ }),
-/* 210 */
+/* 201 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34787,7 +32272,7 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Bar_1 = __webpack_require__(88);
+var Bar_1 = __webpack_require__(91);
 var BarX = /** @class */ (function (_super) {
     __extends(BarX, _super);
     function BarX() {
@@ -34854,7 +32339,7 @@ exports.default = BarX;
 
 
 /***/ }),
-/* 211 */
+/* 202 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -34885,9 +32370,9 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var circle_1 = __webpack_require__(33);
-var common_1 = __webpack_require__(7);
-var NoScaleSeria_1 = __webpack_require__(55);
+var circle_1 = __webpack_require__(34);
+var common_1 = __webpack_require__(5);
+var NoScaleSeria_1 = __webpack_require__(56);
 var Donut = /** @class */ (function (_super) {
     __extends(Donut, _super);
     function Donut() {
@@ -35099,7 +32584,7 @@ exports.default = Donut;
 
 
 /***/ }),
-/* 212 */
+/* 203 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35131,9 +32616,9 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var circle_1 = __webpack_require__(33);
-var common_1 = __webpack_require__(7);
-var NoScaleSeria_1 = __webpack_require__(55);
+var circle_1 = __webpack_require__(34);
+var common_1 = __webpack_require__(5);
+var NoScaleSeria_1 = __webpack_require__(56);
 var Pie = /** @class */ (function (_super) {
     __extends(Pie, _super);
     function Pie() {
@@ -35376,7 +32861,7 @@ exports.default = Pie;
 
 
 /***/ }),
-/* 213 */
+/* 204 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35407,9 +32892,9 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var circle_1 = __webpack_require__(33);
-var common_1 = __webpack_require__(7);
-var NoScaleSeria_1 = __webpack_require__(55);
+var circle_1 = __webpack_require__(34);
+var common_1 = __webpack_require__(5);
+var NoScaleSeria_1 = __webpack_require__(56);
 var Pie = /** @class */ (function (_super) {
     __extends(Pie, _super);
     function Pie() {
@@ -35649,7 +33134,7 @@ exports.default = Pie;
 
 
 /***/ }),
-/* 214 */
+/* 205 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35680,9 +33165,9 @@ var __assign = (this && this.__assign) || function () {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var circle_1 = __webpack_require__(33);
-var common_1 = __webpack_require__(7);
-var BaseSeria_1 = __webpack_require__(38);
+var circle_1 = __webpack_require__(34);
+var common_1 = __webpack_require__(5);
+var BaseSeria_1 = __webpack_require__(35);
 var Radar = /** @class */ (function (_super) {
     __extends(Radar, _super);
     function Radar() {
@@ -35818,7 +33303,7 @@ exports.default = Radar;
 
 
 /***/ }),
-/* 215 */
+/* 206 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35848,8 +33333,8 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var Line_1 = __webpack_require__(56);
-var common_1 = __webpack_require__(7);
+var Line_1 = __webpack_require__(57);
+var common_1 = __webpack_require__(5);
 var Scatter = /** @class */ (function (_super) {
     __extends(Scatter, _super);
     function Scatter() {
@@ -35884,7 +33369,7 @@ exports.default = Scatter;
 
 
 /***/ }),
-/* 216 */
+/* 207 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35904,8 +33389,8 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var spline_1 = __webpack_require__(89);
-var Line_1 = __webpack_require__(56);
+var spline_1 = __webpack_require__(92);
+var Line_1 = __webpack_require__(57);
 var Spline = /** @class */ (function (_super) {
     __extends(Spline, _super);
     function Spline() {
@@ -35930,7 +33415,7 @@ exports.default = Spline;
 
 
 /***/ }),
-/* 217 */
+/* 208 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -35950,8 +33435,8 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var spline_1 = __webpack_require__(89);
-var Area_1 = __webpack_require__(86);
+var spline_1 = __webpack_require__(92);
+var Area_1 = __webpack_require__(89);
 var SplineArea = /** @class */ (function (_super) {
     __extends(SplineArea, _super);
     function SplineArea() {
@@ -35997,7 +33482,7 @@ exports.default = SplineArea;
 
 
 /***/ }),
-/* 218 */
+/* 209 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36030,9 +33515,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var ts_data_1 = __webpack_require__(4);
-var common_1 = __webpack_require__(7);
-var types_1 = __webpack_require__(26);
-var BaseSeria_1 = __webpack_require__(38);
+var common_1 = __webpack_require__(5);
+var types_1 = __webpack_require__(27);
+var BaseSeria_1 = __webpack_require__(35);
 var TreeMap = /** @class */ (function (_super) {
     __extends(TreeMap, _super);
     function TreeMap() {
@@ -36554,70 +34039,365 @@ exports.default = TreeMap;
 
 
 /***/ }),
-/* 219 */
+/* 210 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
-Object.defineProperty(exports, "__esModule", { value: true });
-var dom_1 = __webpack_require__(0);
-var Stacker = /** @class */ (function () {
-    function Stacker() {
-        this._series = [];
-    }
-    Stacker.prototype.add = function (seria) {
-        this._series.push(seria);
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
     };
-    Stacker.prototype.dataReady = function (prev) {
-        this._toPaint = this._series.filter(function (serie) {
-            var next = serie.dataReady(prev);
-            if (next.length) {
-                prev = next;
-                return true;
-            }
-            return false;
-        });
-        return prev || [];
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
-    Stacker.prototype.getPoints = function () {
-        if (this._toPaint.length) {
-            return this._toPaint[0].getPoints().concat(this._toPaint[this._toPaint.length - 1].getPoints());
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
         }
-        return [];
+        return t;
     };
-    Stacker.prototype.paint = function (width, height, prev) {
-        var svg = [];
-        var markers = [];
-        this._toPaint.forEach(function (seria) {
-            if (seria.paintformAndMarkers) {
-                var _a = seria.paintformAndMarkers(width, height, prev), content = _a[0], seriesMarkers = _a[1];
-                svg.push(content);
-                markers.push(seriesMarkers);
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
+var date_1 = __webpack_require__(15);
+var dom_1 = __webpack_require__(0);
+var ts_data_1 = __webpack_require__(4);
+var common_1 = __webpack_require__(5);
+var BaseSeria_1 = __webpack_require__(35);
+var CalendarHeatMap = /** @class */ (function (_super) {
+    __extends(CalendarHeatMap, _super);
+    function CalendarHeatMap() {
+        return _super !== null && _super.apply(this, arguments) || this;
+    }
+    CalendarHeatMap.prototype.scaleReady = function (sizes) {
+        for (var key in sizes) {
+            sizes[key] += this.config.paddings;
+        }
+        return sizes;
+    };
+    CalendarHeatMap.prototype.dataReady = function () {
+        var _this = this;
+        var $startDate, $endDate;
+        var dataPoints = [];
+        this._years = [];
+        this._points = [];
+        if (this.config.startDate) {
+            $startDate =
+                typeof this.config.startDate === "string"
+                    ? date_1.stringToDate(this.config.startDate, this.config.dateFormat)
+                    : this.config.startDate;
+        }
+        if (this.config.endDate) {
+            $endDate =
+                typeof this.config.endDate === "string"
+                    ? date_1.stringToDate(this.config.endDate, this.config.dateFormat)
+                    : this.config.endDate;
+        }
+        if (($endDate === null || $endDate === void 0 ? void 0 : $endDate.getTime()) < ($startDate === null || $startDate === void 0 ? void 0 : $startDate.getTime())) {
+            ts_data_1.dhxError("Incorrect endDate/startDate property set, see docs: https://docs.dhtmlx.com/suite/chart/api/chart_series_config");
+        }
+        this._data.forEach(function (item) {
+            var _a, _b;
+            var iValue = Number(_this._valueLocator(item));
+            var iDate = _this._dateLocator(item);
+            if (typeof iDate === "string") {
+                iDate = date_1.stringToDate(iDate, _this.config.dateFormat);
+            }
+            var iMs = (_a = iDate) === null || _a === void 0 ? void 0 : _a.getTime();
+            var iId = ((_b = item.id) === null || _b === void 0 ? void 0 : _b.toString()) || core_1.uid();
+            if ($startDate || $endDate) {
+                var currentMs = date_1.DateHelper.dayStart(iDate).getTime();
+                var startMs = ($startDate && date_1.DateHelper.dayStart($startDate).getTime()) || 0;
+                var endMs = ($endDate && date_1.DateHelper.dayStart($endDate).getTime()) || Infinity;
+                if (currentMs < startMs || currentMs > endMs)
+                    return;
+            }
+            var samePointIndex = dataPoints.findIndex(function (tPoint) {
+                var tMs = tPoint[0], tValue = tPoint[1];
+                var isSame = date_1.DateHelper.isSameDay(new Date(tMs), iDate);
+                if (isSame)
+                    iValue += tValue;
+                return isSame;
+            });
+            if (samePointIndex > -1) {
+                dataPoints[samePointIndex] = [iMs, iValue, iId];
+            }
+            if (iValue) {
+                _this._minValue = !_this._minValue || iValue < _this._minValue ? iValue : _this._minValue;
+                _this._maxValue = !_this._maxValue || iValue > _this._maxValue ? iValue : _this._maxValue;
+            }
+            samePointIndex < 0 && dataPoints.push([iMs, iValue, iId]);
+        });
+        dataPoints.sort(function (a, b) { return a[0] - b[0]; });
+        if (this._minValue === this._maxValue)
+            this._minValue -= 10;
+        this._maxValue = (!isNaN(this.config.maxValue) && this.config.maxValue) || this._maxValue;
+        this._minValue = (!isNaN(this.config.minValue) && this.config.minValue) || this._minValue;
+        this._maxValue = Math.ceil(this._maxValue / 10) * 10;
+        this._minValue = Math.floor(this._minValue / 10) * 10;
+        var startDateObj = $startDate || new Date(dataPoints[0][0]);
+        var endDateObj = $endDate || new Date(dataPoints[dataPoints.length - 1][0]);
+        var $startYear = startDateObj.getFullYear();
+        var $endYear = endDateObj.getFullYear();
+        if (!this.config.startDate && !this.config.endDate) {
+            $endYear = endDateObj.getFullYear();
+            $startDate = new Date($startYear, 0, 1);
+            $endDate = new Date($endYear, 11, 31);
+        }
+        else if (this.config.startDate && !this.config.endDate) {
+            var endDateObjTemp = new Date(startDateObj.getFullYear() + 1, startDateObj.getMonth(), startDateObj.getDate() - 1);
+            if (endDateObj.getTime() > endDateObjTemp.getTime()) {
+                endDateObjTemp.setFullYear(endDateObj.getFullYear() + 1);
+            }
+            $endDate = endDateObjTemp;
+            $endYear = endDateObjTemp.getFullYear();
+        }
+        else if (!this.config.startDate && this.config.endDate) {
+            $startDate = new Date($startYear, 0, 1);
+        }
+        var dataPointIndex = 0;
+        var tempDate = new Date($startDate.getTime());
+        var targetDate = new Date($endDate.getFullYear(), $endDate.getMonth(), $endDate.getDate() + 1);
+        while (!date_1.DateHelper.isSameDay(tempDate, targetDate)) {
+            var dataPointDate = dataPoints.length && new Date(dataPoints[dataPointIndex][0]);
+            var setNextDay = function () { return tempDate.setDate(tempDate.getDate() + 1); };
+            if (!dataPoints.length) {
+                this._points.push([tempDate.getTime(), 0, core_1.uid()]);
             }
             else {
-                var content = seria.paint(width, height, prev);
-                svg.push(content);
+                if (dataPointIndex < dataPoints.length - 1) {
+                    while (!date_1.DateHelper.isSameDay(tempDate, dataPointDate)) {
+                        this._points.push([tempDate.getTime(), 0, core_1.uid()]);
+                        setNextDay();
+                    }
+                    this._points.push(dataPoints[dataPointIndex]);
+                    dataPointIndex += 1;
+                }
+                else if (date_1.DateHelper.isSameDay(tempDate, dataPointDate)) {
+                    this._points.push(dataPoints[dataPointIndex]);
+                }
+                else {
+                    this._points.push([tempDate.getTime(), 0, core_1.uid()]);
+                }
             }
-            prev = seria.getPoints();
-        });
-        return dom_1.sv("g", svg.concat(markers));
+            setNextDay();
+        }
+        var checkDate = new Date();
+        var firstMonth = $startDate.getMonth();
+        var firstDay = $startDate.getDate();
+        for (var index = 0; index < this._points.length; index++) {
+            checkDate.setTime(this._points[index][0]);
+            if (index === 0 ||
+                (firstMonth === checkDate.getMonth() &&
+                    firstDay === checkDate.getDate() &&
+                    index !== this._points.length - 1)) {
+                this._years.push({
+                    year: checkDate.getFullYear(),
+                    startIndex: index,
+                });
+            }
+        }
+        return this._points;
     };
-    return Stacker;
-}());
-exports.default = Stacker;
+    CalendarHeatMap.prototype.paint = function (width, height) {
+        var _this = this;
+        var _a = this.config, days = _a.days, months = _a.months;
+        var firstWeekDay;
+        var weekDays;
+        switch (this.config.weekStart) {
+            case "saturday":
+                firstWeekDay = -1;
+                break;
+            case "monday":
+                firstWeekDay = 1;
+                break;
+            default:
+                firstWeekDay = 0;
+        }
+        switch (this.config.weekStart) {
+            case "saturday":
+                weekDays = __spreadArrays([days === null || days === void 0 ? void 0 : days[6]], days.slice(0, -1));
+                break;
+            case "monday":
+                weekDays = __spreadArrays(days.slice(1), [days === null || days === void 0 ? void 0 : days[0]]);
+                break;
+            default:
+                weekDays = days;
+        }
+        var defs = [];
+        var bar = [];
+        var svg = [];
+        var chartWidth = 0;
+        var chartHeight = 0;
+        var dashWidth = 1;
+        var dashHeight = 8;
+        this._years.forEach(function (_a, yearIndex) {
+            var year = _a.year, startIndex = _a.startIndex;
+            var _b;
+            var firstDayOfYear = new Date(year, 0, 1);
+            var svgDays = [];
+            var svgMonth = [];
+            var chartWidthCurrent = 0;
+            var pointWeek = 1;
+            for (var index = startIndex; index < _this._points.length; index++) {
+                if (index === ((_b = _this._years[yearIndex + 1]) === null || _b === void 0 ? void 0 : _b.startIndex))
+                    break;
+                var point = _this._points[index];
+                var ms = point[0], value = point[1], id = point[2];
+                var pointDate = new Date();
+                pointDate.setTime(ms);
+                var pointMonth = pointDate.getMonth();
+                var pointDay = date_1.DateHelper.addDay(pointDate, firstWeekDay * -1).getDay();
+                if (pointDay === 0 && !date_1.DateHelper.isSameDay(firstDayOfYear, pointDate)) {
+                    pointWeek += 1;
+                }
+                var opacity = value >= 0 ? value / _this._maxValue || 0 : value / _this._minValue || 0;
+                if (_this._maxValue * _this._minValue > 0) {
+                    opacity = (value - _this._minValue) / (_this._maxValue - _this._minValue);
+                }
+                var pointX = 10 + pointWeek * (_this._cellSize + 2);
+                var pointY = 0.5 +
+                    (pointDay + 1) * (_this._cellSize + 2) +
+                    yearIndex * (weekDays.length * _this._cellSize + _this._headerHeight);
+                if (pointDay === 6) {
+                    chartHeight = pointY + _this._cellSize * 4;
+                }
+                svgDays.push(dom_1.sv("rect", {
+                    x: pointX,
+                    y: pointY,
+                    fill: _this.config.color,
+                    width: _this._cellSize,
+                    height: _this._cellSize,
+                    onclick: [_this._handlers.onclick, value, id],
+                    onmousemove: [_this._handlers.onmousemove, id, _this.id],
+                    onmouseleave: [_this._handlers.onmouseleave, id, _this.id],
+                    class: !_this.config.color ? "heat-neutral" : "",
+                }, []));
+                var colorClass = "";
+                if (value >= 0 && !_this.config.positiveColor) {
+                    colorClass = "heat-positive";
+                }
+                else if (value < 0 && !_this.config.negativeColor) {
+                    colorClass = "heat-negative";
+                }
+                opacity !== 0 &&
+                    svgDays.push(dom_1.sv("rect", {
+                        x: pointX,
+                        y: pointY,
+                        fill: value >= 0 ? _this.config.positiveColor : _this.config.negativeColor,
+                        "fill-opacity": isFinite(opacity) ? opacity : 0,
+                        width: _this._cellSize,
+                        height: _this._cellSize,
+                        onclick: [_this._handlers.onclick, value, id],
+                        onmousemove: [_this._handlers.onmousemove, id, _this.id],
+                        onmouseleave: [_this._handlers.onmouseleave, id, _this.id],
+                        class: colorClass,
+                    }, []));
+                chartWidthCurrent = pointX + _this._cellSize;
+                if (pointDate.getDate() === 1) {
+                    var month = months === null || months === void 0 ? void 0 : months[pointMonth];
+                    var xMonth = 10 + pointWeek * (_this._cellSize + 2);
+                    var yMonth = _this._cellSize -
+                        2 +
+                        yearIndex * (weekDays.length * _this._cellSize + _this._headerHeight) +
+                        weekDays.length * (_this._cellSize + 2) +
+                        4.5;
+                    var text = dom_1.sv("text", {
+                        x: xMonth,
+                        y: yMonth + dashHeight + 12.5,
+                        class: "start-text",
+                    }, [month]);
+                    var dash = dom_1.sv("rect", {
+                        x: xMonth,
+                        y: yMonth,
+                        height: dashHeight,
+                        width: dashWidth,
+                    });
+                    svgMonth.push(dom_1.sv("g", { class: "heat-month-text" }, [dash, text]));
+                }
+            }
+            var weekDaysHeader = weekDays.map(function (day, ind) {
+                return dom_1.sv("text", {
+                    x: 20,
+                    y: 0.5 +
+                        (ind + 1) * (_this._cellSize + 2) +
+                        _this._cellSize / 2 +
+                        yearIndex * (weekDays.length * _this._cellSize + _this._headerHeight),
+                    class: "end-text heat-day-text",
+                }, [dom_1.sv("tspan", { dy: "0.5ex" }, [day])]);
+            });
+            var yearText = dom_1.sv("text", {
+                x: 10 + _this._cellSize + 2,
+                y: _this._cellSize -
+                    4 +
+                    yearIndex * (weekDays.length * _this._cellSize + _this._headerHeight),
+                class: "start-text heat-year-text",
+            }, [year]);
+            bar.push(dom_1.sv("g", {
+                id: year + "_year",
+            }, [yearText, svgMonth, weekDaysHeader, svgDays]));
+            chartWidth = chartWidth > chartWidthCurrent ? chartWidth : chartWidthCurrent;
+        });
+        var getChartAriaAttrs = function (cfg) { return ({
+            "aria-label": "chart " + (cfg.text || ""),
+        }); };
+        svg.push(dom_1.sv("defs", defs));
+        svg = svg.concat(bar);
+        var chartScale = height / chartHeight < 1 ? height / chartHeight : 1;
+        var xPosition = (width - chartWidth * chartScale) / 2;
+        return dom_1.sv("g", __assign(__assign({ id: "seria" + this.config.id }, getChartAriaAttrs(this.config)), { tabindex: 0, transform: "translate(" + (xPosition > 0 ? xPosition : 0) + ", 26) scale(" + chartScale + ")" }), svg);
+    };
+    CalendarHeatMap.prototype._setDefaults = function (config) {
+        var defaults = {
+            tooltip: true,
+            paddings: 5,
+            weekStart: "sunday",
+            days: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            months: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        };
+        this.config = __assign(__assign({}, defaults), config);
+        this._headerHeight = 70;
+        this._cellSize = 16;
+        this._valueLocator = common_1.locator(config.value);
+        this._dateLocator = common_1.locator(config.date);
+    };
+    CalendarHeatMap.prototype._defaultLocator = function (v) {
+        return [this._valueLocator(v), date_1.getFormattedDate("%d/%m/%y", this._dateLocator(v))];
+    };
+    return CalendarHeatMap;
+}(BaseSeria_1.default));
+exports.default = CalendarHeatMap;
 
 
 /***/ }),
-/* 220 */
+/* 211 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var ts_message_1 = __webpack_require__(13);
-var common_1 = __webpack_require__(7);
-var line_1 = __webpack_require__(87);
-var types_1 = __webpack_require__(26);
+var common_1 = __webpack_require__(5);
+var line_1 = __webpack_require__(90);
+var types_1 = __webpack_require__(27);
 var Tooltip = /** @class */ (function () {
     function Tooltip(chart) {
         this._chart = chart;
@@ -36818,9 +34598,11 @@ var Tooltip = /** @class */ (function () {
             _this._mouseOverBar = false;
             var rootView = _this._chart.getRootView();
             var seria = _this._chart.getSeries(seriaId);
-            if (seria.config.type !== "area" && seria.config.type !== "treeMap") {
+            if (seria.config.type !== "area" &&
+                seria.config.type !== "treeMap" &&
+                seria.config.type !== "calendarHeatMap") {
                 var item = rootView && rootView.refs && rootView.refs[common_1.calcPointRef(id, seriaId)].el;
-                item.setAttribute("fill-opacity", seria.config.alpha);
+                item === null || item === void 0 ? void 0 : item.setAttribute("fill-opacity", seria.config.alpha);
             }
             if (_this._tooltip) {
                 _this._tooltip.classList.remove("dhx_chart_tooltip__visible");
@@ -36841,13 +34623,240 @@ exports.Tooltip = Tooltip;
 
 
 /***/ }),
-/* 221 */
+/* 212 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
-var InputEditor_1 = __webpack_require__(222);
+var html_1 = __webpack_require__(2);
+var Exporter = /** @class */ (function () {
+    function Exporter(_name, _view) {
+        this._name = _name;
+        this._view = _view;
+        this._version = "8.0.0";
+    }
+    Exporter.prototype.pdf = function (config) {
+        this._rawExport(config, "pdf", this._view);
+    };
+    Exporter.prototype.png = function (config) {
+        this._rawExport(config, "png", this._view);
+    };
+    Exporter.prototype._rawExport = function (config, mode, view) {
+        var exportStyles = view.config.exportStyles || (config === null || config === void 0 ? void 0 : config.exportStyles);
+        config = config || {};
+        config.url =
+            config.url || "https://export.dhtmlx.com/" + this._name + "/" + mode + "/" + this._version;
+        var styles = "";
+        if (exportStyles === true) {
+            styles = html_1.getPageLinksCss() + "<style>" + html_1.getPageInlineCss() + "</style>";
+        }
+        else if (exportStyles === null || exportStyles === void 0 ? void 0 : exportStyles.length) {
+            styles = "" + html_1.getPageLinksCss(exportStyles);
+        }
+        var html = "\n\t\t\t\t" + styles + "\n\t\t\t\t" + view.getRootView().node.el.parentNode.innerHTML + "\n\t\t\t";
+        var t = document.createElement("form");
+        t.setAttribute("method", "POST");
+        t.setAttribute("action", config.url);
+        t.innerHTML = "<input type=\"hidden\" name=\"raw\"><input type=\"hidden\" name=\"config\">";
+        t.childNodes[0].value = html;
+        t.childNodes[1].value = JSON.stringify(config);
+        document.body.appendChild(t);
+        t.submit();
+        setTimeout(function () {
+            var _a;
+            (_a = t.parentNode) === null || _a === void 0 ? void 0 : _a.removeChild(t);
+        }, 100);
+    };
+    return Exporter;
+}());
+exports.Exporter = Exporter;
+
+
+/***/ }),
+/* 213 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var Stacker_1 = __webpack_require__(93);
+var index_1 = __webpack_require__(88);
+var core_1 = __webpack_require__(1);
+var common_1 = __webpack_require__(5);
+var Legend_1 = __webpack_require__(86);
+var Chart_1 = __webpack_require__(85);
+var ProChart = /** @class */ (function (_super) {
+    __extends(ProChart, _super);
+    function ProChart(node, config) {
+        if (config === void 0) { config = {}; }
+        return _super.call(this, node, config) || this;
+    }
+    ProChart.prototype.setConfig = function (config) {
+        var _this = this;
+        var _a, _b, _c, _d, _e;
+        this.config = config;
+        this._layers.clear();
+        this._series = {};
+        this._scales = {};
+        var min;
+        if (config.scales) {
+            for (var key in config.scales) {
+                var scale = __assign({}, config.scales[key]);
+                if (config.scales[key].min !== undefined) {
+                    min = config.scales[key].min;
+                }
+                scale.type = scale.type || this._detectScaleType(scale, key);
+                if (config.scales.radial && key !== "radial") {
+                    scale.hidden = true;
+                }
+                this._setScale(scale, key);
+            }
+        }
+        var stack = new Stacker_1.default();
+        this._layers.add(stack);
+        (_a = config.series) === null || _a === void 0 ? void 0 : _a.forEach(function (cfg, ind) {
+            var _a, _b, _c, _d;
+            if (cfg.baseLine !== undefined && cfg.baseLine < min) {
+                cfg.baseLine = undefined;
+            }
+            var serieConfig = __assign({}, cfg);
+            serieConfig.type = serieConfig.type || config.type;
+            switch (serieConfig.type) {
+                case "bar":
+                case "xbar":
+                case "area":
+                case "splineArea":
+                    if (!serieConfig.color)
+                        serieConfig.color = serieConfig.fill || common_1.getDefaultColor(ind);
+                    if (!serieConfig.fill)
+                        serieConfig.fill = serieConfig.color || common_1.getDefaultColor(ind);
+                    break;
+                case "treeMap":
+                    serieConfig.legendType = ((_a = config.legend) === null || _a === void 0 ? void 0 : _a.type) || "groupName";
+                    (_c = (_b = config.legend) === null || _b === void 0 ? void 0 : _b.treeSeries) === null || _c === void 0 ? void 0 : _c.map(function (serie, index) {
+                        var _a, _b;
+                        serie.active = (_a = serie.active) !== null && _a !== void 0 ? _a : true;
+                        serie.id = (_b = serie.id) !== null && _b !== void 0 ? _b : core_1.uid();
+                        if (!serie.color)
+                            serie.color = common_1.getDefaultColor(index, serieConfig.legendType === "range");
+                    });
+                    serieConfig.treeSeries = (_d = config.legend) === null || _d === void 0 ? void 0 : _d.treeSeries;
+                    break;
+                case "calendarHeatMap":
+                    if (!serieConfig.dateFormat) {
+                        serieConfig.dateFormat = "%d/%m/%y";
+                    }
+                    break;
+                case "scatter":
+                    if (!serieConfig.pointColor)
+                        serieConfig.pointColor = serieConfig.color || common_1.getDefaultColor(ind);
+                    break;
+            }
+            var chartFactory = index_1.default[serieConfig.type];
+            if (serieConfig.barWidth || _this.config.barWidth) {
+                serieConfig.barWidth = serieConfig.barWidth || _this.config.barWidth;
+            }
+            var chart = new chartFactory(_this.data, serieConfig, _this.events);
+            var scales = common_1.getScales(config.scales);
+            var chartScales = scales.length > 1 && scales[0] !== "radial"
+                ? scales
+                : scales[0] === "radial"
+                    ? scales
+                    : ["bottom", "left"];
+            chartScales.forEach(function (type) {
+                var scale = _this._scales[type];
+                if (!scale) {
+                    return;
+                }
+                chart.addScale(type, scale);
+                if (!serieConfig.stacked) {
+                    scale.add(chart);
+                }
+                else {
+                    scale.add(stack);
+                }
+            });
+            _this._series[chart.id] = chart;
+            if (serieConfig.stacked) {
+                stack.add(chart);
+            }
+            else {
+                _this._layers.add(chart);
+            }
+        });
+        if (config.legend) {
+            var legendConfig = __assign({}, config.legend);
+            if (legendConfig.series) {
+                legendConfig.$seriesInfo = legendConfig.series.map(function (id) { return _this._series[id]; });
+            }
+            if (this.config.type === "calendarHeatMap") {
+                var _f = (_c = (_b = this.config) === null || _b === void 0 ? void 0 : _b.series) === null || _c === void 0 ? void 0 : _c[0], value = _f.value, positiveColor = _f.positiveColor, negativeColor = _f.negativeColor, color = _f.color, minValue = _f.minValue, maxValue = _f.maxValue;
+                legendConfig.type = "scale";
+                legendConfig.form = "line";
+                if (!legendConfig.values) {
+                    legendConfig.values = {
+                        positiveColor: positiveColor,
+                        negativeColor: negativeColor,
+                        color: color,
+                        text: "",
+                        value: value,
+                        minValue: minValue,
+                        maxValue: maxValue,
+                    };
+                }
+                else {
+                    var _g = (_e = (_d = this.config) === null || _d === void 0 ? void 0 : _d.series) === null || _e === void 0 ? void 0 : _e[0], color_1 = _g.color, value_1 = _g.value;
+                    legendConfig.values = __assign(__assign({}, legendConfig.values), { color: color_1,
+                        positiveColor: positiveColor,
+                        negativeColor: negativeColor,
+                        value: value_1,
+                        minValue: minValue,
+                        maxValue: maxValue });
+                }
+            }
+            var legend = new Legend_1.Legend(this.data, legendConfig, this.events);
+            this._layers.add(legend);
+        }
+        this.paint();
+    };
+    return ProChart;
+}(Chart_1.Chart));
+exports.ProChart = ProChart;
+
+
+/***/ }),
+/* 214 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", { value: true });
+var InputEditor_1 = __webpack_require__(215);
 function getEditor(item, dataView) {
     return new InputEditor_1.InputEditor(item, dataView);
 }
@@ -36855,14 +34864,14 @@ exports.getEditor = getEditor;
 
 
 /***/ }),
-/* 222 */
+/* 215 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var types_1 = __webpack_require__(92);
+var types_1 = __webpack_require__(96);
 var InputEditor = /** @class */ (function () {
     function InputEditor(item, dataView) {
         var _this = this;
@@ -36964,7 +34973,7 @@ exports.InputEditor = InputEditor;
 
 
 /***/ }),
-/* 223 */
+/* 216 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -36994,8 +35003,8 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var ScrollView_1 = __webpack_require__(17);
-var DataView_1 = __webpack_require__(91);
+var ScrollView_1 = __webpack_require__(18);
+var DataView_1 = __webpack_require__(95);
 var dom_1 = __webpack_require__(0);
 var ProDataView = /** @class */ (function (_super) {
     __extends(ProDataView, _super);
@@ -37069,7 +35078,1502 @@ exports.ProDataView = ProDataView;
 
 
 /***/ }),
-/* 224 */
+/* 217 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var ts_calendar_1 = __webpack_require__(37);
+var date_1 = __webpack_require__(15);
+var events_1 = __webpack_require__(3);
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var label_1 = __webpack_require__(16);
+var ts_popup_1 = __webpack_require__(11);
+var types_1 = __webpack_require__(7);
+var helper_1 = __webpack_require__(9);
+var KeyManager_1 = __webpack_require__(12);
+var DatePicker = /** @class */ (function (_super) {
+    __extends(DatePicker, _super);
+    function DatePicker(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._isValid = true;
+        _this._popupIsFocus = false;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "valueFormat",
+            "icon",
+            "placeholder",
+            "editable",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._propsCalendar = [
+            "mode",
+            "mark",
+            "disabledDates",
+            "weekStart",
+            "weekNumbers",
+            "timePicker",
+            "dateFormat",
+            "timeFormat",
+            "thisMonthOnly",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsCalendar);
+        _this._keyManager = new KeyManager_1.KeyManager(function () {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            return element === activeEl || _this._popup.isVisible();
+        });
+        _this._initView(config);
+        _this._initHandlers();
+        _this._initHotkeys();
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    DatePicker.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.calendar && this.calendar.destructor();
+        this._popup && this._popup.destructor();
+        this.events = this._uid = this._propsCalendar = this._propsItem = this._props = this._isValid = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    DatePicker.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+                if (this._propsCalendar.includes(key)) {
+                    this.calendar.config[key] = propertyConfig[key];
+                }
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.calendar.paint();
+        this.paint();
+    };
+    DatePicker.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    DatePicker.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+    };
+    DatePicker.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+    };
+    DatePicker.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    DatePicker.prototype.disable = function () {
+        this.config.disabled = true;
+        this.paint();
+    };
+    DatePicker.prototype.enable = function () {
+        this.config.disabled = false;
+        this.paint();
+    };
+    DatePicker.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    DatePicker.prototype.validate = function (silent, validateValue) {
+        if (silent === void 0) { silent = false; }
+        var _a;
+        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
+        var checkValue = ((_a = this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "date"
+            ? value instanceof Date
+            : date_1.stringToDate(value, this.calendar.config.dateFormat, true);
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return;
+        this._isValid = this.config.validation ? this.config.validation(value) : !!checkValue;
+        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        return this._isValid;
+    };
+    DatePicker.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this.paint();
+    };
+    DatePicker.prototype.setValue = function (value) {
+        if (typeof value === "undefined" || value === this.config.value)
+            return;
+        this.calendar.setValue(value);
+    };
+    DatePicker.prototype.getValue = function (asDateObject) {
+        var _a;
+        return (this.calendar.getValue(((_a = this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "date" || asDateObject) || "");
+    };
+    DatePicker.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.input.el.focus();
+        });
+    };
+    DatePicker.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this._popup.hide();
+            _this.getRootView().refs.input.el.blur();
+        });
+    };
+    DatePicker.prototype.clear = function () {
+        if (this.config.value === "")
+            return;
+        this.calendar.clear();
+    };
+    DatePicker.prototype.getWidget = function () {
+        return this.calendar;
+    };
+    DatePicker.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.calendar) {
+            this.calendar.destructor();
+        }
+        if (this._popup) {
+            this._popup.destructor();
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            editable: false,
+            hidden: false,
+            value: "",
+            mode: "calendar",
+            weekStart: "sunday",
+            weekNumbers: false,
+            timePicker: false,
+            dateFormat: "%d/%m/%y",
+            timeFormat: 24,
+            thisMonthOnly: false,
+            valueFormat: "string",
+            required: false,
+            icon: "",
+            placeholder: "",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        this._popup = new ts_popup_1.Popup();
+        this.calendar = new ts_calendar_1.Calendar(null, helper_1.widgetConfig(config));
+        this._popup.attach(this.calendar);
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+    };
+    DatePicker.prototype._initHandlers = function () {
+        var _this = this;
+        this.calendar.events.on(ts_calendar_1.CalendarEvents.beforeChange, function (value) {
+            var _a;
+            if (value !== "" && ((_a = _this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== "date") {
+                value = date_1.getFormattedDate(_this.calendar.config.dateFormat, value);
+            }
+            return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+        });
+        this.calendar.events.on(ts_calendar_1.CalendarEvents.change, function () {
+            var _a;
+            _this.config.value = _this.calendar.getValue(((_a = _this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "date");
+            _this.events.fire(types_1.ItemEvent.change, [_this.config.value]);
+            helper_1.isVerify(_this.config) && _this.validate();
+            _this._popup.hide();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.blur, function () {
+            _this._popupIsFocus = false;
+            _this.paint();
+        });
+        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
+            if (document.activeElement !== _this.getRootView().refs.input.el) {
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+            }
+            _this.paint();
+        });
+        document.addEventListener("keydown", function (event) {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            if (element === activeEl || _this._popup.isVisible()) {
+                _this.events.fire(types_1.ItemEvent.keydown, [event]);
+            }
+        });
+        document.addEventListener("mousedown", function () {
+            var popup = _this._popup.getContainer();
+            var activeEl = document.activeElement;
+            if (popup !== activeEl)
+                _this._popupIsFocus = false;
+        });
+    };
+    DatePicker.prototype._getHandlers = function () {
+        var _this = this;
+        return {
+            onblur: function () {
+                if (!_this._popup.isVisible()) {
+                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+                }
+                _this.paint();
+            },
+            onfocus: function () {
+                if (_this._popup.isVisible()) {
+                    return;
+                }
+                var node = _this.getRootView().refs.input.el;
+                _this._popup.show(node, {
+                    theme: node,
+                });
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+                _this.paint();
+            },
+            oninput: function (e) {
+                var value = e.target.value;
+                _this.events.fire(types_1.ItemEvent.input, [value]);
+            },
+            onchange: function (e) {
+                var value = e.target.value;
+                if (_this.config.editable && date_1.stringToDate(value, _this.calendar.config.dateFormat, true)) {
+                    _this.setValue(value);
+                }
+                else if (value === "") {
+                    _this.clear();
+                }
+            },
+        };
+    };
+    DatePicker.prototype._initHotkeys = function () {
+        var _this = this;
+        var handlers = {
+            "shift+tab": function () {
+                _this._applyTab();
+            },
+            tab: function () {
+                _this._applyTab();
+            },
+            escape: function () {
+                if (_this._popup.isVisible()) {
+                    _this.getRootView().refs.input.el.focus();
+                }
+                _this._popup.hide();
+            },
+            enter: function (event) {
+                event.preventDefault();
+                if (!_this._popup.isVisible()) {
+                    var node = _this.getRootView().refs.input.el;
+                    _this._popup.show(node, {
+                        theme: node,
+                    });
+                }
+            },
+            arrowRight: function (event) {
+                var focusElement = _this._popup.getContainer();
+                if (_this._popup.isVisible() && !_this._popupIsFocus) {
+                    event.preventDefault();
+                    focusElement.focus();
+                    _this._popupIsFocus = true;
+                }
+            },
+        };
+        for (var key in handlers) {
+            this._keyManager.addHotKey(key, handlers[key]);
+        }
+    };
+    DatePicker.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, icon = _d.icon, required = _d.required, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
+        var value = this.calendar.getValue();
+        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el("div.dhx_form-group", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", [
+                dom_1.el("div.dhx_input__container", {}, [
+                    dom_1.el(".dhx_input__icon", {
+                        class: icon || "dxi dxi-calendar-today",
+                    }),
+                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
+                        tabindex: 0,
+                        "data-dhx-id": name || id,
+                        _key: this._uid,
+                        _ref: "input",
+                        value: value,
+                        type: "text",
+                        required: required,
+                        disabled: disabled,
+                        class: activeFocus && "dhx_input--focus",
+                        placeholder: placeholder || "",
+                        name: name || "",
+                        id: id || this._uid,
+                        onfocus: this._handlers.onfocus,
+                        oninput: this._handlers.oninput,
+                        onchange: this._handlers.onchange,
+                        onblur: this._handlers.onblur,
+                        autocomplete: "off",
+                        readOnly: !editable,
+                        "aria-label": label || (editable ? "type or" : "") + " select date",
+                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
+                    }),
+                ]),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    DatePicker.prototype._applyTab = function () {
+        var _a, _b, _c;
+        var activeEl = document.activeElement;
+        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
+        if (activeEl !== popup && !this._popupIsFocus) {
+            this._popup.hide();
+        }
+    };
+    return DatePicker;
+}(label_1.Label));
+exports.DatePicker = DatePicker;
+
+
+/***/ }),
+/* 218 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(7);
+var events_1 = __webpack_require__(3);
+var core_1 = __webpack_require__(1);
+var helper_1 = __webpack_require__(9);
+var Button = /** @class */ (function (_super) {
+    __extends(Button, _super);
+    function Button(container, config) {
+        var _this = _super.call(this, container, __assign({ disabled: false, hidden: false, submit: false, full: false, circle: false, loading: false, view: "flat", size: "medium", color: "primary", width: "content", height: "content", url: "", text: "", icon: "" }, config)) || this;
+        _this._propsItem = [
+            "submit",
+            "url",
+            "text",
+            "icon",
+            "view",
+            "size",
+            "color",
+            "full",
+            "circle",
+            "loading",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        _this.config.text = _this.config.text || _this.config.value || "";
+        _this.events = new events_1.EventSystem();
+        _this._handlers = {
+            onclick: function (event) { return _this.events.fire(types_1.ItemEvent.click, [event]); },
+            onblur: function () { return _this.events.fire(types_1.ItemEvent.blur, [_this.config.text]); },
+            onfocus: function () { return _this.events.fire(types_1.ItemEvent.focus, [_this.config.text]); },
+            onkeydown: function (event) { return _this.events.fire(types_1.ItemEvent.keydown, [event]); },
+        };
+        if (_this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    Button.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.config = this._propsItem = this._props = this.events = this._handlers = this._uid = null;
+        this.unmount();
+    };
+    Button.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this.config.text = this.config.text || this.config.value;
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    Button.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Button.prototype.show = function () {
+        var _a = this.config, _b = _a.text, text = _b === void 0 ? "" : _b, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [text])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [text]);
+    };
+    Button.prototype.hide = function (init) {
+        if (init === void 0) { init = false; }
+        var _a = this.config, _b = _a.text, text = _b === void 0 ? "" : _b, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [text, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [text, init]);
+    };
+    Button.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    Button.prototype.disable = function () {
+        this.config.disabled = true;
+        this.paint();
+    };
+    Button.prototype.enable = function () {
+        this.config.disabled = false;
+        this.paint();
+    };
+    Button.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    Button.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.button.el.focus();
+        });
+    };
+    Button.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.button.el.blur();
+        });
+    };
+    Button.prototype._draw = function () {
+        var _a = this.config, color = _a.color, size = _a.size, view = _a.view, full = _a.full, loading = _a.loading, circle = _a.circle, icon = _a.icon, text = _a.text, disabled = _a.disabled, submit = _a.submit, id = _a.id, name = _a.name;
+        var colorsCss = {
+            danger: " dhx_button--color_danger",
+            secondary: " dhx_button--color_secondary",
+            primary: " dhx_button--color_primary",
+            success: " dhx_button--color_success",
+        }[color] || " dhx_button--color_primary";
+        var sizeCss = {
+            small: " dhx_button--size_small",
+            medium: " dhx_button--size_medium",
+        }[size] || " dhx_button--size_medium";
+        var viewCss = {
+            flat: " dhx_button--view_flat",
+            link: " dhx_button--view_link",
+        }[view] || " dhx_button--view_flat";
+        var fullCss = full ? " dhx_button--width_full" : "";
+        var circleCss = circle ? " dhx_button--circle" : "";
+        var loadingCss = loading ? " dhx_button--loading" : "";
+        var iconViewCss = icon && !text ? " dhx_button--icon" : "";
+        return dom_1.el("button", {
+            disabled: disabled,
+            id: id,
+            "data-dhx-id": name || id,
+            onclick: this._handlers.onclick,
+            onfocus: this._handlers.onfocus,
+            onblur: this._handlers.onblur,
+            onkeydown: this._handlers.onkeydown,
+            type: submit ? "submit" : "button",
+            class: "dhx_button" +
+                colorsCss +
+                sizeCss +
+                viewCss +
+                fullCss +
+                circleCss +
+                loadingCss +
+                iconViewCss,
+            _ref: "button",
+        }, [
+            icon &&
+                dom_1.el("span.dhx_button__icon", {
+                    class: icon,
+                }),
+            text && dom_1.el("span.dhx_button__text", text),
+            loading &&
+                dom_1.el("span.dhx_button__loading", [dom_1.el("span.dhx_button__loading-icon.dxi.dxi-loading")]),
+        ]);
+    };
+    return Button;
+}(view_1.View));
+exports.Button = Button;
+
+
+/***/ }),
+/* 219 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var ts_layout_1 = __webpack_require__(10);
+var events_1 = __webpack_require__(3);
+var checkbox_1 = __webpack_require__(99);
+var label_1 = __webpack_require__(16);
+var types_1 = __webpack_require__(7);
+var core_1 = __webpack_require__(1);
+var helper_1 = __webpack_require__(9);
+var ts_popup_1 = __webpack_require__(11);
+var CheckboxGroup = /** @class */ (function (_super) {
+    __extends(CheckboxGroup, _super);
+    function CheckboxGroup(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._buttons = [];
+        _this._isValid = true;
+        _this._propsItem = [
+            "required",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+            "options",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        _this._initView(config);
+        _this._initHandlers();
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    CheckboxGroup.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.layout && this.layout.destructor();
+        this.events = this._uid = this._propsItem = this._props = this._isValid = this._buttons = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    CheckboxGroup.prototype.setProperties = function (arg, props) {
+        if (typeof arg === "undefined" ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()])) {
+            return;
+        }
+        if (typeof arg === "object" && !core_1.isEmptyObj(arg)) {
+            for (var key in arg) {
+                if (this._props.includes(key)) {
+                    this.config[key] = arg[key];
+                }
+            }
+            if (arg.hasOwnProperty("options")) {
+                this._initView(this.config);
+                this._initHandlers();
+            }
+        }
+        if (typeof arg === "string" && props && !core_1.isEmptyObj(props)) {
+            var checkbox = this._buttons.find(function (item) { return item.config.id === arg; });
+            checkbox && checkbox.setProperties(props, true);
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    CheckboxGroup.prototype.getProperties = function (id) {
+        if (typeof id === "undefined") {
+            var obj = {};
+            for (var key in this.config) {
+                if (this._props.includes(key)) {
+                    obj[key] = this.config[key];
+                }
+            }
+            return obj;
+        }
+        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
+        return checkbox.getProperties();
+    };
+    CheckboxGroup.prototype.getValue = function (id) {
+        if (typeof id === "undefined") {
+            var valueList_1 = {};
+            this._buttons.forEach(function (item) {
+                valueList_1[item.config.id] = item.getValue();
+            });
+            return valueList_1;
+        }
+        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
+        if (id && checkbox) {
+            return checkbox.getValue();
+        }
+    };
+    CheckboxGroup.prototype.setValue = function (newValue) {
+        if (typeof newValue === "undefined" || core_1.isEmptyObj(newValue))
+            return;
+        var currentValue = this.getValue();
+        var _loop_1 = function (id, value) {
+            var checkbox = this_1._buttons.find(function (i) { return i.config.id === id; });
+            if (checkbox) {
+                var checkboxValue = checkbox.config.value;
+                currentValue[id] =
+                    typeof checkboxValue === "string" ? (value && checkboxValue) || "" : !!value;
+            }
+        };
+        var this_1 = this;
+        for (var _i = 0, _a = Object.entries(newValue); _i < _a.length; _i++) {
+            var _b = _a[_i], id = _b[0], value = _b[1];
+            _loop_1(id, value);
+        }
+        if (!this.events.fire(types_1.ItemEvent.beforeChange, [currentValue])) {
+            return;
+        }
+        var _loop_2 = function (id, value) {
+            var checkbox = this_2._buttons.find(function (item) { return item.config.id === id; });
+            if (checkbox)
+                checkbox.setValue(!!value, true);
+        };
+        var this_2 = this;
+        for (var _c = 0, _d = Object.entries(newValue); _c < _d.length; _c++) {
+            var _e = _d[_c], id = _e[0], value = _e[1];
+            _loop_2(id, value);
+        }
+        this.events.fire(types_1.ItemEvent.change, [this.getValue()]);
+        helper_1.isVerify(this.config) && this.validate();
+    };
+    CheckboxGroup.prototype.isChecked = function (id) {
+        if (typeof id === "undefined") {
+            var checkedList_1 = {};
+            this._buttons.forEach(function (item) {
+                checkedList_1[item.config.id] = item.isChecked();
+            });
+            return checkedList_1;
+        }
+        var checkbox = this._buttons.find(function (item) { return item.config.id === id; });
+        if (id && checkbox) {
+            return checkbox.isChecked();
+        }
+    };
+    CheckboxGroup.prototype.focus = function (id) {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            if (!_this._buttons.length) {
+                return;
+            }
+            if (!id) {
+                return _this._buttons[0].focus();
+            }
+            var checkbox = _this._buttons.find(function (item) { return item.config.id === id; });
+            checkbox && checkbox.focus();
+        });
+    };
+    CheckboxGroup.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            if (!_this._buttons.length) {
+                return;
+            }
+            _this._buttons.forEach(function (checkbox) {
+                checkbox.blur();
+            });
+        });
+    };
+    CheckboxGroup.prototype.show = function (id) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isHidden = (!button && (this.config.hidden || this._buttons.some(function (item) { return item.config.hidden; }))) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden);
+        if (!isHidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue(), id])) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.show();
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.show(); });
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue(), id]);
+    };
+    CheckboxGroup.prototype.hide = function (id, init) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isHidden = (!button && this.config.hidden) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden);
+        if ((isHidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), id, init])) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.hide();
+            this.config.hidden = this._buttons.every(function (item) { return item.config.hidden; });
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.hide(); });
+            this.config.hidden = true;
+        }
+        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), id, init]);
+    };
+    CheckboxGroup.prototype.isVisible = function (id) {
+        var _a;
+        var button = this._buttons.find(function (item) { return item.config.id === id; });
+        return !(this.config.hidden || (core_1.isDefined(id) && ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden)));
+    };
+    CheckboxGroup.prototype.enable = function (id) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isDisabled = (!button && (this.config.disabled || this._buttons.some(function (item) { return item.config.disabled; }))) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled);
+        if (!isDisabled) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.enable();
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.enable(); });
+        }
+        this.config.disabled = false;
+        this.paint();
+    };
+    CheckboxGroup.prototype.disable = function (id, init) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isDisabled = (!button && this.config.disabled) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled);
+        if (isDisabled && !init) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.disable();
+            this.config.disabled = this._buttons.every(function (item) { return item.config.disabled; });
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.disable(); });
+            this.config.disabled = true;
+        }
+        this.paint();
+    };
+    CheckboxGroup.prototype.isDisabled = function (id) {
+        var _a;
+        var button = this._buttons.find(function (item) { return item.config.id === id; });
+        return Boolean(this.config.disabled || (core_1.isDefined(id) && ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled)));
+    };
+    CheckboxGroup.prototype.clear = function () {
+        if (this._buttons.some(function (item) { return item.isChecked(); })) {
+            var value_1 = {};
+            this._buttons.forEach(function (checkbox) {
+                value_1[checkbox.config.id] = typeof checkbox.config.value === "string" ? "" : false;
+            });
+            if (!this.events.fire(types_1.ItemEvent.beforeChange, [value_1])) {
+                return;
+            }
+            this._buttons.forEach(function (checkbox) {
+                checkbox.clear(true);
+            });
+            this.events.fire(types_1.ItemEvent.change, [value_1]);
+            helper_1.isVerify(this.config) && this.validate();
+        }
+    };
+    CheckboxGroup.prototype.validate = function (silent) {
+        var _this = this;
+        if (silent === void 0) { silent = false; }
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
+            return;
+        if (this.config.required) {
+            this._isValid = this._buttons.some(function (element) { return element.config.$required && !!element.config.checked; });
+        }
+        if (!silent) {
+            this._buttons.forEach(function (element) {
+                element.config.$validationStatus = _this._isValid
+                    ? types_1.ValidationStatus.success
+                    : types_1.ValidationStatus.error;
+            });
+            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
+        }
+        return this._isValid;
+    };
+    CheckboxGroup.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this._buttons.forEach(function (element) {
+            element.clearValidate();
+        });
+        this.paint();
+    };
+    CheckboxGroup.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config) || !config.options || core_1.isEmptyObj(config.options)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.layout) {
+            this.layout.destructor();
+        }
+        if (this._buttons.length) {
+            this._buttons.forEach(function (button) {
+                button.destructor();
+            });
+            this._buttons = [];
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            options: {},
+            required: false,
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (this.config.helpMessage) {
+            this._helper = new ts_popup_1.Popup({
+                css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
+            });
+            this._helper.attachHTML(this.config.helpMessage);
+        }
+        var checkboxesConfig = this.config.options.rows || this.config.options.cols;
+        checkboxesConfig === null || checkboxesConfig === void 0 ? void 0 : checkboxesConfig.forEach(function (option) {
+            option.id = option.id || core_1.uid();
+            option.$group = true;
+        });
+        this.layout = new ts_layout_1.Layout(null, this.config.options);
+        checkboxesConfig === null || checkboxesConfig === void 0 ? void 0 : checkboxesConfig.forEach(function (option) {
+            var checkbox = new checkbox_1.Checkbox(null, __assign(__assign({}, option), { disabled: config.disabled || option.disabled, name: config.name, $required: config.required }));
+            _this._buttons.push(checkbox);
+            _this.layout.getCell(option.id).attach(checkbox);
+            checkbox.events.on(types_1.ItemEvent.beforeChange, function (checked) {
+                var _a;
+                var value = __assign(__assign({}, _this.getValue()), (_a = {}, _a[checkbox.config.id] = checked, _a));
+                return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+            });
+            checkbox.events.on(types_1.ItemEvent.change, function () {
+                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
+                helper_1.isVerify(_this.config) && _this.validate();
+            });
+            checkbox.events.on(types_1.ItemEvent.focus, function (_value, id) {
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue(), id]);
+            });
+            checkbox.events.on(types_1.ItemEvent.blur, function (_value, id) {
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue(), id]);
+            });
+            checkbox.events.on(types_1.ItemEvent.keydown, function (event, id) {
+                _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
+            });
+            checkbox.events.on(types_1.ItemEvent.afterHide, function () {
+                dom_1.awaitRedraw().then(function () {
+                    var _a;
+                    (_a = _this.layout.getCell(checkbox.config.id)) === null || _a === void 0 ? void 0 : _a.hide();
+                });
+            });
+            checkbox.events.on(types_1.ItemEvent.afterShow, function () {
+                var _a;
+                (_a = _this.layout.getCell(checkbox.config.id)) === null || _a === void 0 ? void 0 : _a.show();
+            });
+        });
+        this.config.value && this.setValue(this.config.value);
+        this.clearValidate();
+        if (!this.config.disabled &&
+            this._buttons.length &&
+            this._buttons.every(function (item) { return item.config.disabled; })) {
+            this.config.disabled = true;
+        }
+        if (this.config.hidden)
+            dom_1.awaitRedraw().then(function () { return _this.hide(undefined, true); });
+    };
+    CheckboxGroup.prototype._initHandlers = function () {
+        var _this = this;
+        this.events.on(types_1.ItemEvent.change, function () {
+            _this.config.value = _this.getValue();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+    };
+    CheckboxGroup.prototype._draw = function () {
+        var visibility = this.config.hidden ? " dhx_form-group--hidden" : "";
+        var _a = this.config, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage, required = _a.required, name = _a.name, id = _a.id;
+        return dom_1.el("fieldset.dhx_form-group-fieldset", {}, [
+            dom_1.el("div.dhx_form-group.dhx_form-group--checkbox-group", {
+                class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)) + visibility,
+                "data-dhx-id": name || id,
+                role: "radiogroup",
+            }, [
+                label || labelWidth || helpMessage || required ? this._drawLabel() : null,
+                dom_1.el("div.dhx_checkbox-group--container", {}, [
+                    this.layout && dom_1.inject(this.layout.getRootView()),
+                    required &&
+                        helper_1.getValidationMessage(this.config) &&
+                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
+                ]),
+            ]),
+        ]);
+    };
+    return CheckboxGroup;
+}(label_1.Label));
+exports.CheckboxGroup = CheckboxGroup;
+
+
+/***/ }),
+/* 220 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var ts_layout_1 = __webpack_require__(10);
+var ts_popup_1 = __webpack_require__(11);
+var events_1 = __webpack_require__(3);
+var radiobutton_1 = __webpack_require__(221);
+var helper_1 = __webpack_require__(9);
+var label_1 = __webpack_require__(16);
+var types_1 = __webpack_require__(7);
+var RadioGroup = /** @class */ (function (_super) {
+    __extends(RadioGroup, _super);
+    function RadioGroup(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._buttons = [];
+        _this._isValid = true;
+        _this._propsItem = [
+            "required",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+            "options",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        _this._initView(config);
+        _this._initHandlers();
+        _this.config.value && _this._setValue(_this.config.value);
+        _this.clearValidate();
+        if (_this.config.helpMessage) {
+            _this._helper = new ts_popup_1.Popup({
+                css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
+            });
+            _this._helper.attachHTML(_this.config.helpMessage);
+        }
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    RadioGroup.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.layout && this.layout.destructor();
+        this.events = this._uid = this._propsItem = this._props = this._isValid = this._buttons = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    RadioGroup.prototype.setProperties = function (arg, props) {
+        if (typeof arg === "undefined" ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        if (typeof arg === "object" && !core_1.isEmptyObj(arg)) {
+            for (var key in arg) {
+                if (this._props.includes(key)) {
+                    this.config[key] = arg[key];
+                }
+            }
+            if (arg.hasOwnProperty("options")) {
+                this._initView(this.config);
+                this._initHandlers();
+            }
+        }
+        if (typeof arg === "string" && props && !core_1.isEmptyObj(props)) {
+            var radio = this._buttons.find(function (item) { return item.config.id === arg; });
+            radio && radio.setProperties(props);
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    RadioGroup.prototype.getProperties = function (id) {
+        if (typeof id === "undefined") {
+            var obj = {};
+            for (var key in this.config) {
+                if (this._props.includes(key)) {
+                    obj[key] = this.config[key];
+                }
+            }
+            return obj;
+        }
+        var radio = this._buttons.find(function (item) { return item.config.id === id; });
+        return radio.getProperties();
+    };
+    RadioGroup.prototype.getValue = function () {
+        var _this = this;
+        this._buttons.forEach(function (element) {
+            if (element.getValue()) {
+                _this.config.value = element.getValue() || "";
+            }
+        });
+        return this.config.value || "";
+    };
+    RadioGroup.prototype.setValue = function (value) {
+        if (value === this.config.value)
+            return;
+        this._setValue(value);
+        this.events.fire(types_1.ItemEvent.change, [value]);
+        helper_1.isVerify(this.config) && this.validate();
+    };
+    RadioGroup.prototype.focus = function (id) {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            if (!_this._buttons.length) {
+                return;
+            }
+            if (!id) {
+                return _this._buttons[0].focus();
+            }
+            var radiobutton = _this._buttons.find(function (i) { return i.config.id === id; });
+            if (!radiobutton) {
+                return;
+            }
+            return radiobutton.focus();
+        });
+    };
+    RadioGroup.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            if (!_this._buttons.length) {
+                return;
+            }
+            _this._buttons.forEach(function (radioButton) { return radioButton.blur(); });
+        });
+    };
+    RadioGroup.prototype.show = function (id) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isHidden = (!button && (this.config.hidden || this._buttons.some(function (item) { return item.config.hidden; }))) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden);
+        if (!isHidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue(), id])) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.show();
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.show(); });
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue(), id]);
+    };
+    RadioGroup.prototype.hide = function (id, init) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isHidden = (!button && this.config.hidden) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden);
+        if ((isHidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), id, init])) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.hide();
+            this.config.hidden = this._buttons.every(function (item) { return item.config.hidden; });
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.hide(); });
+            this.config.hidden = true;
+        }
+        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), id, init]);
+    };
+    RadioGroup.prototype.isVisible = function (id) {
+        var _a;
+        var button = this._buttons.find(function (item) { return item.config.id === id; });
+        return !(this.config.hidden || (core_1.isDefined(id) && ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.hidden)));
+    };
+    RadioGroup.prototype.enable = function (id) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isDisabled = (!button && (this.config.disabled || this._buttons.some(function (item) { return item.config.disabled; }))) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled);
+        if (!isDisabled) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.enable();
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.enable(); });
+        }
+        this.config.disabled = false;
+        this.paint();
+    };
+    RadioGroup.prototype.disable = function (id, init) {
+        var _a;
+        var button = (id && this._buttons.find(function (item) { return item.config.id === id; }));
+        if (core_1.isDefined(id) && !button) {
+            return;
+        }
+        var isDisabled = (!button && this.config.disabled) || ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled);
+        if (isDisabled && !init) {
+            return;
+        }
+        if (button) {
+            button === null || button === void 0 ? void 0 : button.disable();
+            this.config.disabled = this._buttons.every(function (item) { return item.config.disabled; });
+        }
+        else {
+            this._buttons.forEach(function (item) { return item.disable(); });
+            this.config.disabled = true;
+        }
+        this.paint();
+    };
+    RadioGroup.prototype.isDisabled = function (id) {
+        var _a;
+        var button = this._buttons.find(function (item) { return item.config.id === id; });
+        return Boolean(this.config.disabled || (core_1.isDefined(id) && ((_a = button === null || button === void 0 ? void 0 : button.config) === null || _a === void 0 ? void 0 : _a.disabled)));
+    };
+    RadioGroup.prototype.clear = function () {
+        if (this.config.value === "")
+            return;
+        this._buttons.forEach(function (element) {
+            element.clear();
+        });
+        this.config.value = "";
+        this.events.fire(types_1.ItemEvent.change, [this.config.value]);
+    };
+    RadioGroup.prototype.validate = function (silent) {
+        var _this = this;
+        if (silent === void 0) { silent = false; }
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [this.getValue()]))
+            return;
+        if (this.config.required) {
+            this._isValid = this._buttons.some(function (element) { return _this.config.required && !!element.config.checked; });
+        }
+        if (!silent) {
+            this._buttons.forEach(function (element) {
+                element.config.$validationStatus = _this._isValid
+                    ? types_1.ValidationStatus.success
+                    : types_1.ValidationStatus.error;
+            });
+            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            this.events.fire(types_1.ItemEvent.afterValidate, [this.getValue(), this._isValid]);
+        }
+        return this._isValid;
+    };
+    RadioGroup.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this._buttons.map(function (element) {
+            element.clearValidate();
+        });
+        this.paint();
+    };
+    RadioGroup.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config) || !config.options || core_1.isEmptyObj(config.options)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.layout) {
+            this.layout.destructor();
+        }
+        if (this._buttons.length) {
+            this._buttons.forEach(function (button) {
+                button.destructor();
+            });
+            this._buttons = [];
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            options: {},
+            required: false,
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (this.config.hidden)
+            dom_1.awaitRedraw().then(function () { return _this.hide(undefined, true); });
+        var radioButtonsConfig = this.config.options.rows || this.config.options.cols;
+        radioButtonsConfig === null || radioButtonsConfig === void 0 ? void 0 : radioButtonsConfig.forEach(function (option) {
+            option.id = option.id || core_1.uid();
+        });
+        this.layout = new ts_layout_1.Layout(null, this.config.options);
+        radioButtonsConfig === null || radioButtonsConfig === void 0 ? void 0 : radioButtonsConfig.forEach(function (option) {
+            var radioButton = new radiobutton_1.RadioButton(null, __assign(__assign({}, option), { disabled: config.disabled || option.disabled, $name: config.name, $required: config.required }));
+            _this._buttons.push(radioButton);
+            _this.layout.getCell(option.id).attach(radioButton);
+            radioButton.events.on(radiobutton_1.RadioButtonEvents.beforeChange, function () {
+                return _this.events.fire(types_1.ItemEvent.beforeChange, [radioButton.config.value || ""]);
+            });
+            radioButton.events.on(radiobutton_1.RadioButtonEvents.change, function () {
+                _this._buttons.map(function (button) {
+                    if (button.config.id !== radioButton.config.id) {
+                        button.setValue(false);
+                    }
+                });
+                _this.events.fire(types_1.ItemEvent.change, [_this.getValue()]);
+                helper_1.isVerify(_this.config) && _this.validate();
+            });
+            radioButton.events.on(radiobutton_1.RadioButtonEvents.focus, function (value, id) {
+                _this.events.fire(types_1.ItemEvent.focus, [value, id]);
+            });
+            radioButton.events.on(radiobutton_1.RadioButtonEvents.blur, function (value, id) {
+                _this.events.fire(types_1.ItemEvent.blur, [value, id]);
+            });
+            radioButton.events.on(radiobutton_1.RadioButtonEvents.keydown, function (event, id) {
+                _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
+            });
+            radioButton.events.on(types_1.ItemEvent.afterHide, function () {
+                dom_1.awaitRedraw().then(function () {
+                    _this.layout.getCell(radioButton.config.id).hide();
+                });
+            });
+            radioButton.events.on(types_1.ItemEvent.afterShow, function () {
+                _this.layout.getCell(radioButton.config.id).show();
+            });
+        });
+        if (!this.config.disabled &&
+            this._buttons.length &&
+            this._buttons.every(function (item) { return item.config.disabled; })) {
+            this.config.disabled = true;
+        }
+    };
+    RadioGroup.prototype._initHandlers = function () {
+        var _this = this;
+        this.events.on(types_1.ItemEvent.beforeChange, function () { return _this.paint(); });
+        this.events.on(types_1.ItemEvent.change, function () {
+            _this.config.value = _this.getValue();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+    };
+    RadioGroup.prototype._draw = function () {
+        var _a = this.config, label = _a.label, labelWidth = _a.labelWidth, helpMessage = _a.helpMessage, required = _a.required, hidden = _a.hidden, name = _a.name, id = _a.id;
+        var visibility = hidden ? " dhx_form-group--hidden" : "";
+        return dom_1.el("fieldset.dhx_form-group-fieldset", {}, [
+            dom_1.el("div.dhx_form-group.dhx_form-group--radio-group", {
+                class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)) + visibility,
+                "data-dhx-id": name || id,
+            }, [
+                label || labelWidth || helpMessage || required ? [this._drawLabel()] : null,
+                dom_1.el("div.dhx_radio-group--container", {}, [
+                    this.layout && dom_1.inject(this.layout.getRootView()),
+                    required &&
+                        helper_1.getValidationMessage(this.config) &&
+                        dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
+                ]),
+            ]),
+        ]);
+    };
+    RadioGroup.prototype._setValue = function (value) {
+        if (typeof value === "undefined" || this._buttons.findIndex(function (i) { return i.config.value === value; }) === -1)
+            return;
+        this._buttons.forEach(function (element) {
+            value === element.config.value ? element.setValue(true) : element.setValue(false);
+        });
+    };
+    return RadioGroup;
+}(label_1.Label));
+exports.RadioGroup = RadioGroup;
+
+
+/***/ }),
+/* 221 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -37109,15 +36613,20 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
-var view_1 = __webpack_require__(5);
-var helper_1 = __webpack_require__(8);
-var types_1 = __webpack_require__(6);
+var view_1 = __webpack_require__(6);
+var helper_1 = __webpack_require__(9);
+var types_1 = __webpack_require__(7);
 var RadioButtonEvents;
 (function (RadioButtonEvents) {
+    RadioButtonEvents["beforeChange"] = "beforeChange";
     RadioButtonEvents["change"] = "change";
     RadioButtonEvents["focus"] = "focus";
     RadioButtonEvents["blur"] = "blur";
     RadioButtonEvents["keydown"] = "keydown";
+    RadioButtonEvents["beforeHide"] = "beforeHide";
+    RadioButtonEvents["afterHide"] = "afterHide";
+    RadioButtonEvents["beforeShow"] = "beforeShow";
+    RadioButtonEvents["afterShow"] = "afterShow";
 })(RadioButtonEvents = exports.RadioButtonEvents || (exports.RadioButtonEvents = {}));
 var RadioButton = /** @class */ (function (_super) {
     __extends(RadioButton, _super);
@@ -37128,8 +36637,12 @@ var RadioButton = /** @class */ (function (_super) {
         _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
         _this._handlers = {
             onchange: function (e) {
-                _this.config.checked = e.target.checked;
-                _this.events.fire(RadioButtonEvents.change, [e.target.checked]);
+                var checked = e.target.checked;
+                if (!_this.events.fire(RadioButtonEvents.beforeChange, [checked])) {
+                    return;
+                }
+                _this.config.checked = checked;
+                _this.events.fire(RadioButtonEvents.change, [checked]);
             },
             onfocus: function () { return _this.events.fire(RadioButtonEvents.focus, [_this.getValue() || "", _this.config.id]); },
             onblur: function () { var _a; return (_a = _this.events) === null || _a === void 0 ? void 0 : _a.fire(RadioButtonEvents.blur, [_this.getValue() || "", _this.config.id]); },
@@ -37174,6 +36687,25 @@ var RadioButton = /** @class */ (function (_super) {
         this.config.checked = checked;
         this.paint();
     };
+    RadioButton.prototype.show = function () {
+        var hidden = this.config.hidden;
+        if (!hidden || !this.events.fire(RadioButtonEvents.beforeShow, [])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(RadioButtonEvents.afterShow, []);
+    };
+    RadioButton.prototype.hide = function () {
+        var hidden = this.config.hidden;
+        if (hidden || !this.events.fire(RadioButtonEvents.beforeHide, [])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(RadioButtonEvents.afterHide, []);
+    };
+    RadioButton.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
     RadioButton.prototype.focus = function () {
         var _this = this;
         dom_1.awaitRedraw().then(function () {
@@ -37187,15 +36719,15 @@ var RadioButton = /** @class */ (function (_super) {
         });
     };
     RadioButton.prototype.disable = function () {
-        this.config.$disabled = true;
+        this.config.disabled = true;
         this.paint();
     };
     RadioButton.prototype.enable = function () {
-        this.config.$disabled = false;
+        this.config.disabled = false;
         this.paint();
     };
     RadioButton.prototype.isDisabled = function () {
-        return this.config.$disabled;
+        return !!this.config.disabled;
     };
     RadioButton.prototype.clear = function () {
         this.config.checked = false;
@@ -37215,7 +36747,7 @@ var RadioButton = /** @class */ (function (_super) {
         this.paint();
     };
     RadioButton.prototype._draw = function () {
-        var _a = this.config, id = _a.id, value = _a.value, checked = _a.checked, $disabled = _a.$disabled, $name = _a.$name, $required = _a.$required, text = _a.text;
+        var _a = this.config, id = _a.id, value = _a.value, checked = _a.checked, disabled = _a.disabled, $name = _a.$name, $required = _a.$required, text = _a.text;
         return dom_1.el("label.dhx_radiobutton.dhx_form-group", {
             class: helper_1.getFormItemCss(this.config, !!$required),
         }, [
@@ -37224,7 +36756,7 @@ var RadioButton = /** @class */ (function (_super) {
                 id: id,
                 value: value || "",
                 name: $name || "",
-                disabled: $disabled,
+                disabled: disabled,
                 checked: checked,
                 onchange: this._handlers.onchange,
                 onfocus: this._handlers.onfocus,
@@ -37240,6 +36772,670 @@ var RadioButton = /** @class */ (function (_super) {
     return RadioButton;
 }(view_1.View));
 exports.RadioButton = RadioButton;
+
+
+/***/ }),
+/* 222 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var label_1 = __webpack_require__(16);
+var helper_1 = __webpack_require__(9);
+var events_1 = __webpack_require__(3);
+var types_1 = __webpack_require__(7);
+var Select = /** @class */ (function (_super) {
+    __extends(Select, _super);
+    function Select(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._isValid = true;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "icon",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        _this._initView(config);
+        _this._initHandlers();
+        return _this;
+    }
+    Select.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.events = this._uid = this._propsItem = this._props = this._isValid = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    Select.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    Select.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Select.prototype.show = function () {
+        if (!this.config.hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue()])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue()]);
+    };
+    Select.prototype.hide = function (init) {
+        if ((this.config.hidden && !init) ||
+            !this.events.fire(types_1.ItemEvent.beforeHide, [this.getValue(), !!init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [this.getValue(), !!init]);
+    };
+    Select.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    Select.prototype.disable = function (value) {
+        var option = (core_1.isDefined(value) &&
+            this.config.options.find(function (option) { return option.value === value; }));
+        if (core_1.isDefined(value) && !option) {
+            return;
+        }
+        var isDisabled = (!option && this.config.disabled) || (option === null || option === void 0 ? void 0 : option.disabled);
+        if (isDisabled) {
+            return;
+        }
+        if (option) {
+            option.disabled = true;
+            this.config.disabled = this.config.options.every(function (option) { return option.disabled; });
+        }
+        else {
+            this.config.options = this.config.options.map(function (option) { return (__assign(__assign({}, option), { disabled: true })); });
+            this.config.disabled = true;
+        }
+        this.paint();
+    };
+    Select.prototype.enable = function (value) {
+        var option = (core_1.isDefined(value) &&
+            this.config.options.find(function (option) { return option.value === value; }));
+        if (core_1.isDefined(value) && !option) {
+            return;
+        }
+        var isDisabled = (!option && (this.config.disabled || this.config.options.some(function (option) { return option.disabled; }))) || (option === null || option === void 0 ? void 0 : option.disabled);
+        if (!isDisabled) {
+            return;
+        }
+        if (option) {
+            option.disabled = false;
+        }
+        else {
+            this.config.options = this.config.options.map(function (option) { return (__assign(__assign({}, option), { disabled: false })); });
+        }
+        this.config.disabled = false;
+        this.paint();
+    };
+    Select.prototype.isDisabled = function (value) {
+        var option = this.config.options.find(function (option) { return option.value === value; });
+        return Boolean(this.config.disabled || (core_1.isDefined(value) && (option === null || option === void 0 ? void 0 : option.disabled)));
+    };
+    Select.prototype.validate = function (silent) {
+        if (silent === void 0) { silent = false; }
+        var _a = this.config, value = _a.value, validation = _a.validation;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return;
+        this._isValid = validation
+            ? this.config.validation(value)
+            : typeof value !== "undefined" && !!String(value).length;
+        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        return this._isValid;
+    };
+    Select.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this.paint();
+    };
+    Select.prototype.clear = function () {
+        var _a, _b;
+        var value = (_b = (_a = this.config) === null || _a === void 0 ? void 0 : _a.options[0]) === null || _b === void 0 ? void 0 : _b.value;
+        if (this.config.value === value || !this.events.fire(types_1.ItemEvent.beforeChange, [value])) {
+            return;
+        }
+        this.config.value = value;
+        this.events.fire(types_1.ItemEvent.change, [value]);
+        helper_1.isVerify(this.config) && this.validate();
+        this.paint();
+    };
+    Select.prototype.setValue = function (value) {
+        if (typeof value === "undefined" ||
+            value === this.config.value ||
+            this.config.options.findIndex(function (i) { return i.value === value; }) === -1 ||
+            !this.events.fire(types_1.ItemEvent.beforeChange, [value])) {
+            return;
+        }
+        this.config.value = value;
+        this.events.fire(types_1.ItemEvent.change, [value]);
+        helper_1.isVerify(this.config) && this.validate();
+        this.paint();
+    };
+    Select.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.select.el.focus();
+        });
+    };
+    Select.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.select.el.blur();
+        });
+    };
+    Select.prototype.getValue = function () {
+        return this.config.value;
+    };
+    Select.prototype.setOptions = function (options) {
+        if (!options || !options.length) {
+            throw new Error("Function argument cannot be empty, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
+        }
+        if (!this.events.fire(types_1.ItemEvent.beforeChangeOptions, [__spreadArrays(options)])) {
+            return;
+        }
+        this._checkOptions(options);
+        this.config.options = __spreadArrays(options);
+        this.events.fire(types_1.ItemEvent.changeOptions, [__spreadArrays(options)]);
+        this.setValue(this.config.options[0].value);
+        this.paint();
+    };
+    Select.prototype.getOptions = function () {
+        return this.config.options;
+    };
+    Select.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        this._checkOptions(config.options);
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            required: false,
+            icon: "",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+            options: config.options,
+            value: config.options[0].value,
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (!this.config.disabled &&
+            this.config.options.length &&
+            this.config.options.every(function (option) { return option.disabled; })) {
+            this.config.disabled = true;
+        }
+        if (this.config.hidden)
+            dom_1.awaitRedraw().then(function () { return _this.hide(true); });
+        this.paint();
+    };
+    Select.prototype._initHandlers = function () {
+        var _this = this;
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+    };
+    Select.prototype._getHandlers = function () {
+        var _this = this;
+        return {
+            onchange: function (e) {
+                var value = _this.config.options
+                    .map(function (o) { return o.value; })
+                    .find(function (v) { return v == e.target.value; });
+                if (!_this.events.fire(types_1.ItemEvent.beforeChange, [value]))
+                    return;
+                _this.config.value = value;
+                _this.events.fire(types_1.ItemEvent.change, [value]);
+                helper_1.isVerify(_this.config) && _this.validate();
+                _this.paint();
+            },
+            onblur: function () {
+                if (!_this._uid)
+                    return;
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+                _this.paint();
+            },
+            onfocus: function () {
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+                _this.paint();
+            },
+        };
+    };
+    Select.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, id = _d.id, options = _d.options, icon = _d.icon, value = _d.value, label = _d.label, labelWidth = _d.labelWidth, helpMessage = _d.helpMessage, required = _d.required, name = _d.name;
+        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.select) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el(".dhx_form-group", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
+        }, [
+            (label || labelWidth || helpMessage) && this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", {}, [
+                dom_1.el("div.dhx_input__container", {}, [
+                    dom_1.el(".dhx_input__icon", {
+                        class: icon ? icon : "dxi dxi-menu-down",
+                    }),
+                    dom_1.el("select.dhx_select.dhx_input", {
+                        id: id,
+                        "data-dhx-id": name || id,
+                        tabindex: 0,
+                        class: activeFocus && "dhx_input--focus",
+                        onchange: this._handlers.onchange,
+                        onfocus: this._handlers.onfocus,
+                        onblur: this._handlers.onblur,
+                        onkeydown: this._handlers.onkeydown,
+                        _ref: "select",
+                        required: required,
+                    }, options.length &&
+                        options.map(function (option) {
+                            return dom_1.el("option", {
+                                value: option.value,
+                                disabled: option.disabled,
+                                selected: value === option.value,
+                            }, option.content);
+                        })),
+                ]),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    Select.prototype._checkOptions = function (options) {
+        if (options.length === 0) {
+            throw new Error("Property options* cannot be empty, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
+        }
+        options.forEach(function (item) {
+            if (!item.hasOwnProperty("value") || !item.hasOwnProperty("content")) {
+                throw new Error("The object must contain two required properties value and content, for more info check documentation https://docs.dhtmlx.com/suite/form__select.html#addingselect");
+            }
+        });
+    };
+    return Select;
+}(label_1.Label));
+exports.Select = Select;
+
+
+/***/ }),
+/* 223 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var helper_1 = __webpack_require__(9);
+var input_1 = __webpack_require__(58);
+var types_1 = __webpack_require__(7);
+var core_1 = __webpack_require__(1);
+var Textarea = /** @class */ (function (_super) {
+    __extends(Textarea, _super);
+    function Textarea() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "placeholder",
+            "readOnly",
+            "maxlength",
+            "minlength",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        return _this;
+    }
+    Textarea.prototype.getValue = function () {
+        var _a;
+        return String((_a = this.config.value) !== null && _a !== void 0 ? _a : "");
+    };
+    Textarea.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.textarea.el.focus();
+        });
+    };
+    Textarea.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.textarea.el.blur();
+        });
+    };
+    Textarea.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    Textarea.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Textarea.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            required: false,
+            validation: undefined,
+            placeholder: "",
+            readOnly: false,
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        this.paint();
+    };
+    Textarea.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, id = _d.id, value = _d.value, disabled = _d.disabled, name = _d.name, placeholder = _d.placeholder, required = _d.required, resizable = _d.resizable, readOnly = _d.readOnly, maxlength = _d.maxlength, minlength = _d.minlength, label = _d.label, helpMessage = _d.helpMessage, height = _d.height;
+        var activeFocus = ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.textarea) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el("div.dhx_form-group.dhx_form-group--textarea", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", [
+                dom_1.el("textarea.dhx_input.dhx_input--textarea", {
+                    type: "text",
+                    id: id,
+                    "data-dhx-id": name || id,
+                    placeholder: placeholder || "",
+                    value: core_1.isDefined(value) ? value : "",
+                    name: name || "",
+                    disabled: disabled,
+                    required: required,
+                    readOnly: readOnly,
+                    maxlength: maxlength,
+                    minlength: minlength,
+                    onblur: this._handlers.onblur,
+                    oninput: this._handlers.oninput,
+                    onchange: this._handlers.onchange,
+                    onfocus: this._handlers.onfocus,
+                    onkeydown: this._handlers.onkeydown,
+                    _hooks: {
+                        didInsert: function (node) {
+                            if (height === "content") {
+                                var textarea = node.el;
+                                textarea.style.height = textarea.scrollHeight + "px";
+                            }
+                        },
+                    },
+                    style: {
+                        resize: resizable ? "both" : "none",
+                    },
+                    _ref: "textarea",
+                    "aria-label": label || (readOnly ? value : "") + " type text",
+                    "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
+                }),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    return Textarea;
+}(input_1.Input));
+exports.Textarea = Textarea;
+
+
+/***/ }),
+/* 224 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var helper_1 = __webpack_require__(9);
+var input_1 = __webpack_require__(58);
+var types_1 = __webpack_require__(7);
+var Text = /** @class */ (function (_super) {
+    __extends(Text, _super);
+    function Text() {
+        var _this = _super !== null && _super.apply(this, arguments) || this;
+        _this._propsItem = [
+            "inputType",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem);
+        return _this;
+    }
+    Text.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    Text.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Text.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            value: "",
+            inputType: "text",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        this.paint();
+    };
+    Text.prototype._draw = function () {
+        var _a = this.config, id = _a.id, value = _a.value, name = _a.name, inputType = _a.inputType, label = _a.label;
+        var valueLength = (value !== null && value !== void 0 ? value : "").toString().length;
+        return dom_1.el("div.dhx_form-group.dhx_form-group--textinput", {
+            class: helper_1.getFormItemCss(this.config),
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", [
+                dom_1.el("input.dhx_input.dhx_input--textinput", {
+                    type: ["text", "number", "password"].includes(inputType) ? inputType : "text",
+                    readOnly: true,
+                    id: id,
+                    "data-dhx-id": name || id,
+                    value: value !== null && value !== void 0 ? value : "",
+                    name: name,
+                    _ref: "input",
+                    tabindex: -1,
+                    role: "presentation",
+                    "aria-label": label || value,
+                    size: valueLength > 20 ? valueLength : 20,
+                    onkeydown: this._handlers.onkeydown,
+                }),
+            ]),
+        ]);
+    };
+    return Text;
+}(input_1.Input));
+exports.Text = Text;
 
 
 /***/ }),
@@ -37261,17 +37457,6 @@ var __extends = (this && this.__extends) || (function () {
         d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
     };
 })();
-var __rest = (this && this.__rest) || function (s, e) {
-    var t = {};
-    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
-        t[p] = s[p];
-    if (s != null && typeof Object.getOwnPropertySymbols === "function")
-        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
-            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
-                t[p[i]] = s[p[i]];
-        }
-    return t;
-};
 var __spreadArrays = (this && this.__spreadArrays) || function () {
     for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
     for (var r = Array(s), k = 0, i = 0; i < il; i++)
@@ -37280,793 +37465,317 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var Form_1 = __webpack_require__(94);
-var types_1 = __webpack_require__(6);
-var ts_layout_1 = __webpack_require__(10);
+var dom_1 = __webpack_require__(0);
 var core_1 = __webpack_require__(1);
-var button_1 = __webpack_require__(96);
-var dateinput_1 = __webpack_require__(95);
-var checkbox_1 = __webpack_require__(57);
-var checkboxGroup_1 = __webpack_require__(97);
-var input_1 = __webpack_require__(39);
-var radioGroup_1 = __webpack_require__(98);
-var select_1 = __webpack_require__(99);
-var simplevault_1 = __webpack_require__(104);
-var sliderform_1 = __webpack_require__(103);
-var textarea_1 = __webpack_require__(100);
-var textinput_1 = __webpack_require__(101);
-var timeinput_1 = __webpack_require__(106);
-var colorpicker_1 = __webpack_require__(107);
-var container_1 = __webpack_require__(226);
-var spacer_1 = __webpack_require__(108);
-var proCombo_1 = __webpack_require__(227);
-var ProForm = /** @class */ (function (_super) {
-    __extends(ProForm, _super);
-    function ProForm(container, config) {
-        return _super.call(this, container, config) || this;
+var helper_1 = __webpack_require__(9);
+var ts_combobox_1 = __webpack_require__(25);
+var events_1 = __webpack_require__(3);
+var label_1 = __webpack_require__(16);
+var types_1 = __webpack_require__(7);
+var Combo = /** @class */ (function (_super) {
+    __extends(Combo, _super);
+    function Combo(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._isValid = true;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "placeholder",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+            "readonly",
+            "readOnly",
+        ];
+        _this._propsCombo = [
+            "template",
+            "filter",
+            "multiselection",
+            "selectAllButton",
+            "itemsCount",
+            "itemHeight",
+            "virtual",
+            "listHeight",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsCombo);
+        _this._initView(config);
+        _this._initHandlers();
+        return _this;
     }
-    ProForm.prototype._addLayoutItem = function (item) {
+    Combo.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.combobox && this.combobox.destructor();
+        this.events = this._uid = this._propsCombo = this._propsItem = this._props = this._isValid = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    Combo.prototype.setProperties = function (propertyConfig) {
         var _this = this;
-        var id = (item.id = item.id || core_1.uid());
-        var name = (item.name = item.name || id.toString());
-        item.type = item.type && item.type.toLowerCase();
-        var width = item.width, height = item.height;
-        var css = item.css, padding = item.padding, config = __rest(item, ["css", "padding"]);
-        var classList = css ? css + " dhx_form-element" : "dhx_form-element";
-        var autoSize = !(item.type === "spacer" || item.type === undefined);
-        if (autoSize && !width) {
-            width = "content";
-        }
-        if (autoSize && !height) {
-            height = "content";
-        }
-        switch (config.type) {
-            case "button":
-                {
-                    if (config.full) {
-                        classList += " dhx_button--full-gravity";
-                    }
-                    var button_2 = (this._attachments[name] = new button_1.Button(null, item));
-                    button_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                        return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                        _this._changeProps(name, props);
-                        _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                        _this.layout.paint();
-                    });
-                    button_2.events.on(types_1.ItemEvent.click, function (e) {
-                        e.preventDefault();
-                        _this.events.fire(types_1.FormEvents.click, [name, e]);
-                        _this.events.fire(types_1.FormEvents.buttonClick, [name, e]);
-                        if (button_2.config.submit && _this.validate()) {
-                            button_2.config.url && _this.send(button_2.config.url);
-                        }
-                    });
-                    button_2.events.on(types_1.ItemEvent.beforeHide, function (text, init) {
-                        if (!init) {
-                            return _this.events.fire(types_1.FormEvents.beforeHide, [name, text]);
-                        }
-                    });
-                    button_2.events.on(types_1.ItemEvent.beforeShow, function (text) {
-                        return _this.events.fire(types_1.FormEvents.beforeShow, [name, text]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.afterHide, function (text, init) {
-                        _this.layout.getCell(name).hide();
-                        !init && _this.events.fire(types_1.FormEvents.afterHide, [name, text]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.afterShow, function (text) {
-                        _this.layout.getCell(name).show();
-                        _this.events.fire(types_1.FormEvents.afterShow, [name, text]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.focus, function (text) {
-                        _this.events.fire(types_1.FormEvents.focus, [name, text]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.blur, function (text) {
-                        _this.events.fire(types_1.FormEvents.blur, [name, text]);
-                    });
-                    button_2.events.on(types_1.ItemEvent.keydown, function (event) {
-                        _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                    });
+        dom_1.awaitRedraw().then(function () {
+            if (!propertyConfig ||
+                core_1.isEmptyObj(propertyConfig) ||
+                !_this.events.fire(types_1.ItemEvent.beforeChangeProperties, [_this.getProperties()]))
+                return;
+            for (var key in propertyConfig) {
+                if (_this._props.includes(key)) {
+                    _this.config[key] = propertyConfig[key];
                 }
-                break;
-            case "datepicker": {
-                var datePicker_1 = (this._attachments[name] = new dateinput_1.DatePicker(null, item));
-                this._state[name] = datePicker_1.getValue(config.valueFormat === "Date");
-                datePicker_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = datePicker_1.getValue(config.valueFormat === "Date");
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                datePicker_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                datePicker_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                datePicker_1.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
             }
-            case "checkbox": {
-                var checkbox_2 = (this._attachments[name] = new checkbox_1.Checkbox(null, item));
-                this._state[name] = checkbox_2.getValue();
-                checkbox_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = checkbox_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                checkbox_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                checkbox_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                checkbox_2.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "checkboxgroup": {
-                var checkboxGroup_2 = (this._attachments[name] = new checkboxGroup_1.CheckboxGroup(null, item));
-                this._state[name] = checkboxGroup_2.getValue();
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = checkboxGroup_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.focus, function (value, id) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value, id]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.blur, function (value, id) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value, id]);
-                });
-                checkboxGroup_2.events.on(types_1.ItemEvent.keydown, function (event, id) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name, id]);
-                });
-                break;
-            }
-            case "combo": {
-                var combo_1 = (this._attachments[name] = new proCombo_1.ProCombo(null, item));
-                this._state[name] = combo_1.getValue();
-                combo_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                combo_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = combo_1.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                combo_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                combo_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                combo_1.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                combo_1.events.on(types_1.ItemEvent.keydown, function (event, id) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name, id]);
-                });
-                break;
-            }
-            case "input": {
-                var input_2 = (this._attachments[name] = new input_1.Input(null, item));
-                this._state[name] = input_2.getValue();
-                input_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                input_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = input_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                input_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                input_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                input_2.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                input_2.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "radiogroup": {
-                var radioGroup_2 = (this._attachments[name] = new radioGroup_1.RadioGroup(null, item));
-                this._state[name] = radioGroup_2.getValue();
-                radioGroup_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = radioGroup_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.focus, function (value, id) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value, id]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.blur, function (value, id) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value, id]);
-                });
-                radioGroup_2.events.on(types_1.ItemEvent.keydown, function (event, id) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name, id]);
-                });
-                break;
-            }
-            case "select": {
-                var select_2 = (this._attachments[name] = new select_1.Select(null, item));
-                this._state[name] = select_2.getValue();
-                select_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                select_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = select_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                select_2.events.on(types_1.ItemEvent.changeOptions, function (options) {
-                    _this.layout.getCell(name).config.options = __spreadArrays(options);
-                });
-                select_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                select_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                select_2.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                select_2.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "simplevault": {
-                config.$vaultHeight = height;
-                var simpleVault_1 = (this._attachments[name] = new simplevault_1.SimpleVault(null, item));
-                this._state[name] = simpleVault_1.getValue();
-                simpleVault_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = simpleVault_1.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                simpleVault_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                break;
-            }
-            case "slider": {
-                var sliderForm = (this._attachments[name] = new sliderform_1.SliderForm(null, item));
-                this._state[name] = sliderForm.getValue();
-                sliderForm.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                sliderForm.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                sliderForm.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "textarea": {
-                var textarea_2 = (this._attachments[name] = new textarea_1.Textarea(null, item));
-                this._state[name] = textarea_2.getValue();
-                textarea_2.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = textarea_2.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                textarea_2.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                textarea_2.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                textarea_2.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "text": {
-                if (width === "content") {
-                    classList += " dhx_form-element--fit-content";
-                }
-                var text_1 = (this._attachments[name] = new textinput_1.Text(null, item));
-                this._state[name] = text_1.getValue();
-                text_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                text_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = text_1.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                text_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                text_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                text_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                text_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                text_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                text_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                text_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                break;
-            }
-            case "timepicker": {
-                var timePicker_1 = (this._attachments[name] = new timeinput_1.TimePicker(null, item));
-                this._state[name] =
-                    (config.value && timePicker_1.getValue(config.valueFormat === "timeObject")) || "";
-                timePicker_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = timePicker_1.getValue(config.valueFormat === "timeObject");
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                timePicker_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                timePicker_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                timePicker_1.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "colorpicker": {
-                var colorPicker_1 = (this._attachments[name] = new colorpicker_1.ColorPicker(null, item));
-                this._state[name] = colorPicker_1.getValue();
-                colorPicker_1.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this._state[name] = colorPicker_1.getValue();
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.change, function (value) {
-                    _this._state[name] = value;
-                    _this.events.fire(types_1.FormEvents.change, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.beforeValidate, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeValidate, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.afterValidate, function (value, isValid) {
-                    _this.events.fire(types_1.FormEvents.afterValidate, [name, value, isValid]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.focus, function (value) {
-                    _this.events.fire(types_1.FormEvents.focus, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.blur, function (value) {
-                    _this.events.fire(types_1.FormEvents.blur, [name, value]);
-                });
-                colorPicker_1.events.on(types_1.ItemEvent.keydown, function (event) {
-                    _this.events.fire(types_1.FormEvents.keydown, [event, name]);
-                });
-                break;
-            }
-            case "container": {
-                var container = (this._attachments[name] = new container_1.Container(null, item));
-                container.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                container.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                container.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                container.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                container.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                container.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                break;
-            }
-            case "spacer":
-            default: {
-                var spacer = (this._attachments[name] = new spacer_1.Spacer(null, item));
-                spacer.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
-                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
-                });
-                spacer.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
-                    _this._changeProps(name, props);
-                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
-                    _this.layout.paint();
-                });
-                spacer.events.on(types_1.ItemEvent.beforeHide, function (value, init) {
-                    if (!init) {
-                        return _this.events.fire(types_1.FormEvents.beforeHide, [name, value]);
-                    }
-                });
-                spacer.events.on(types_1.ItemEvent.beforeShow, function (value) {
-                    return _this.events.fire(types_1.FormEvents.beforeShow, [name, value]);
-                });
-                spacer.events.on(types_1.ItemEvent.afterHide, function (value, init) {
-                    _this.layout.getCell(name).hide();
-                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name, value]);
-                });
-                spacer.events.on(types_1.ItemEvent.afterShow, function (value) {
-                    _this.layout.getCell(name).show();
-                    _this.events.fire(types_1.FormEvents.afterShow, [name, value]);
-                });
-                break;
-            }
-        }
-        var cell = {
-            id: name,
-            width: width,
-            height: height,
-            padding: padding,
-            css: classList,
-        };
-        if ("gravity" in item) {
-            cell.gravity = item.gravity;
-        }
-        return cell;
+            var data = [];
+            _this.getWidget().data.forEach(function (item) { return data.push(item); });
+            _this.config.data = data;
+            _this._initView(_this.config);
+            _this._initHandlers();
+            _this.events.fire(types_1.ItemEvent.afterChangeProperties, [_this.getProperties()]);
+            _this.combobox.paint();
+            _this.paint();
+        });
     };
-    ProForm.prototype._initUI = function (container) {
-        var attachments = (this._attachments = {});
-        var layoutConfig = {
-            padding: "8px",
-        };
-        this.config.css += " dhx_form";
-        this._createLayoutConfig(this.config, layoutConfig);
-        var layout = (this.layout = new ts_layout_1.ProLayout(container, layoutConfig));
-        for (var name_1 in attachments) {
-            layout.getCell(name_1).attach(attachments[name_1]);
+    Combo.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Combo.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+    };
+    Combo.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+    };
+    Combo.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    Combo.prototype.disable = function () {
+        this.config.disabled = true;
+        this.combobox.disable();
+        this.paint();
+    };
+    Combo.prototype.enable = function () {
+        this.config.disabled = false;
+        this.combobox.enable();
+        this.paint();
+    };
+    Combo.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    Combo.prototype.clear = function () {
+        if (!this.config.value)
+            return;
+        this.config.value = "";
+        this.combobox.clear();
+    };
+    Combo.prototype.getValue = function () {
+        if (this.config.multiselection) {
+            return this.combobox.getValue(true) || [];
+        }
+        else {
+            return this.combobox.getValue() || "";
         }
     };
-    return ProForm;
-}(Form_1.Form));
-exports.ProForm = ProForm;
+    Combo.prototype.setValue = function (value) {
+        if (typeof value === "undefined" || value === this.config.value)
+            return;
+        this.combobox.setValue(value);
+    };
+    Combo.prototype.validate = function (silent, validateValue) {
+        var _this = this;
+        if (silent === void 0) { silent = false; }
+        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return false;
+        var text;
+        if (Array.isArray(value)) {
+            text = value.map(function (id) { return _this._getItemText(id); });
+        }
+        else {
+            text = this._getItemText(value) || "";
+        }
+        this._isValid = this.config.validation
+            ? this.config.validation(value, text)
+            : this._exsistData(value);
+        if (!silent) {
+            this.config.$validationStatus = this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            this.config.required && this._validationStatus();
+            this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        }
+        return this._isValid;
+    };
+    Combo.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this._validationStatus();
+        this.paint();
+    };
+    Combo.prototype.getWidget = function () {
+        return this.combobox;
+    };
+    Combo.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.combobox.focus();
+        });
+    };
+    Combo.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.combobox.blur();
+        });
+    };
+    Combo.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.combobox) {
+            this.combobox.destructor();
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            hidden: false,
+            value: "",
+            readOnly: false,
+            multiselection: false,
+            selectAllButton: false,
+            itemHeight: 32,
+            virtual: false,
+            listHeight: 224,
+            required: false,
+            placeholder: "",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        var comboConfig = {};
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+                if (key !== "validation") {
+                    comboConfig[key] = config[key];
+                }
+            }
+        }
+        this.combobox = new ts_combobox_1.Combobox(null, comboConfig);
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        this.paint();
+    };
+    Combo.prototype._initHandlers = function () {
+        var _this = this;
+        this.combobox.events.on(ts_combobox_1.ComboboxEvents.beforeChange, function (value) {
+            return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+        });
+        this.combobox.events.on(ts_combobox_1.ComboboxEvents.change, function () {
+            var value = (_this.config.value = _this.getValue());
+            _this.events.fire(types_1.ItemEvent.change, [value]);
+            helper_1.isVerify(_this.config) && _this.validate();
+            _this.paint();
+        });
+        this.combobox.events.on(ts_combobox_1.ComboboxEvents.focus, function () {
+            _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+            _this.paint();
+        });
+        this.combobox.events.on(ts_combobox_1.ComboboxEvents.blur, function () {
+            _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+            _this.paint();
+        });
+        this.combobox.events.on(ts_combobox_1.ComboboxEvents.keydown, function (event, id) {
+            if (event.code === "Enter") {
+                event.preventDefault();
+            }
+            _this.events.fire(types_1.ItemEvent.keydown, [event, id]);
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+    };
+    Combo.prototype._validationStatus = function () {
+        var _a, _b, _c;
+        var activeFocus = this.combobox.popup.isVisible() ||
+            ((_c = (_b = (_a = this.combobox.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        if (!activeFocus) {
+            switch (this.config.$validationStatus) {
+                case types_1.ValidationStatus.success:
+                    return (this.combobox.config.css =
+                        (this.config.css || "") + "dhx_form-group--state_success");
+                case types_1.ValidationStatus.error:
+                    return (this.combobox.config.css =
+                        (this.config.css || "") + "dhx_form-group--state_error");
+                case types_1.ValidationStatus.pre:
+                default:
+                    return (this.combobox.config.css = this.config.css || "");
+            }
+        }
+        return (this.combobox.config.css = this.config.css || "");
+    };
+    Combo.prototype._getRootView = function () {
+        return this.combobox.getRootView();
+    };
+    Combo.prototype._draw = function () {
+        var _a = this.config, labelWidth = _a.labelWidth, labelPosition = _a.labelPosition, name = _a.name, id = _a.id;
+        return dom_1.el(".dhx_form-group", {
+            "data-dhx-id": name || id,
+        }, [
+            dom_1.inject(this._getRootView()),
+            dom_1.el("div", {
+                style: {
+                    "margin-left": "" + (labelWidth && labelPosition === "left" ? "calc(" + labelWidth + " + 16px)" : ""),
+                },
+                class: this._validationStatus(),
+            }, [dom_1.el("span.dhx_input__caption", helper_1.getValidationMessage(this.config))]),
+        ]);
+    };
+    Combo.prototype._exsistData = function (id) {
+        var _this = this;
+        if (!core_1.isDefined(id))
+            return false;
+        if (id instanceof Array) {
+            if (!id.length)
+                return false;
+            return id.every(function (i) {
+                return _this.combobox.data.exists(i);
+            });
+        }
+        return this.combobox.data.exists(id);
+    };
+    Combo.prototype._getItemText = function (id) {
+        var _a;
+        return (_a = this.combobox.data.getItem(id)) === null || _a === void 0 ? void 0 : _a.value;
+    };
+    return Combo;
+}(label_1.Label));
+exports.Combo = Combo;
 
 
 /***/ }),
@@ -38099,14 +37808,1724 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(6);
+var core_1 = __webpack_require__(1);
+var ts_slider_1 = __webpack_require__(45);
+var events_1 = __webpack_require__(3);
+var label_1 = __webpack_require__(16);
+var types_1 = __webpack_require__(7);
+var helper_1 = __webpack_require__(9);
+var SliderForm = /** @class */ (function (_super) {
+    __extends(SliderForm, _super);
+    function SliderForm(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._propsItem = ["label", "labelWidth", "labelPosition", "hiddenLabel", "helpMessage"];
+        _this._propsSlider = [
+            "min",
+            "max",
+            "step",
+            "mode",
+            "range",
+            "inverse",
+            "tooltip",
+            "tick",
+            "tickTemplate",
+            "majorTick",
+        ];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsSlider);
+        _this._initView(config);
+        _this._initHandlers();
+        var render = function () { return _this._drawSlider(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    SliderForm.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.slider && this.slider.destructor();
+        this.events = this._uid = this._propsSlider = this._propsItem = this._props = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    SliderForm.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this._initView(this.config);
+        this._initHandlers();
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.slider.paint();
+        this.paint();
+    };
+    SliderForm.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    SliderForm.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+    };
+    SliderForm.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+    };
+    SliderForm.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    SliderForm.prototype.disable = function () {
+        this.config.disabled = true;
+        this.slider.disable();
+        this.paint();
+    };
+    SliderForm.prototype.enable = function () {
+        this.config.disabled = false;
+        this.slider.enable();
+        this.paint();
+    };
+    SliderForm.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    SliderForm.prototype.clear = function () {
+        var _a = this.config, value = _a.value, min = _a.min;
+        if (value[0] === min)
+            return;
+        this.slider.setValue(min);
+    };
+    SliderForm.prototype.getValue = function () {
+        return this.slider.getValue();
+    };
+    SliderForm.prototype.setValue = function (value) {
+        if (typeof value === "undefined" || value === this.config.value)
+            return;
+        this.slider.setValue(value);
+    };
+    SliderForm.prototype.getWidget = function () {
+        return this.slider;
+    };
+    SliderForm.prototype.focus = function (extra) {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.slider.focus(extra);
+        });
+    };
+    SliderForm.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.slider.blur();
+        });
+    };
+    SliderForm.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.slider) {
+            this.slider.destructor();
+        }
+        var sliderConfig = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            mode: "horizontal",
+            min: 0,
+            max: 100,
+            step: 1,
+            range: false,
+            inverse: false,
+            tooltip: true,
+            disabled: false,
+            hidden: false,
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                sliderConfig[key] = config[key];
+            }
+        }
+        this.config = __assign({ type: this.config.type }, sliderConfig);
+        this.slider = new ts_slider_1.Slider(null, sliderConfig);
+        this.config.disabled && this.slider.disable();
+        this.config.value = this.slider.getValue();
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+    };
+    SliderForm.prototype._initHandlers = function () {
+        var _this = this;
+        this.slider.events.on(ts_slider_1.SliderEvents.beforeChange, function (newValue, _oldValue, extra) {
+            var value = [newValue];
+            if (_this.config.range) {
+                var _a = _this.getValue(), v1 = _a[0], v2 = _a[1];
+                value = extra ? [v1, newValue] : [newValue, v2];
+            }
+            return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+        });
+        this.slider.events.on(ts_slider_1.SliderEvents.change, function () {
+            if (!_this._uid)
+                return;
+            var value = (_this.config.value = _this.slider.getValue());
+            _this.events.fire(types_1.ItemEvent.change, [value]);
+            _this.paint();
+        });
+        this.slider.events.on(ts_slider_1.SliderEvents.focus, function () {
+            _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+        });
+        this.slider.events.on(ts_slider_1.SliderEvents.blur, function () {
+            _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+        });
+        this.slider.events.on(ts_slider_1.SliderEvents.keydown, function (event) {
+            _this.events.fire(types_1.ItemEvent.keydown, [event]);
+        });
+    };
+    SliderForm.prototype._drawSlider = function () {
+        var _a = this.config, name = _a.name, id = _a.id;
+        return dom_1.el("div.dhx_form-group", {
+            "data-dhx-id": name || id,
+        }, [dom_1.inject(this.slider.getRootView())]);
+    };
+    return SliderForm;
+}(label_1.Label));
+exports.SliderForm = SliderForm;
+
+
+/***/ }),
+/* 227 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var events_1 = __webpack_require__(3);
+var html_1 = __webpack_require__(2);
+var view_1 = __webpack_require__(6);
+var core_1 = __webpack_require__(1);
+var ts_data_1 = __webpack_require__(4);
+var ts_vault_1 = __webpack_require__(59);
+var ts_popup_1 = __webpack_require__(11);
+var helper_1 = __webpack_require__(9);
+var en_1 = __webpack_require__(100);
+var types_1 = __webpack_require__(7);
+var SimpleVault = /** @class */ (function (_super) {
+    __extends(SimpleVault, _super);
+    function SimpleVault(container, config) {
+        var _this = _super.call(this, container, config) || this;
+        _this._isValid = true;
+        _this._propsItem = [
+            "required",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._propsSimpleVault = ["target", "singleRequest", "fieldName", "params"];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsSimpleVault);
+        _this.events = new events_1.EventSystem(_this);
+        _this.data = new ts_data_1.DataCollection();
+        _this._uploader = new ts_vault_1.Uploader(__assign(__assign({}, config), { autosend: false, fieldName: config.fieldName || config.name || config.id }), _this.data, _this.data.events);
+        _this._initView(config);
+        _this._initHandlers();
+        _this._handlers = {
+            add: function (e) {
+                if (_this.config.disabled) {
+                    return;
+                }
+                e.preventDefault();
+                _this._uploader.selectFile();
+            },
+            remove: function (e) {
+                if (_this.config.disabled) {
+                    return;
+                }
+                var id = html_1.locate(e);
+                if (!id) {
+                    return;
+                }
+                _this.data.remove(id);
+            },
+            ondragover: function (e) {
+                var types = e.dataTransfer.types;
+                for (var _i = 0, types_2 = types; _i < types_2.length; _i++) {
+                    var type = types_2[_i];
+                    if (type !== "Files" && type !== "application/x-moz-file") {
+                        return;
+                    }
+                }
+                if (_this._dragoverTimeout) {
+                    clearTimeout(_this._dragoverTimeout);
+                }
+                else {
+                    _this.paint();
+                }
+                _this._dragover = true;
+                _this._dragoverTimeout = setTimeout(function () {
+                    _this._dragover = false;
+                    _this._dragoverTimeout = null;
+                    _this.paint();
+                }, 150);
+            },
+            showHelper: function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                _this._helper.show(e.target, {
+                    mode: _this.config.labelPosition === "left" ? "bottom" : "right",
+                    theme: e.target,
+                });
+            },
+            hideHelper: function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                _this._helper.hide();
+            },
+        };
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    SimpleVault.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this._helper && this._helper.destructor();
+        this.config = this.events = this._uid = this._helper = this._handlers = this._uploader = this.data = null;
+        this._propsItem = this._propsSimpleVault = this._props = this._isValid = this._dragover = this._dragoverTimeout = null;
+        this.unmount();
+    };
+    SimpleVault.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+                if (this._propsSimpleVault.includes(key)) {
+                    this._uploader.config[key] = propertyConfig[key];
+                }
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    SimpleVault.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    SimpleVault.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+    };
+    SimpleVault.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+    };
+    SimpleVault.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    SimpleVault.prototype.disable = function () {
+        this.config.disabled = true;
+        this.paint();
+    };
+    SimpleVault.prototype.enable = function () {
+        this.config.disabled = false;
+        this.paint();
+    };
+    SimpleVault.prototype.isDisabled = function () {
+        return this.config.disabled;
+    };
+    SimpleVault.prototype.validate = function (silent) {
+        if (silent === void 0) { silent = false; }
+        var _a = this.config, required = _a.required, value = _a.value;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return;
+        this._isValid = !required || this.data.getLength() > 0;
+        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        return this._isValid;
+    };
+    SimpleVault.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this.paint();
+    };
+    SimpleVault.prototype.clear = function () {
+        if (this.getValue().length === 0)
+            return;
+        this.data.removeAll();
+        this.paint();
+    };
+    SimpleVault.prototype.getValue = function () {
+        return this.data.serialize();
+    };
+    SimpleVault.prototype.selectFile = function () {
+        this._uploader.selectFile();
+    };
+    SimpleVault.prototype.send = function (params) {
+        if (helper_1.isVerify(this.config) && !this.validate(true)) {
+            return;
+        }
+        this._uploader.send(params);
+    };
+    SimpleVault.prototype.setValue = function (value) {
+        if (!value.length) {
+            return;
+        }
+        this.data.parse(value);
+        helper_1.isVerify(this.config) && this.validate();
+    };
+    SimpleVault.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            fieldName: config.fieldName || config.name || config.id,
+            disabled: false,
+            hidden: false,
+            singleRequest: false,
+            target: "",
+            value: [],
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        this.config.value.length && this.setValue(this.config.value);
+        this.paint();
+    };
+    SimpleVault.prototype._initHandlers = function () {
+        var _this = this;
+        this.data.events.on(types_1.ItemEvent.change, function (_id, method) {
+            var value = (_this.config.value = _this.getValue());
+            _this.events.fire(types_1.ItemEvent.change, [value]);
+            method && helper_1.isVerify(_this.config) && _this.validate();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+        this._uploader.events.on("beforeUploadFile", function (file) {
+            return _this.events.fire(types_1.ItemEvent.beforeUploadFile, [file, _this.config.value]);
+        });
+        this._uploader.events.on("uploadBegin", function (file) {
+            _this.events.fire(types_1.ItemEvent.uploadBegin, [file, _this.config.value]);
+        });
+        this._uploader.events.on("uploadComplete", function (file) {
+            _this.events.fire(types_1.ItemEvent.uploadComplete, [file, _this.config.value]);
+        });
+        this._uploader.events.on("uploadFail", function (file) {
+            _this.events.fire(types_1.ItemEvent.uploadFail, [file, _this.config.value]);
+        });
+        this._uploader.events.on("uploadFile", function (file, extra) {
+            _this.events.fire(types_1.ItemEvent.uploadFile, [file, _this.config.value, extra]);
+        });
+        this._uploader.events.on("uploadProgress", function (file) {
+            _this.events.fire(types_1.ItemEvent.uploadProgress, [file, _this.config.value]);
+        });
+    };
+    SimpleVault.prototype._draw = function () {
+        var _this = this;
+        if (this.config.helpMessage) {
+            if (this._helper) {
+                this._helper.attachHTML(this.config.helpMessage);
+            }
+            else {
+                this._helper = new ts_popup_1.Popup({
+                    css: "dhx_tooltip dhx_tooltip--forced dhx_tooltip--light",
+                });
+                this._helper.attachHTML(this.config.helpMessage);
+            }
+        }
+        var files = this.data.getLength()
+            ? dom_1.el("ul.dhx_simplevault__files.dhx_simplevault-files", {
+                class: this.config.$vaultHeight ? "" : "dhx_simplevault-files__fixed",
+            }, this.data.map(function (file) {
+                return dom_1.el("li.dhx_simplevault-files__item", [
+                    dom_1.el("span.dhx_simplevault-files__item-name", (file.file && file.file.name) || file.name),
+                    dom_1.el(".dhx_button.dhx_simplevault-files__delete.dhx_button--icon.dhx_button--view_link.dhx_button--size_small.dhx_button--color_secondary.dhx_button--circle", {
+                        "data-dhx-id": file.id,
+                        onclick: _this._handlers.remove,
+                    }, [dom_1.el("span.dxi.dxi-delete-forever")]),
+                ]);
+            }))
+            : null;
+        var _a = this.config, id = _a.id, helpMessage = _a.helpMessage, disabled = _a.disabled, required = _a.required, label = _a.label;
+        var labelStyle = html_1.getLabelStyle(this.config);
+        return dom_1.el(".dhx_form-group.dhx_form-group--simplevault", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config)),
+        }, [
+            labelStyle &&
+                dom_1.el("legend.dhx_label", {
+                    class: helpMessage ? "dhx_label--with-help" : "",
+                    style: labelStyle.style,
+                    onclick: this._handlers.add,
+                    "aria-label": label || "select files",
+                }, helpMessage
+                    ? [
+                        (labelStyle.label || required) &&
+                            dom_1.el("span.dhx_label__holder", labelStyle.label),
+                        dom_1.el("span.dhx_label-help.dxi.dxi-help-circle-outline", {
+                            tabindex: "0",
+                            role: "button",
+                            onclick: this._handlers.showHelper,
+                            onfocus: this._handlers.showHelper,
+                            onblur: this._handlers.hideHelper,
+                        }),
+                    ]
+                    : labelStyle.label),
+            dom_1.el(".dhx_input__wrapper", { id: this._uid }, [
+                dom_1.el("div", {
+                    _hooks: {
+                        didInsert: function (node) {
+                            _this._uploader.linkDropArea(node.el);
+                        },
+                    },
+                    ondragover: this._handlers.ondragover,
+                    class: "dhx_simplevault" + (this._dragover ? " dhx_simplevault--on-drag" : ""),
+                }, [
+                    dom_1.el("div.dhx_simplevault-loader", [
+                        dom_1.el("span.dhx_simplevault__icon.dxi.dxi-vault"),
+                    ]),
+                    dom_1.el(".dhx_simplevault__drop-area", [
+                        dom_1.el("input.dhx_simplevault__input", {
+                            type: "file",
+                            id: id,
+                            disabled: disabled,
+                        }),
+                        dom_1.el("span.dhx_simplevault__icon.dxi.dxi-vault"),
+                        dom_1.el("span.dhx_simplevault__title", [
+                            dom_1.el("span", en_1.default.simpleVaultText),
+                            dom_1.el("br"),
+                            dom_1.el("label.dhx_simplevault__label", {
+                                onclick: this._handlers.add,
+                                for: id,
+                            }, " " + en_1.default.simpleVaultLabel),
+                        ]),
+                    ]),
+                    files,
+                ]),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    return SimpleVault;
+}(view_1.View));
+exports.SimpleVault = SimpleVault;
+
+
+/***/ }),
+/* 228 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var ts_timepicker_1 = __webpack_require__(42);
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var label_1 = __webpack_require__(16);
+var ts_popup_1 = __webpack_require__(11);
+var events_1 = __webpack_require__(3);
+var types_1 = __webpack_require__(7);
+var helper_1 = __webpack_require__(9);
+var KeyManager_1 = __webpack_require__(12);
+var TimePicker = /** @class */ (function (_super) {
+    __extends(TimePicker, _super);
+    function TimePicker(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._isValid = true;
+        _this._popupIsFocus = false;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "icon",
+            "placeholder",
+            "editable",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._propsTimepicker = ["timeFormat", "controls", "valueFormat"];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsTimepicker);
+        _this._keyManager = new KeyManager_1.KeyManager(function () {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            return element === activeEl || _this._popup.isVisible();
+        });
+        _this._initView(config);
+        _this._initHandlers();
+        _this._initHotkeys();
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    TimePicker.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.timepicker && this.timepicker.destructor();
+        this._popup && this._popup.destructor();
+        this.events = this._uid = this._propsItem = this._propsTimepicker = this._props = this._isValid = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    TimePicker.prototype.setProperties = function (propertyConfig) {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            if (!propertyConfig ||
+                core_1.isEmptyObj(propertyConfig) ||
+                !_this.events.fire(types_1.ItemEvent.beforeChangeProperties, [_this.getProperties()]))
+                return;
+            for (var key in propertyConfig) {
+                if (_this._props.includes(key)) {
+                    _this.config[key] = propertyConfig[key];
+                }
+            }
+            _this._initView(_this.config);
+            _this._initHandlers();
+            _this.events.fire(types_1.ItemEvent.afterChangeProperties, [_this.getProperties()]);
+            _this.paint();
+        });
+    };
+    TimePicker.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    TimePicker.prototype.show = function () {
+        if (!this.config.hidden ||
+            !this.events.fire(types_1.ItemEvent.beforeShow, [this.getValue(this.config.valueFormat === "timeObject")])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [this.getValue(this.config.valueFormat === "timeObject")]);
+    };
+    TimePicker.prototype.hide = function (init) {
+        if ((this.config.hidden && !init) ||
+            !this.events.fire(types_1.ItemEvent.beforeHide, [
+                this.getValue(this.config.valueFormat === "timeObject"),
+                init,
+            ])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [
+            this.getValue(this.config.valueFormat === "timeObject"),
+            init,
+        ]);
+    };
+    TimePicker.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    TimePicker.prototype.disable = function () {
+        this.config.disabled = true;
+        this.paint();
+    };
+    TimePicker.prototype.enable = function () {
+        this.config.disabled = false;
+        this.paint();
+    };
+    TimePicker.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    TimePicker.prototype.validate = function (silent, validateValue) {
+        if (silent === void 0) { silent = false; }
+        var value = typeof validateValue === "undefined"
+            ? this.getValue(this.config.valueFormat === "timeObject")
+            : validateValue;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return;
+        this._isValid = this.config.validation
+            ? this.config.validation(value)
+            : helper_1.isTimeFormat(this.getValue(), this.config.timeFormat);
+        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        return this._isValid;
+    };
+    TimePicker.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this.paint();
+    };
+    TimePicker.prototype.setValue = function (value) {
+        if (typeof value === "undefined" || value === this.config.value)
+            return;
+        this.timepicker.setValue(value);
+        if (this.config.controls) {
+            var value_1 = this.getValue(this._isTimeObject());
+            if (!this.events.fire(types_1.ItemEvent.beforeChange, [value_1])) {
+                return;
+            }
+            this.config.value = this.timepicker.getValue();
+            this.events.fire(types_1.ItemEvent.change, [value_1]);
+        }
+        helper_1.isVerify(this.config) && this.validate();
+        this.paint();
+    };
+    TimePicker.prototype.getValue = function (asOBject) {
+        return asOBject ? this.timepicker.getValue(asOBject) : this.config.value || "";
+    };
+    TimePicker.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.input.el.focus();
+        });
+    };
+    TimePicker.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this._popup.hide();
+            _this.getRootView().refs.input.el.blur();
+        });
+    };
+    TimePicker.prototype.clear = function () {
+        if (this.config.value === "")
+            return;
+        this._clear();
+    };
+    TimePicker.prototype.getWidget = function () {
+        return this.timepicker;
+    };
+    TimePicker.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.timepicker) {
+            this.timepicker.destructor();
+        }
+        if (this._popup) {
+            this._popup.destructor();
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            editable: false,
+            hidden: false,
+            timeFormat: 24,
+            controls: false,
+            valueFormat: "string",
+            required: false,
+            icon: "",
+            placeholder: "",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        this._popup = new ts_popup_1.Popup();
+        this.timepicker = new ts_timepicker_1.Timepicker(null, helper_1.widgetConfig(config));
+        this._popup.attach(this.timepicker);
+        if (this.config.hasOwnProperty("value")) {
+            this.config.value = this.timepicker.getValue();
+        }
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+    };
+    TimePicker.prototype._initHandlers = function () {
+        var _this = this;
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+        if (this.config.controls) {
+            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.afterClose, function () {
+                _this._popup.hide();
+            });
+            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.afterApply, function () {
+                _this._afterApply(true);
+            });
+            this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
+                if (_this.config.value && _this.config.value !== _this.timepicker.getValue()) {
+                    _this.timepicker.setValue(_this.config.value);
+                }
+                else if (_this.config.value === "" || _this.config.value === undefined) {
+                    _this._clear(true);
+                }
+            });
+        }
+        else {
+            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.beforeChange, function (value) {
+                var compareValue = _this.config.timeFormat === 12 ? "12:00AM" : "00:00";
+                var pickerStringValue = _this.timepicker.getValue();
+                if ((_this.config.value === "" && compareValue === pickerStringValue) ||
+                    _this.config.value === pickerStringValue) {
+                    return;
+                }
+                return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+            });
+            this.timepicker.events.on(ts_timepicker_1.TimepickerEvents.change, function (value) {
+                var compareValue = _this.config.timeFormat === 12 ? "12:00AM" : "00:00";
+                var pickerStringValue = _this.timepicker.getValue();
+                if ((_this.config.value === "" && compareValue === pickerStringValue) ||
+                    _this.config.value === pickerStringValue) {
+                    return;
+                }
+                _this.config.value = _this.timepicker.getValue();
+                _this.events.fire(types_1.ItemEvent.change, [value]);
+                helper_1.isVerify(_this.config) && _this.validate();
+                _this.paint();
+            });
+        }
+        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
+            if (document.activeElement !== _this.getRootView().refs.input.el) {
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+            }
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.input, function (value) {
+            var timeLength = _this.config.timeFormat === 12 ? 7 : 5;
+            if (value.length >= timeLength && helper_1.isTimeFormat(value, _this.config.timeFormat)) {
+                _this.timepicker.setValue(value);
+            }
+            else if (value === "" && !_this.config.controls) {
+                _this._clear();
+            }
+        });
+        this.events.on(types_1.ItemEvent.afterChangeProperties, function () {
+            _this.config.value = _this.timepicker.getValue();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.blur, function () {
+            _this._popupIsFocus = false;
+            _this.paint();
+        });
+        document.addEventListener("keydown", function (event) {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            if (element === activeEl || _this._popup.isVisible()) {
+                _this.events.fire(types_1.ItemEvent.keydown, [event]);
+            }
+        });
+        document.addEventListener("mousedown", function () {
+            var popup = _this._popup.getContainer();
+            var activeEl = document.activeElement;
+            if (popup !== activeEl)
+                _this._popupIsFocus = false;
+        });
+    };
+    TimePicker.prototype._getHandlers = function () {
+        var _this = this;
+        return {
+            onfocus: function () {
+                if (_this._popup.isVisible()) {
+                    return;
+                }
+                var node = _this.getRootView().refs.input.el;
+                _this._popup.show(node, {
+                    theme: node,
+                });
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+                _this.paint();
+            },
+            onblur: function () {
+                if (!_this._popup.isVisible()) {
+                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+                }
+                _this.paint();
+            },
+            oninput: function (e) {
+                var value = e.target.value;
+                _this.events.fire(types_1.ItemEvent.input, [value]);
+            },
+        };
+    };
+    TimePicker.prototype._initHotkeys = function () {
+        var _this = this;
+        var handlers = {
+            "shift+tab": function () {
+                _this._applyTab();
+            },
+            tab: function () {
+                _this._applyTab();
+            },
+            escape: function () {
+                if (_this._popup.isVisible()) {
+                    _this.getRootView().refs.input.el.focus();
+                }
+                _this._popup.hide();
+            },
+            enter: function (event) {
+                event.preventDefault();
+                var node = _this.getRootView().refs.input.el;
+                if (!_this._popup.isVisible()) {
+                    _this._popup.show(node, {
+                        theme: node,
+                    });
+                }
+                if (!_this._popupIsFocus && _this.config.controls) {
+                    _this._afterApply();
+                }
+                else {
+                    _this._popup.hide();
+                    _this.paint();
+                }
+            },
+            arrowRight: function (event) {
+                var focusElement = _this._popup.getContainer();
+                if (_this._popup.isVisible() && !_this._popupIsFocus) {
+                    event.preventDefault();
+                    focusElement.focus();
+                    _this._popupIsFocus = true;
+                }
+            },
+        };
+        for (var key in handlers) {
+            this._keyManager.addHotKey(key, handlers[key]);
+        }
+    };
+    TimePicker.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, value = _d.value, required = _d.required, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
+        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el("div.dhx_form-group", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", [
+                dom_1.el("div.dhx_input__container", {}, [
+                    dom_1.el(".dhx_input__icon.dxi.dxi-clock-outline"),
+                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
+                        tabindex: 0,
+                        "data-dhx-id": name || id,
+                        _key: this._uid,
+                        _ref: "input",
+                        value: value,
+                        type: "text",
+                        required: required,
+                        disabled: disabled,
+                        class: activeFocus && "dhx_input--focus",
+                        placeholder: placeholder || "",
+                        name: name || "",
+                        id: id || this._uid,
+                        onfocus: this._handlers.onfocus,
+                        onblur: this._handlers.onblur,
+                        oninput: this._handlers.oninput,
+                        autocomplete: "off",
+                        readOnly: !editable,
+                        "aria-label": label || (editable ? "type or" : "") + " select date",
+                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
+                    }),
+                ]),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    TimePicker.prototype._clear = function (silent) {
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeChange, [""])) {
+            return;
+        }
+        this.config.value = "";
+        this.timepicker.clear();
+        if (!silent) {
+            this.events.fire(types_1.ItemEvent.change, [""]);
+            helper_1.isVerify(this.config) && this.validate();
+        }
+        this.paint();
+    };
+    TimePicker.prototype._afterApply = function (isApply) {
+        if (isApply === void 0) { isApply = false; }
+        var inputValue = this.getRootView().refs.input.el.value;
+        if (inputValue === "" && !isApply) {
+            this.clear();
+        }
+        else {
+            var value = this.timepicker.getValue(this._isTimeObject());
+            if (!this.events.fire(types_1.ItemEvent.beforeChange, [value])) {
+                return;
+            }
+            this.config.value = this.timepicker.getValue();
+            this.events.fire(types_1.ItemEvent.change, [value]);
+            helper_1.isVerify(this.config) && this.validate();
+        }
+        this._popup.hide();
+        this.paint();
+    };
+    TimePicker.prototype._applyTab = function () {
+        var _a, _b, _c;
+        var activeEl = document.activeElement;
+        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
+        if (activeEl !== popup && !this._popupIsFocus) {
+            this._popup.hide();
+        }
+    };
+    TimePicker.prototype._isTimeObject = function () {
+        var _a;
+        return ((_a = this.config.valueFormat) === null || _a === void 0 ? void 0 : _a.toLowerCase()) === "timeobject";
+    };
+    return TimePicker;
+}(label_1.Label));
+exports.TimePicker = TimePicker;
+
+
+/***/ }),
+/* 229 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var ts_colorpicker_1 = __webpack_require__(51);
+var events_1 = __webpack_require__(3);
+var dom_1 = __webpack_require__(0);
+var core_1 = __webpack_require__(1);
+var label_1 = __webpack_require__(16);
+var ts_popup_1 = __webpack_require__(11);
+var types_1 = __webpack_require__(7);
+var helper_1 = __webpack_require__(9);
+var KeyManager_1 = __webpack_require__(12);
+var ColorPicker = /** @class */ (function (_super) {
+    __extends(ColorPicker, _super);
+    function ColorPicker(container, config) {
+        var _this = _super.call(this, null, config) || this;
+        _this.events = new events_1.EventSystem();
+        _this._isValid = true;
+        _this._popupIsFocus = false;
+        _this._propsItem = [
+            "required",
+            "validation",
+            "icon",
+            "placeholder",
+            "editable",
+            "label",
+            "labelWidth",
+            "labelPosition",
+            "hiddenLabel",
+            "helpMessage",
+            "preMessage",
+            "successMessage",
+            "errorMessage",
+        ];
+        _this._propsColorpicker = ["mode", "grayShades", "customColors", "palette"];
+        _this._props = __spreadArrays(helper_1.baseProps, _this._propsItem, _this._propsColorpicker);
+        _this._keyManager = new KeyManager_1.KeyManager(function () {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            return element === activeEl || _this._popup.isVisible();
+        });
+        _this._initView(config);
+        _this._initHandlers();
+        _this._initHotkeys();
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    ColorPicker.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this._popup && this._popup.destructor();
+        this.colorpicker && this.colorpicker.destructor();
+        this.events = this._uid = this._propsColorpicker = this._propsItem = this._props = this._isValid = null;
+        _super.prototype._destructor.call(this);
+        this.unmount();
+    };
+    ColorPicker.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (this._props.includes(key)) {
+                this.config[key] = propertyConfig[key];
+                if (this._propsColorpicker.includes(key)) {
+                    this.colorpicker.config[key] = propertyConfig[key];
+                }
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.colorpicker.paint();
+        this.paint();
+    };
+    ColorPicker.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, _a = this._props; _i < _a.length; _i++) {
+            var prop = _a[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    ColorPicker.prototype.show = function () {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [value])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, [value]);
+    };
+    ColorPicker.prototype.hide = function (init) {
+        var _a = this.config, value = _a.value, hidden = _a.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [value, init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [value, init]);
+    };
+    ColorPicker.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    ColorPicker.prototype.disable = function () {
+        this.config.disabled = true;
+        this.paint();
+    };
+    ColorPicker.prototype.enable = function () {
+        this.config.disabled = false;
+        this.paint();
+    };
+    ColorPicker.prototype.isDisabled = function () {
+        return !!this.config.disabled;
+    };
+    ColorPicker.prototype.validate = function (silent, validateValue) {
+        if (silent === void 0) { silent = false; }
+        var value = typeof validateValue === "undefined" ? this.getValue() : validateValue;
+        if (!silent && !this.events.fire(types_1.ItemEvent.beforeValidate, [value]))
+            return;
+        this._isValid = this.config.validation ? this.config.validation(value) : ts_colorpicker_1.isHex(value);
+        !silent && this.events.fire(types_1.ItemEvent.afterValidate, [value, this._isValid]);
+        return this._isValid;
+    };
+    ColorPicker.prototype.clearValidate = function () {
+        this.config.$validationStatus = types_1.ValidationStatus.pre;
+        this.paint();
+    };
+    ColorPicker.prototype.setValue = function (value) {
+        if (typeof value === "undefined" || value === this.config.value)
+            return;
+        this.colorpicker.setValue(value);
+    };
+    ColorPicker.prototype.getValue = function () {
+        return this.colorpicker.getValue();
+    };
+    ColorPicker.prototype.clear = function () {
+        if (this.config.value === "")
+            return;
+        this.colorpicker.clear();
+    };
+    ColorPicker.prototype.getWidget = function () {
+        return this.colorpicker;
+    };
+    ColorPicker.prototype.focus = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this.getRootView().refs.input.el.focus();
+        });
+    };
+    ColorPicker.prototype.blur = function () {
+        var _this = this;
+        dom_1.awaitRedraw().then(function () {
+            _this._popup.hide();
+            _this.getRootView().refs.input.el.blur();
+        });
+    };
+    ColorPicker.prototype._initView = function (config) {
+        var _this = this;
+        if (core_1.isEmptyObj(config)) {
+            throw new Error("Check the configuration is correct");
+        }
+        if (this.colorpicker) {
+            this.colorpicker.destructor();
+        }
+        if (this._popup) {
+            this._popup.destructor();
+        }
+        this.config = {
+            type: config.type,
+            id: config.id,
+            name: config.name,
+            disabled: false,
+            editable: false,
+            hidden: false,
+            value: "",
+            grayShades: true,
+            pickerOnly: false,
+            paletteOnly: false,
+            customColors: [],
+            palette: ts_colorpicker_1.palette,
+            mode: "palette",
+            required: false,
+            icon: "",
+            placeholder: "",
+            label: "",
+            labelWidth: "",
+            labelPosition: "top",
+            hiddenLabel: false,
+            helpMessage: "",
+            preMessage: "",
+            successMessage: "",
+            errorMessage: "",
+            width: "content",
+            height: "content",
+        };
+        for (var key in config) {
+            if (key !== "id" && key !== "type" && key !== "name") {
+                this.config[key] = config[key];
+            }
+        }
+        this._popup = new ts_popup_1.Popup();
+        this.colorpicker = new ts_colorpicker_1.Colorpicker(null, helper_1.widgetConfig(config));
+        this._popup.attach(this.colorpicker);
+        if (this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+    };
+    ColorPicker.prototype._initHandlers = function () {
+        var _this = this;
+        this.colorpicker.events.on(ts_colorpicker_1.ColorpickerEvents.beforeChange, function (value) {
+            return _this.events.fire(types_1.ItemEvent.beforeChange, [value]);
+        });
+        this.colorpicker.events.on(ts_colorpicker_1.ColorpickerEvents.change, function () {
+            _this.config.value = _this.colorpicker.getValue();
+            _this.events.fire(types_1.ItemEvent.change, [_this.config.value]);
+            if (helper_1.isVerify(_this.config)) {
+                _this.validate();
+            }
+            _this._popup.hide();
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.afterValidate, function () {
+            _this.config.$validationStatus = _this._isValid ? types_1.ValidationStatus.success : types_1.ValidationStatus.error;
+            _this.paint();
+        });
+        this._popup.events.on(ts_popup_1.PopupEvents.afterHide, function () {
+            if (document.activeElement !== _this.getRootView().refs.input.el) {
+                _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+            }
+            _this.paint();
+        });
+        this.events.on(types_1.ItemEvent.blur, function () {
+            _this._popupIsFocus = false;
+            _this.paint();
+        });
+        document.addEventListener("keydown", function (event) {
+            var _a, _b, _c;
+            var activeEl = document.activeElement;
+            var element = (_c = (_b = (_a = _this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el;
+            if (element === activeEl || _this._popup.isVisible()) {
+                _this.events.fire(types_1.ItemEvent.keydown, [event]);
+            }
+        });
+        document.addEventListener("mousedown", function () {
+            var popup = _this._popup.getContainer();
+            var activeEl = document.activeElement;
+            if (popup !== activeEl)
+                _this._popupIsFocus = false;
+        });
+    };
+    ColorPicker.prototype._getHandlers = function () {
+        var _this = this;
+        return {
+            onblur: function () {
+                if (!_this._popup.isVisible()) {
+                    _this.events.fire(types_1.ItemEvent.blur, [_this.getValue()]);
+                }
+                _this.paint();
+            },
+            onfocus: function () {
+                if (_this._popup.isVisible()) {
+                    return;
+                }
+                var node = _this.getRootView().refs.input.el;
+                _this._popup.show(node, {
+                    theme: node,
+                });
+                _this.events.fire(types_1.ItemEvent.focus, [_this.getValue()]);
+                _this.paint();
+            },
+            oninput: function (e) {
+                var value = e.target.value;
+                _this.events.fire(types_1.ItemEvent.input, [value]);
+            },
+            onchange: function (e) {
+                var value = e.target.value;
+                if (_this.config.editable && ts_colorpicker_1.isHex(value)) {
+                    _this.setValue(value);
+                }
+                else if (value === "") {
+                    _this.clear();
+                }
+            },
+        };
+    };
+    ColorPicker.prototype._initHotkeys = function () {
+        var _this = this;
+        var handlers = {
+            "shift+tab": function () {
+                _this._applyTab();
+            },
+            tab: function () {
+                _this._applyTab();
+            },
+            escape: function () {
+                if (_this._popup.isVisible()) {
+                    _this.getRootView().refs.input.el.focus();
+                }
+                _this._popup.hide();
+            },
+            enter: function (event) {
+                event.preventDefault();
+                if (!_this._popup.isVisible()) {
+                    var node = _this.getRootView().refs.input.el;
+                    _this._popup.show(node, {
+                        theme: node,
+                    });
+                }
+            },
+            arrowRight: function (event) {
+                var focusElement = _this._popup.getContainer();
+                if (_this._popup.isVisible() && !_this._popupIsFocus) {
+                    event.preventDefault();
+                    focusElement.focus();
+                    _this._popupIsFocus = true;
+                }
+            },
+        };
+        for (var key in handlers) {
+            this._keyManager.addHotKey(key, handlers[key]);
+        }
+    };
+    ColorPicker.prototype._draw = function () {
+        var _a, _b, _c;
+        var _d = this.config, required = _d.required, value = _d.value, icon = _d.icon, disabled = _d.disabled, placeholder = _d.placeholder, name = _d.name, id = _d.id, editable = _d.editable, label = _d.label, helpMessage = _d.helpMessage;
+        var activeFocus = this._popup.isVisible() || ((_c = (_b = (_a = this.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.input) === null || _c === void 0 ? void 0 : _c.el) === document.activeElement;
+        return dom_1.el("div.dhx_form-group", {
+            class: helper_1.getFormItemCss(this.config, helper_1.isVerify(this.config), activeFocus),
+        }, [
+            this._drawLabel(),
+            dom_1.el(".dhx_input__wrapper", [
+                dom_1.el("div.dhx_input__container", {}, [
+                    dom_1.el(".dhx_input__icon", {
+                        class: icon ||
+                            "dxi dxi-eyedropper-variant" +
+                                (value ? " dhx_input__icon--color-selected" : ""),
+                        style: { "background-color": value || "transparent" },
+                    }),
+                    dom_1.el("input.dhx_input.dhx_input--icon-padding", {
+                        tabindex: 0,
+                        "data-dhx-id": name || id,
+                        _key: this._uid,
+                        _ref: "input",
+                        value: value,
+                        type: "text",
+                        required: required,
+                        disabled: disabled,
+                        class: activeFocus && "dhx_input--focus",
+                        placeholder: placeholder || "",
+                        name: name || "",
+                        id: id || this._uid,
+                        onfocus: this._handlers.onfocus,
+                        oninput: this._handlers.oninput,
+                        onchange: this._handlers.onchange,
+                        onblur: this._handlers.onblur,
+                        autocomplete: "off",
+                        readOnly: !editable,
+                        "aria-label": label || (editable ? "type or" : "") + " select color",
+                        "aria-describedby": helpMessage ? "dhx_label__help_" + (id || this._uid) : null,
+                    }),
+                ]),
+                helper_1.getValidationMessage(this.config) &&
+                    dom_1.el("span.dhx_input__caption", {}, helper_1.getValidationMessage(this.config)),
+            ]),
+        ]);
+    };
+    ColorPicker.prototype._applyTab = function () {
+        var _a, _b, _c;
+        var activeEl = document.activeElement;
+        var popup = (_c = (_b = (_a = this._popup.getRootView()) === null || _a === void 0 ? void 0 : _a.refs) === null || _b === void 0 ? void 0 : _b.content) === null || _c === void 0 ? void 0 : _c.el;
+        if (activeEl !== popup && !this._popupIsFocus) {
+            this._popup.hide();
+        }
+    };
+    return ColorPicker;
+}(label_1.Label));
+exports.ColorPicker = ColorPicker;
+
+
+/***/ }),
+/* 230 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(7);
+var events_1 = __webpack_require__(3);
+var core_1 = __webpack_require__(1);
+var helper_1 = __webpack_require__(9);
+var Spacer = /** @class */ (function (_super) {
+    __extends(Spacer, _super);
+    function Spacer(container, config) {
+        var _this = _super.call(this, container, __assign({ disabled: false, hidden: false, width: "content", height: "content" }, config)) || this;
+        _this.events = new events_1.EventSystem();
+        if (_this.config.hidden) {
+            dom_1.awaitRedraw().then(function () {
+                _this.hide(true);
+            });
+        }
+        var render = function () { return _this._draw(); };
+        _this.mount(container, dom_1.create({ render: render }));
+        return _this;
+    }
+    Spacer.prototype.destructor = function () {
+        this.events && this.events.clear();
+        this.config = this.events = null;
+        this.unmount();
+    };
+    Spacer.prototype.setProperties = function (propertyConfig) {
+        if (!propertyConfig ||
+            core_1.isEmptyObj(propertyConfig) ||
+            !this.events.fire(types_1.ItemEvent.beforeChangeProperties, [this.getProperties()]))
+            return;
+        for (var key in propertyConfig) {
+            if (helper_1.baseProps.includes(key)) {
+                this.config[key] = propertyConfig[key];
+            }
+        }
+        this.events.fire(types_1.ItemEvent.afterChangeProperties, [this.getProperties()]);
+        this.paint();
+    };
+    Spacer.prototype.getProperties = function () {
+        var obj = {};
+        for (var _i = 0, baseProps_1 = helper_1.baseProps; _i < baseProps_1.length; _i++) {
+            var prop = baseProps_1[_i];
+            obj[prop] = this.config[prop];
+        }
+        return obj;
+    };
+    Spacer.prototype.show = function () {
+        var hidden = this.config.hidden;
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [])) {
+            return;
+        }
+        this.config.hidden = false;
+        this.events.fire(types_1.ItemEvent.afterShow, []);
+    };
+    Spacer.prototype.hide = function (init) {
+        var hidden = this.config.hidden;
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [!!init])) {
+            return;
+        }
+        this.config.hidden = true;
+        this.events.fire(types_1.ItemEvent.afterHide, [!!init]);
+    };
+    Spacer.prototype.isVisible = function () {
+        return !this.config.hidden;
+    };
+    Spacer.prototype._draw = function () {
+        return dom_1.el("div");
+    };
+    return Spacer;
+}(view_1.View));
+exports.Spacer = Spacer;
+
+
+/***/ }),
+/* 231 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+var Form_1 = __webpack_require__(98);
+var types_1 = __webpack_require__(7);
+var ts_layout_1 = __webpack_require__(10);
+var container_1 = __webpack_require__(232);
+var ProForm = /** @class */ (function (_super) {
+    __extends(ProForm, _super);
+    function ProForm(container, config) {
+        return _super.call(this, container, config) || this;
+    }
+    ProForm.prototype._initItemHandlers = function (item, name) {
+        var _this = this;
+        _super.prototype._initItemHandlers.call(this, item, name);
+        switch (item.type) {
+            case "container": {
+                var container = (this._attachments[name] = new container_1.Container(null, item));
+                container.events.on(types_1.ItemEvent.beforeChangeProperties, function (props) {
+                    return _this.events.fire(types_1.FormEvents.beforeChangeProperties, [name, props]);
+                });
+                container.events.on(types_1.ItemEvent.afterChangeProperties, function (props) {
+                    _this._changeProps(name, props);
+                    _this.events.fire(types_1.FormEvents.afterChangeProperties, [name, props]);
+                    _this.layout.paint();
+                });
+                container.events.on(types_1.ItemEvent.beforeHide, function (init) {
+                    if (!init) {
+                        return _this.events.fire(types_1.FormEvents.beforeHide, [name]);
+                    }
+                });
+                container.events.on(types_1.ItemEvent.beforeShow, function () {
+                    return _this.events.fire(types_1.FormEvents.beforeShow, [name]);
+                });
+                container.events.on(types_1.ItemEvent.afterHide, function (init) {
+                    _this.layout.getCell(name).hide();
+                    !init && _this.events.fire(types_1.FormEvents.afterHide, [name]);
+                });
+                container.events.on(types_1.ItemEvent.afterShow, function () {
+                    _this.layout.getCell(name).show();
+                    _this.events.fire(types_1.FormEvents.afterShow, [name]);
+                });
+                break;
+            }
+        }
+    };
+    ProForm.prototype._initUI = function (container) {
+        var _a;
+        var attachments = (this._attachments = {});
+        var layoutConfig = {
+            padding: "8px",
+        };
+        this.config.css += " dhx_form";
+        this._createLayoutConfig(this.config, layoutConfig);
+        var layout = (this.layout = new ts_layout_1.ProLayout(container, layoutConfig));
+        for (var name_1 in attachments) {
+            (_a = layout.getCell(name_1)) === null || _a === void 0 ? void 0 : _a.attach(attachments[name_1]);
+        }
+    };
+    return ProForm;
+}(Form_1.Form));
+exports.ProForm = ProForm;
+
+
+/***/ }),
+/* 232 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+var dom_1 = __webpack_require__(0);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(7);
 var events_1 = __webpack_require__(3);
 var core_1 = __webpack_require__(1);
 var ts_layout_1 = __webpack_require__(10);
-var helper_1 = __webpack_require__(8);
+var helper_1 = __webpack_require__(9);
 var Container = /** @class */ (function (_super) {
     __extends(Container, _super);
     function Container(container, config) {
@@ -38149,19 +39568,20 @@ var Container = /** @class */ (function (_super) {
     };
     Container.prototype.show = function () {
         var hidden = this.config.hidden;
-        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [undefined])) {
+        if (!hidden || !this.events.fire(types_1.ItemEvent.beforeShow, [])) {
             return;
         }
         this.config.hidden = false;
-        this.events.fire(types_1.ItemEvent.afterShow, [undefined]);
+        this.events.fire(types_1.ItemEvent.afterShow, []);
     };
     Container.prototype.hide = function (init) {
+        if (init === void 0) { init = false; }
         var hidden = this.config.hidden;
-        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [undefined, init])) {
+        if ((hidden && !init) || !this.events.fire(types_1.ItemEvent.beforeHide, [init])) {
             return;
         }
         this.config.hidden = true;
-        this.events.fire(types_1.ItemEvent.afterHide, [undefined, init]);
+        this.events.fire(types_1.ItemEvent.afterHide, [init]);
     };
     Container.prototype.isVisible = function () {
         return !this.config.hidden;
@@ -38175,7 +39595,7 @@ var Container = /** @class */ (function (_super) {
         this.paint();
     };
     Container.prototype.isDisabled = function () {
-        return this.config.disabled;
+        return !!this.config.disabled;
     };
     Container.prototype.setProperties = function (propertyConfig) {
         if (!propertyConfig ||
@@ -38214,97 +39634,7 @@ exports.Container = Container;
 
 
 /***/ }),
-/* 227 */
-/***/ (function(module, exports, __webpack_require__) {
-
-"use strict";
-
-var __extends = (this && this.__extends) || (function () {
-    var extendStatics = function (d, b) {
-        extendStatics = Object.setPrototypeOf ||
-            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
-            function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
-        return extendStatics(d, b);
-    };
-    return function (d, b) {
-        extendStatics(d, b);
-        function __() { this.constructor = d; }
-        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
-    };
-})();
-Object.defineProperty(exports, "__esModule", { value: true });
-var combo_1 = __webpack_require__(102);
-var core_1 = __webpack_require__(1);
-var ts_combobox_1 = __webpack_require__(24);
-var dom_1 = __webpack_require__(0);
-var ProCombo = /** @class */ (function (_super) {
-    __extends(ProCombo, _super);
-    function ProCombo(container, config) {
-        return _super.call(this, container, config) || this;
-    }
-    ProCombo.prototype._initView = function (config) {
-        var _this = this;
-        if (core_1.isEmptyObj(config)) {
-            throw new Error("Check the configuration is correct");
-        }
-        if (this.combobox) {
-            this.combobox.destructor();
-        }
-        this.config = {
-            type: config.type,
-            id: config.id,
-            name: config.name,
-            disabled: false,
-            hidden: false,
-            value: "",
-            readOnly: false,
-            template: undefined,
-            filter: undefined,
-            multiselection: false,
-            selectAllButton: false,
-            itemsCount: undefined,
-            itemHeight: 32,
-            virtual: false,
-            listHeight: 224,
-            required: false,
-            validation: undefined,
-            placeholder: "",
-            label: "",
-            labelWidth: "",
-            labelPosition: "top",
-            hiddenLabel: false,
-            helpMessage: "",
-            preMessage: "",
-            successMessage: "",
-            errorMessage: "",
-            width: "content",
-            height: "content",
-            padding: undefined,
-        };
-        var comboConfig = {};
-        for (var key in config) {
-            if (key !== "id" && key !== "type" && key !== "name") {
-                this.config[key] = config[key];
-                if (key !== "validation") {
-                    comboConfig[key] = config[key];
-                }
-            }
-        }
-        this.combobox = new ts_combobox_1.ProCombobox(null, comboConfig);
-        if (this.config.hidden) {
-            dom_1.awaitRedraw().then(function () {
-                _this.hide(true);
-            });
-        }
-        this.paint();
-    };
-    return ProCombo;
-}(combo_1.Combo));
-exports.ProCombo = ProCombo;
-
-
-/***/ }),
-/* 228 */
+/* 233 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38313,12 +39643,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(229));
-__export(__webpack_require__(230));
+__export(__webpack_require__(234));
+__export(__webpack_require__(235));
 
 
 /***/ }),
-/* 229 */
+/* 234 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38339,7 +39669,7 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var html_1 = __webpack_require__(2);
 var ts_message_1 = __webpack_require__(13);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_navbar_1 = __webpack_require__(20);
 var ContextMenu = /** @class */ (function (_super) {
     __extends(ContextMenu, _super);
     function ContextMenu() {
@@ -38412,7 +39742,7 @@ exports.ContextMenu = ContextMenu;
 
 
 /***/ }),
-/* 230 */
+/* 235 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38431,12 +39761,15 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
-var ts_navbar_1 = __webpack_require__(19);
+var ts_navbar_1 = __webpack_require__(20);
 var Menu = /** @class */ (function (_super) {
     __extends(Menu, _super);
     function Menu(element, config) {
-        var _this = _super.call(this, element, config) || this;
+        var _this = _super.call(this, element, core_1.extend({
+            $name: "menu",
+        }, config)) || this;
         var render = function () { return _this._draw(); };
         _this.mount(element, dom_1.create({ render: render }));
         return _this;
@@ -38465,7 +39798,7 @@ exports.Menu = Menu;
 
 
 /***/ }),
-/* 231 */
+/* 236 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38484,8 +39817,8 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Ribbon_1 = __webpack_require__(110);
-var ScrollView_1 = __webpack_require__(17);
+var Ribbon_1 = __webpack_require__(102);
+var ScrollView_1 = __webpack_require__(18);
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
 var ts_message_1 = __webpack_require__(13);
@@ -38552,7 +39885,7 @@ exports.ProRibbon = ProRibbon;
 
 
 /***/ }),
-/* 232 */
+/* 237 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38573,8 +39906,8 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var dom_1 = __webpack_require__(0);
 var html_1 = __webpack_require__(2);
-var ScrollView_1 = __webpack_require__(17);
-var Sidebar_1 = __webpack_require__(112);
+var ScrollView_1 = __webpack_require__(18);
+var Sidebar_1 = __webpack_require__(104);
 var ts_message_1 = __webpack_require__(13);
 var ProSidebar = /** @class */ (function (_super) {
     __extends(ProSidebar, _super);
@@ -38633,7 +39966,7 @@ exports.ProSidebar = ProSidebar;
 
 
 /***/ }),
-/* 233 */
+/* 238 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38642,12 +39975,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(234));
-__export(__webpack_require__(114));
+__export(__webpack_require__(239));
+__export(__webpack_require__(106));
 
 
 /***/ }),
-/* 234 */
+/* 239 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -38689,13 +40022,14 @@ var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
 var KeyManager_1 = __webpack_require__(12);
-var FocusManager_1 = __webpack_require__(18);
+var FocusManager_1 = __webpack_require__(19);
 var ts_layout_1 = __webpack_require__(10);
-var types_1 = __webpack_require__(114);
+var types_1 = __webpack_require__(106);
 var Tabbar = /** @class */ (function (_super) {
     __extends(Tabbar, _super);
     function Tabbar(container, config) {
         var _this = _super.call(this, container, core_1.extend({ mode: "top" }, config)) || this;
+        _this._tabFontSize = 14;
         _this._keyManager = new KeyManager_1.KeyManager(function () { return html_1.locate(document.activeElement, "tabs_id") === _this._uid; });
         _this._initHotkeys();
         if (_this.config.disabled) {
@@ -38747,6 +40081,9 @@ var Tabbar = /** @class */ (function (_super) {
                 _this.paint();
             }
         });
+        if (this._tabsContainer) {
+            this._tabFontSize = parseFloat(getComputedStyle(this._tabsContainer).getPropertyValue("font-size"));
+        }
         return dom_1.el("div", {
             class: "dhx_widget dhx_tabbar" +
                 (this.config.mode ? " dhx_tabbar--" + this.config.mode : "") +
@@ -39082,6 +40419,7 @@ var Tabbar = /** @class */ (function (_super) {
                     onclick: this._handlers.onTabClick,
                 }, __spreadArrays(this._cells.map(function (cell) {
                     var _a = _this.config, closable = _a.closable, closeButtons = _a.closeButtons, activeView = _a.activeView;
+                    var disabled = _this._disabled.includes(cell.config.id);
                     return dom_1.el("li", {
                         class: "dhx_tabbar-tab" +
                             (cell.config.tabCss ? " " + cell.config.tabCss : ""),
@@ -39093,25 +40431,20 @@ var Tabbar = /** @class */ (function (_super) {
                             (activeView === cell.id
                                 ? ".dhx_tabbar-tab-button--active"
                                 : "") +
-                            (_this._disabled.includes(cell.config.id)
-                                ? ".dhx_tabbar-tab-button--disabled"
-                                : ""), {
+                            (disabled ? ".dhx_tabbar-tab-button--disabled" : ""), {
                             tabindex: "0",
                             "aria-controls": cell.id,
                             id: "tab-content-" + cell.id,
                             "aria-selected": "" + (activeView === cell.id),
                             _ref: cell.id.toString(),
                             type: "button",
+                            disabled: disabled,
                         }, [dom_1.el("span.dhx_button__text", cell.config.tab)]),
                         (Array.isArray(closable) &&
                             closable.includes(cell.config.id) &&
-                            !_this._disabled.includes(cell.config.id)) ||
-                            (closable &&
-                                typeof closable === "boolean" &&
-                                !_this._disabled.includes(cell.config.id)) ||
-                            (closeButtons &&
-                                typeof closeButtons === "boolean" &&
-                                !_this._disabled.includes(cell.config.id))
+                            !disabled) ||
+                            (closable && typeof closable === "boolean" && !disabled) ||
+                            (closeButtons && typeof closeButtons === "boolean" && !disabled)
                             ? dom_1.el("div.dhx_tabbar-tab__close.dxi--small.dxi.dxi-close", {
                                 tabindex: 0,
                                 role: "button",
@@ -39154,7 +40487,9 @@ var Tabbar = /** @class */ (function (_super) {
             this.config.tabHeight = this.config.tabHeight + "px";
         var width = this.config.tabWidth ||
             (this._isHorizontalMode()
-                ? core_1.getStringWidth(config.tab.toUpperCase(), { font: "500 14.4px Arial" }) + 50 + "px"
+                ? core_1.getStringWidth(config.tab.toUpperCase(), { font: "500 " + this._tabFontSize + ".4px Arial" }) +
+                    50 +
+                    "px"
                 : "200px");
         var height = this.config.tabHeight || "45px";
         if (this._isHorizontalMode()) {
@@ -39316,7 +40651,7 @@ exports.Tabbar = Tabbar;
 
 
 /***/ }),
-/* 235 */
+/* 240 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -39325,13 +40660,13 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(236));
-__export(__webpack_require__(115));
-__export(__webpack_require__(116));
+__export(__webpack_require__(241));
+__export(__webpack_require__(107));
+__export(__webpack_require__(108));
 
 
 /***/ }),
-/* 236 */
+/* 241 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -39365,13 +40700,13 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var html_1 = __webpack_require__(2);
-var types_1 = __webpack_require__(31);
-var view_1 = __webpack_require__(5);
+var types_1 = __webpack_require__(32);
+var view_1 = __webpack_require__(6);
 var ts_data_1 = __webpack_require__(4);
-var Editor_1 = __webpack_require__(115);
+var Editor_1 = __webpack_require__(107);
 var KeyManager_1 = __webpack_require__(12);
-var FocusManager_1 = __webpack_require__(18);
-var types_2 = __webpack_require__(116);
+var FocusManager_1 = __webpack_require__(19);
+var types_2 = __webpack_require__(108);
 function getSelectionIndent(level) {
     return level * 20;
 }
@@ -39947,7 +41282,8 @@ var Tree = /** @class */ (function (_super) {
             if (_this.config.template) {
                 var template = _this.config.template(item, isFolder);
                 itemValue =
-                    typeof template === "string"
+                    typeof template === "string" &&
+                        ((item.hasOwnProperty("value") && !item.$edit) || !item.hasOwnProperty("value"))
                         ? dom_1.el("div.dhx_tree-template__wrapper", {
                             ".innerHTML": template,
                         })
@@ -40177,7 +41513,7 @@ exports.Tree = Tree;
 
 
 /***/ }),
-/* 237 */
+/* 242 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40208,10 +41544,10 @@ function detectDrag(e) {
 }
 exports.detectDrag = detectDrag;
 
-/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(15)))
+/* WEBPACK VAR INJECTION */}.call(this, __webpack_require__(17)))
 
 /***/ }),
-/* 238 */
+/* 243 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40258,7 +41594,7 @@ exports.default = {
 
 
 /***/ }),
-/* 239 */
+/* 244 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40277,11 +41613,11 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var Window_1 = __webpack_require__(118);
-var ts_toolbar_1 = __webpack_require__(25);
+var Window_1 = __webpack_require__(110);
+var ts_toolbar_1 = __webpack_require__(26);
 var ts_layout_1 = __webpack_require__(10);
-var ts_navbar_1 = __webpack_require__(19);
-var types_1 = __webpack_require__(119);
+var ts_navbar_1 = __webpack_require__(20);
+var types_1 = __webpack_require__(111);
 var ProWindow = /** @class */ (function (_super) {
     __extends(ProWindow, _super);
     function ProWindow(config) {
@@ -40481,7 +41817,7 @@ exports.ProWindow = ProWindow;
 
 
 /***/ }),
-/* 240 */
+/* 245 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40511,11 +41847,11 @@ var __assign = (this && this.__assign) || function () {
     return __assign.apply(this, arguments);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-var ts_grid_1 = __webpack_require__(28);
+var ts_grid_1 = __webpack_require__(29);
 var core_1 = __webpack_require__(1);
 var ts_data_1 = __webpack_require__(4);
-var TreeGridCollection_1 = __webpack_require__(121);
-var types_1 = __webpack_require__(122);
+var TreeGridCollection_1 = __webpack_require__(113);
+var types_1 = __webpack_require__(114);
 var defaultGroupTemplate = function (groupName, group) {
     return (groupName || "") + " (" + group.length + ")";
 };
@@ -40655,18 +41991,81 @@ var TreeGrid = /** @class */ (function (_super) {
         this.events.fire(ts_grid_1.GridEvents.afterRowShow, [row]);
     };
     TreeGrid.prototype.getCellRect = function (rowId, colId) {
+        var _a, _b;
         var columns = this.config.columns.filter(function (col) { return !col.hidden; });
         var rows = this.data.mapVisible(function (i) { return i; });
-        var colInd = core_1.findIndex(columns, function (obj) { return obj.id == colId; });
-        var rowInd = core_1.findIndex(rows, function (obj) { return obj.id == rowId; });
+        var span = this.getSpan(rowId, colId);
+        var colInd = core_1.findIndex(columns, function (obj) { return obj.id == (span ? span.column : colId); });
+        var rowInd = core_1.findIndex(rows, function (obj) { return obj.id == (span ? span.row : rowId); });
         var x = ts_grid_1.getTotalWidth(columns.slice(0, colInd));
         var y = ts_grid_1.getTotalHeight(rows.slice(0, rowInd));
         return {
             x: x,
             y: y,
-            height: rows[rowInd] ? rows[rowInd].$height : 0,
-            width: columns[colInd] ? columns[colInd].$width : 0,
+            height: (span === null || span === void 0 ? void 0 : span.rowspan) ? ts_grid_1.getHeight(rows, span.rowspan, rowInd) : ((_a = rows[rowInd]) === null || _a === void 0 ? void 0 : _a.$height) || 0,
+            width: (span === null || span === void 0 ? void 0 : span.colspan) ? ts_grid_1.getWidth(columns, span.colspan, colInd) : ((_b = columns[colInd]) === null || _b === void 0 ? void 0 : _b.$width) || 0,
         };
+    };
+    TreeGrid.prototype.getSpan = function (rowId, colId) {
+        var _this = this;
+        if (this.config.spans) {
+            var checkRowSpan_1 = null;
+            var count_1 = 0;
+            var checkItem_1 = function (itemId, length) {
+                count_1++;
+                if (itemId === rowId)
+                    return true;
+                if (count_1 === length)
+                    return false;
+                var items = _this.data.getItems(itemId);
+                for (var i = 0; i < items.length; i++) {
+                    var isTree = items[i].$items;
+                    if (!isTree) {
+                        count_1++;
+                        if (items[i].id === rowId)
+                            return true;
+                        if (count_1 === length)
+                            return false;
+                    }
+                    else {
+                        return checkRowSpan_1(items, items[i].id, length);
+                    }
+                }
+                return -1;
+            };
+            checkRowSpan_1 = function (items, itemId, length) {
+                var res = checkItem_1(itemId, length);
+                if (res !== -1) {
+                    count_1 = 0;
+                    return res;
+                }
+                items = items || _this.data.getItems(_this.data.getParent(itemId));
+                var nextItem = items[_this.data.getIndex(itemId) + 1];
+                if (nextItem) {
+                    return checkRowSpan_1(items, nextItem.id, length);
+                }
+                else {
+                    var parentId = _this.data.getParent(itemId);
+                    items = _this.data.getItems(_this.data.getParent(parentId));
+                    var nextItem_1 = items[_this.data.getIndex(parentId) + 1];
+                    if (nextItem_1)
+                        return checkRowSpan_1(items, nextItem_1.id, length);
+                }
+                return false;
+            };
+            var spans = this.config.spans;
+            var colIndex_1 = this.config.columns.findIndex(function (col) { return col.id === colId; });
+            var index = core_1.findIndex(spans, function (span) {
+                var row = span.row, column = span.column, _a = span.rowspan, rowspan = _a === void 0 ? 1 : _a, _b = span.colspan, colspan = _b === void 0 ? 1 : _b;
+                var startColIndex = _this.config.columns.findIndex(function (col) { return col.id === column; });
+                var endColIndex = startColIndex + colspan;
+                return (colIndex_1 >= startColIndex &&
+                    colIndex_1 < endColIndex &&
+                    !(row !== rowId && rowspan === 1) &&
+                    checkRowSpan_1(null, row, rowspan));
+            });
+            return spans[index];
+        }
     };
     TreeGrid.prototype._adjustColumnsWidth = function (rows, cols, adjust) {
         var _a, _b;
@@ -40729,6 +42128,9 @@ var TreeGrid = /** @class */ (function (_super) {
         this.events.detach(ts_grid_1.GridEvents.filterChange, this);
         this.events.on(ts_grid_1.GridEvents.filterChange, function (val, colId, filter) {
             var _a, _b, _c;
+            if (!_this.events.fire(ts_grid_1.GridEvents.beforeFilter, [val, colId])) {
+                return;
+            }
             val = val !== null && val !== void 0 ? val : "";
             if (!_this._activeFilters) {
                 _this._activeFilters = {};
@@ -40821,7 +42223,7 @@ exports.TreeGrid = TreeGrid;
 
 
 /***/ }),
-/* 241 */
+/* 246 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40830,12 +42232,12 @@ function __export(m) {
     for (var p in m) if (!exports.hasOwnProperty(p)) exports[p] = m[p];
 }
 Object.defineProperty(exports, "__esModule", { value: true });
-__export(__webpack_require__(242));
-__export(__webpack_require__(123));
+__export(__webpack_require__(247));
+__export(__webpack_require__(115));
 
 
 /***/ }),
-/* 242 */
+/* 247 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -40858,9 +42260,9 @@ var core_1 = __webpack_require__(1);
 var dom_1 = __webpack_require__(0);
 var events_1 = __webpack_require__(3);
 var ts_data_1 = __webpack_require__(4);
-var view_1 = __webpack_require__(5);
-var types_1 = __webpack_require__(123);
-var ts_toolbar_1 = __webpack_require__(25);
+var view_1 = __webpack_require__(6);
+var types_1 = __webpack_require__(115);
+var ts_toolbar_1 = __webpack_require__(26);
 var Pagination = /** @class */ (function (_super) {
     __extends(Pagination, _super);
     function Pagination(container, config) {

@@ -14,6 +14,8 @@ export declare class Cell extends View implements ICell {
     protected _parent: ILayout;
     protected _ui: IViewLike;
     protected _resizerHandlers: any;
+    protected _progress: boolean;
+    protected _stopProgressDefault: boolean;
     private _isLastFlexCell;
     private _afterWindowResized;
     constructor(parent: string | HTMLElement | ILayout, config: ICellConfig);
@@ -31,7 +33,12 @@ export declare class Cell extends View implements ICell {
     getCellView(): any;
     attach(component: any, config?: any): IViewLike;
     attachHTML(html: string): void;
+    detach(): void;
+    progressShow(): void;
+    progressHide(): void;
+    isVisibleProgress(): boolean;
     toVDOM(nodes?: any[]): any;
+    protected _getProgressBar(): any;
     protected _getCss(_content?: boolean): string;
     protected _initHandlers(): void;
     protected _getCollapsedSize(cell: ICell, nextCell: ICell): number;
@@ -41,6 +48,10 @@ export declare class Cell extends View implements ICell {
     protected _getAnyFlexCell(selfInclude?: boolean): any;
     protected _getResizerView(): any;
     protected _isXDirection(): any;
+    protected _checkProgress(): boolean;
+    protected _checkAutoProgress(): boolean;
+    protected _calculateProgressState(): void;
     protected _calculateStyle(): any;
     private _resizedWindow;
+    private _resetCellsSize;
 }
