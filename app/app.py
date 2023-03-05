@@ -13,6 +13,7 @@ from model import *
 import compmgr
 import dbreplication
 import forecasts_fe
+import forecasts_charts
 import forecasts_be
 import tmkt_fe
 import tmkt_be
